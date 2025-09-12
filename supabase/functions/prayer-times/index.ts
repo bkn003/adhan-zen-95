@@ -16,9 +16,15 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const locationName = url.searchParams.get('location');
-    const range = url.searchParams.get('range');
-    const month = url.searchParams.get('month');
+    const contentType = req.headers.get('content-type') || '';
+    let payload: any = null;
+    if (contentType.includes('application/json')) {
+      try { payload = await req.json(); } catch (_) {}
+    }
+
+    const locationName = payload?.location ?? url.searchParams.get('location');
+    const range = payload?.range ?? url.searchParams.get('range');
+    const month = payload?.month ?? url.searchParams.get('month');
 
     if (!locationName || !range || !month) {
       return new Response(
@@ -82,7 +88,7 @@ serve(async (req) => {
       .select('*')
       .eq('location_id', location.id)
       .eq('month', month)
-      .eq('date_range', range);
+      .ilike('date_range', `${range}%`);
 
     if (prayerError) {
       console.error('Prayer times query error:', prayerError);

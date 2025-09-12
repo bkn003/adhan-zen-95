@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 import type { Location } from '@/types/prayer.types';
-
 interface PrayerTimesResponse {
   location: {
     id: string;
@@ -26,15 +26,12 @@ export const usePrayerTimesOptimized = (locationId: string, date: Date) => {
     return '25-31';
   };
 
-  const formatMonth = (date: Date): string => {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-  };
-
   const range = getDateRange(date.getDate());
-  const month = formatMonth(date);
-
+  const monthName = format(date, 'LLLL'); // e.g., "September"
+  const monthAbbrev = format(date, 'LLL'); // e.g., "Sep"
+  const compositeRange = `${range} ${monthAbbrev}`;
   return useQuery({
-    queryKey: ['prayer-times-optimized', locationId, range, month],
+    queryKey: ['prayer-times-optimized', locationId, range, monthName],
     queryFn: async (): Promise<PrayerTimesResponse> => {
       // First get the location name
       const { data: location, error: locationError } = await supabase
@@ -56,8 +53,8 @@ export const usePrayerTimesOptimized = (locationId: string, date: Date) => {
           .from('prayer_times')
           .select('*')
           .eq('location_id', locationId)
-          .eq('month', month)
-          .eq('date_range', range);
+          .eq('month', monthName)
+          .ilike('date_range', `${range}%`);
 
         if (error) {
           throw error;
@@ -71,7 +68,7 @@ export const usePrayerTimesOptimized = (locationId: string, date: Date) => {
             coordinates: { latitude: 0, longitude: 0 }
           },
           range,
-          month,
+          month: monthName,
           times: prayerTimes || []
         };
       } else {
@@ -80,7 +77,7 @@ export const usePrayerTimesOptimized = (locationId: string, date: Date) => {
           body: {
             location: location.mosque_name,
             range,
-            month
+            month: monthName,
           }
         });
 

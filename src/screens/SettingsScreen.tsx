@@ -78,6 +78,12 @@ export const SettingsScreen = () => {
     setAdhanVolume(value);
     localStorage.setItem('adhanVolume', value.toString());
   };
+
+  const handleResetAutoRamadan = () => {
+    localStorage.removeItem('autoRamadanOverride');
+    localStorage.removeItem('isRamadan');
+    setIsRamadanMode(false);
+  };
   return <div className="p-4 pb-20 space-y-4">
       {/* Header */}
       <div className="bg-white rounded-xl p-4 text-center border border-green-100 py-0 px-[2px]">
@@ -193,6 +199,12 @@ export const SettingsScreen = () => {
               <Switch checked={isSaharEndEnabled} onCheckedChange={handleSaharEndToggle} />
             </div>
           )}
+          <button
+            onClick={handleResetAutoRamadan}
+            className="w-full py-2 px-4 bg-gray-50 text-gray-600 rounded-lg text-sm font-medium"
+          >
+            Reset to Auto-detect
+          </button>
         </div>
       </div>
 
