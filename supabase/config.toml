@@ -1,0 +1,7 @@
+project_id = "ablvlnynjfhpgusqlhlx"
+
+[functions.prayer-times]
+verify_jwt = false
+
+[functions.warm-cache]
+verify_jwt = false

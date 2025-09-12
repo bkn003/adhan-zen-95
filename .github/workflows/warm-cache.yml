@@ -1,0 +1,18 @@
+name: Warm Prayer Times Cache
+
+on:
+  schedule:
+    # Run daily at 00:05 UTC
+    - cron: '5 0 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  warm-cache:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Warm Cache
+        run: |
+          curl -X GET "${{ secrets.NEXT_PUBLIC_BASE_URL }}/functions/v1/warm-cache?key=${{ secrets.WARM_CACHE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json"

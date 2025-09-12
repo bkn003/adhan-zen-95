@@ -1,0 +1,43 @@
+{
+  "name": "Adhan Zen - Prayer Times",
+  "short_name": "Adhan Zen",
+  "description": "Islamic Prayer Times & Qibla Direction App with Adhan Notifications",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#16a34a",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/app-icon-512.png", 
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["lifestyle", "religion"],
+  "shortcuts": [
+    {
+      "name": "Prayer Times",
+      "short_name": "Prayers",
+      "description": "View current prayer times",
+      "url": "/",
+      "icons": [{ "src": "/app-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Qibla Direction",
+      "short_name": "Qibla",
+      "description": "Find Qibla direction",
+      "url": "/qibla",
+      "icons": [{ "src": "/app-icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
