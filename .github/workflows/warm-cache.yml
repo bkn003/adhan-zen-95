@@ -13,6 +13,6 @@ jobs:
     steps:
       - name: Warm Cache
         run: |
-          curl -X GET "${{ secrets.NEXT_PUBLIC_BASE_URL }}/functions/v1/warm-cache?key=${{ secrets.WARM_CACHE_KEY }}" \
+          curl -X GET "${{ secrets.SUPABASE_URL }}/functions/v1/warm-cache?key=${{ secrets.WARM_CACHE_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "Content-Type: application/json"
