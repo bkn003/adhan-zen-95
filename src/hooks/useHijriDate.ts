@@ -3,15 +3,27 @@ import { useQuery } from '@tanstack/react-query';
 import type { HijriDate } from '@/types/prayer.types';
 
 export const useHijriDate = (selectedDate?: Date) => {
+  // Get user's Hijri adjustment setting (default -1)
+  const getHijriAdjustment = () => {
+    const saved = localStorage.getItem('hijriAdjustment');
+    return saved !== null ? parseInt(saved) : -1;
+  };
+
   return useQuery({
-    queryKey: ['hijriDate', selectedDate?.toISOString()],
+    queryKey: ['hijriDate', selectedDate?.toISOString(), getHijriAdjustment()],
     queryFn: async (): Promise<HijriDate> => {
       try {
         const targetDate = selectedDate || new Date();
+        const adjustment = getHijriAdjustment();
+        
+        // Apply adjustment to the target date before conversion
+        const adjustedDate = new Date(targetDate);
+        adjustedDate.setDate(adjustedDate.getDate() + adjustment);
+        
         // Aladhan expects DD-MM-YYYY format, not ISO
-        const dd = String(targetDate.getDate()).padStart(2, '0');
-        const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
-        const yyyy = targetDate.getFullYear();
+        const dd = String(adjustedDate.getDate()).padStart(2, '0');
+        const mm = String(adjustedDate.getMonth() + 1).padStart(2, '0');
+        const yyyy = adjustedDate.getFullYear();
         const dateStr = `${dd}-${mm}-${yyyy}`; // DD-MM-YYYY
         let response = await fetch(`https://api.aladhan.com/v1/gToH/${dateStr}`);
         let data = await response.json();
@@ -38,13 +50,15 @@ export const useHijriDate = (selectedDate?: Date) => {
         throw new Error('Failed to fetch Hijri date');
       } catch (error) {
         console.error('Error fetching Hijri date:', error);
-        // Fallback to static date as requested
+        // Fallback to static date with default adjustment applied
+        const adjustment = getHijriAdjustment();
+        const fallbackDay = 13 + adjustment;
         return {
-          date: '13',
+          date: fallbackDay.toString(),
           month: 'Rabi al-Awwal',
           year: '1447',
           designation: 'AH',
-          adjustedDate: '13 Rabi al-Awwal 1447',
+          adjustedDate: `${fallbackDay} Rabi al-Awwal 1447`,
           monthNumber: 3
         };
       }

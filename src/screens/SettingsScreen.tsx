@@ -3,6 +3,7 @@ import { MapPin, Calendar, Palette, Volume2, Clock } from 'lucide-react';
 import { tamilText } from '@/utils/tamilText';
 import { LocationSelector } from '@/components/LocationSelector';
 import { LocationSearch } from '@/components/LocationSearch';
+import { HijriAdjustment } from '@/components/HijriAdjustment';
 import { useLocations } from '@/hooks/useLocations';
 import type { Location } from '@/types/prayer.types';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -228,9 +229,10 @@ export const SettingsScreen = () => {
       {/* Hijri Date Adjustment */}
       <div className="bg-white rounded-xl p-4 border border-green-100">
         <h3 className="text-lg font-semibold text-gray-800 mb-3">Hijri Date Adjustment</h3>
-        <button className="w-full py-3 px-4 bg-gray-50 text-gray-700 rounded-lg text-sm font-medium border border-gray-200">
-          Adjust Hijri Date
-        </button>
+        <HijriAdjustment />
+        <p className="text-xs text-gray-500 mt-2">
+          Adjust Hijri date to match your local moon sighting. Default is -1 day.
+        </p>
       </div>
 
       {/* Adhan Sound Notifications */}

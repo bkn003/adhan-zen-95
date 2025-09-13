@@ -14,7 +14,8 @@ export const HijriDate = ({
   selectedDate
 }: HijriDateProps) => {
   const [hijriAdjustment, setHijriAdjustment] = useState(() => {
-    return parseInt(localStorage.getItem('hijriAdjustment') || '0');
+    const saved = localStorage.getItem('hijriAdjustment');
+    return saved !== null ? parseInt(saved) : -1; // Default to -1
   });
   const [tempAdjustment, setTempAdjustment] = useState(hijriAdjustment.toString());
   
@@ -28,7 +29,8 @@ export const HijriDate = ({
     const adjustment = parseInt(tempAdjustment) || 0;
     setHijriAdjustment(adjustment);
     localStorage.setItem('hijriAdjustment', adjustment.toString());
-    window.location.reload(); // Refresh to apply adjustment
+    // Force re-render by updating the state immediately
+    setTempAdjustment(adjustment.toString());
   };
 
   if (isLoading) {
@@ -61,7 +63,23 @@ export const HijriDate = ({
     const parts = dateStr.split(' ');
     if (parts.length >= 3) {
       const day = parseInt(parts[0]) + hijriAdjustment;
-      return `${day} ${parts.slice(1).join(' ')}`;
+      
+      // Handle month boundaries
+      let adjustedDay = day;
+      let monthName = parts[1];
+      let year = parts[2];
+      
+      if (adjustedDay <= 0) {
+        // Previous month
+        adjustedDay = 30 + adjustedDay; // Approximate month length
+        // You could implement proper month calculation here
+      } else if (adjustedDay > 30) {
+        // Next month 
+        adjustedDay = adjustedDay - 30; // Approximate month length
+        // You could implement proper month calculation here
+      }
+      
+      return `${adjustedDay} ${monthName} ${year}`;
     }
     return dateStr;
   };
@@ -104,7 +122,8 @@ export const HijriDate = ({
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
                   Current: {hijriDate.adjustedDate}<br/>
-                  Adjusted: {adjustHijriDate(hijriDate.adjustedDate)}
+                  Adjusted: {adjustHijriDate(hijriDate.adjustedDate)}<br/>
+                  <span className="text-green-600">Default adjustment: -1 day</span>
                 </p>
               </div>
             </div>
