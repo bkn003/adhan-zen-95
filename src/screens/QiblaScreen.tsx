@@ -4,9 +4,23 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import { tamilText } from '@/utils/tamilText';
 
 export const QiblaScreen = () => {
-  const { latitude, longitude, error, loading, calculateQiblaDirection } = useGeolocation();
+  const { 
+    latitude, 
+    longitude, 
+    error, 
+    loading, 
+    heading,
+    magneticHeading,
+    calculateDistance,
+    calculateQiblaDirection, 
+    getCompassDirection,
+    getRelativeQiblaDirection 
+  } = useGeolocation();
   
   const qiblaDirection = calculateQiblaDirection();
+  const relativeQiblaDirection = getRelativeQiblaDirection();
+  const deviceHeading = magneticHeading || heading || 0;
+  const compassDirection = getCompassDirection(deviceHeading);
 
   if (loading) {
     return (
@@ -73,7 +87,10 @@ export const QiblaScreen = () => {
         <div className="flex flex-col items-center">
           <div className="relative w-48 h-48 mb-6">
             {/* Compass Circle */}
-            <div className="absolute inset-0 rounded-full border-4 border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100">
+            <div 
+              className="absolute inset-0 rounded-full border-4 border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 transition-transform duration-300"
+              style={{ transform: `rotate(${-deviceHeading}deg)` }}
+            >
               {/* Direction markers */}
               <div className="absolute top-2 left-1/2 transform -translate-x-1/2 text-sm font-bold text-red-600">N</div>
               <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-sm font-bold text-gray-600">E</div>
@@ -84,8 +101,8 @@ export const QiblaScreen = () => {
             {/* Qibla Arrow */}
             <div className="absolute inset-0 flex items-center justify-center">
               <Navigation 
-                className="w-16 h-16 text-green-600 transition-transform duration-1000"
-                style={{ transform: `rotate(${qiblaDirection}deg)` }}
+                className="w-16 h-16 text-green-600 transition-transform duration-300"
+                style={{ transform: `rotate(${relativeQiblaDirection}deg)` }}
               />
             </div>
           </div>
@@ -94,11 +111,15 @@ export const QiblaScreen = () => {
             <p className="text-4xl font-bold text-green-600 mb-2">
               Qibla: {Math.round(qiblaDirection)}°
             </p>
-            <p className="text-sm text-gray-500 mb-2">Direction: WNW</p>
-            <p className="text-sm text-gray-500 mb-4">Distance: 4153 km to Mecca</p>
-            {latitude && longitude && (
-              <p className="text-xs text-gray-400">
-                Device Heading: 0°
+            <p className="text-sm text-gray-500 mb-2">Direction: {getCompassDirection(qiblaDirection)}</p>
+            <p className="text-sm text-gray-500 mb-4">Distance: {latitude && longitude ? Math.round(calculateDistance(latitude, longitude, 21.4225, 39.8262)) : 4153} km to Mecca</p>
+            <div className="flex justify-between text-xs text-gray-400 mb-2">
+              <span>Device Heading: {Math.round(deviceHeading)}° ({compassDirection})</span>
+              <span>Relative Qibla: {Math.round(relativeQiblaDirection)}°</span>
+            </div>
+            {heading !== null && (
+              <p className="text-xs text-green-600">
+                ✓ Live compass active
               </p>
             )}
           </div>

@@ -10,6 +10,7 @@ import { useLocations } from '@/hooks/useLocations';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { useHijriDate } from '@/hooks/useHijriDate';
 import { usePrayerWorker } from '@/hooks/usePrayerWorker';
+import { usePrayerNotifications } from '@/hooks/usePrayerNotifications';
 import { tamilText } from '@/utils/tamilText';
 import type { Location } from '@/types/prayer.types';
 interface HomeScreenProps {
@@ -71,6 +72,9 @@ export const HomeScreen = ({
   const {
     requestNotificationPermission
   } = usePrayerWorker(prayerTimes, selectedLocation?.id);
+
+  // Initialize prayer notifications
+  usePrayerNotifications(prayerTimes);
 
   // Load persisted location or auto-select first location
   useEffect(() => {

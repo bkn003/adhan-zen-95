@@ -6,6 +6,8 @@ interface GeolocationState {
   longitude: number | null;
   error: string | null;
   loading: boolean;
+  heading: number | null;
+  magneticHeading: number | null;
 }
 
 export const useGeolocation = () => {
@@ -14,6 +16,8 @@ export const useGeolocation = () => {
     longitude: null,
     error: null,
     loading: true,
+    heading: null,
+    magneticHeading: null,
   });
 
   useEffect(() => {
@@ -27,12 +31,13 @@ export const useGeolocation = () => {
     }
 
     const success = (position: GeolocationPosition) => {
-      setState({
+      setState(prev => ({
+        ...prev,
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
         error: null,
         loading: false,
-      });
+      }));
     };
 
     const error = (error: GeolocationPositionError) => {
@@ -48,6 +53,35 @@ export const useGeolocation = () => {
       timeout: 10000,
       maximumAge: 300000, // 5 minutes
     });
+
+    // Device orientation setup
+    const handleOrientation = (event: DeviceOrientationEvent) => {
+      if (event.alpha !== null) {
+        setState(prev => ({
+          ...prev,
+          heading: event.alpha,
+          magneticHeading: (event as any).webkitCompassHeading || event.alpha,
+        }));
+      }
+    };
+
+    // Request orientation permissions for iOS
+    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+      (DeviceOrientationEvent as any).requestPermission()
+        .then((permissionState: string) => {
+          if (permissionState === 'granted') {
+            window.addEventListener('deviceorientation', handleOrientation);
+          }
+        })
+        .catch(console.error);
+    } else {
+      // For Android and other devices
+      window.addEventListener('deviceorientation', handleOrientation);
+    }
+
+    return () => {
+      window.removeEventListener('deviceorientation', handleOrientation);
+    };
   }, []);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -80,9 +114,23 @@ export const useGeolocation = () => {
     return ((bearing * (180 / Math.PI)) + 360) % 360;
   };
 
+  const getCompassDirection = (degrees: number): string => {
+    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+    const index = Math.round(degrees / 22.5) % 16;
+    return directions[index];
+  };
+
+  const getRelativeQiblaDirection = (): number => {
+    const qiblaDirection = calculateQiblaDirection();
+    const deviceHeading = state.magneticHeading || state.heading || 0;
+    return (qiblaDirection - deviceHeading + 360) % 360;
+  };
+
   return {
     ...state,
     calculateDistance,
     calculateQiblaDirection,
+    getCompassDirection,
+    getRelativeQiblaDirection,
   };
 };

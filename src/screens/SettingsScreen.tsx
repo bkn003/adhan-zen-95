@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
+import { useNotifications } from '@/hooks/useNotifications';
 export const SettingsScreen = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -21,6 +23,13 @@ export const SettingsScreen = () => {
   const {
     data: locations
   } = useLocations();
+  const { 
+    permission, 
+    supported, 
+    enabled: notificationsEnabled, 
+    enableNotifications, 
+    disableNotifications 
+  } = useNotifications();
 
   // Load persisted settings
   useEffect(() => {
@@ -74,9 +83,17 @@ export const SettingsScreen = () => {
     setIsAdhanEnabled(enabled);
     localStorage.setItem('adhanEnabled', enabled.toString());
   };
-  const handleVolumeChange = (value: number) => {
-    setAdhanVolume(value);
-    localStorage.setItem('adhanVolume', value.toString());
+  const handleVolumeChange = (value: number[]) => {
+    setAdhanVolume(value[0]);
+    localStorage.setItem('adhanVolume', value[0].toString());
+  };
+
+  const handleNotificationToggle = async (enabled: boolean) => {
+    if (enabled) {
+      await enableNotifications();
+    } else {
+      disableNotifications();
+    }
   };
 
   const handleResetAutoRamadan = () => {
@@ -218,22 +235,47 @@ export const SettingsScreen = () => {
 
       {/* Adhan Sound Notifications */}
       <div className="bg-white rounded-xl p-4 border border-green-100">
-        <h3 className="text-lg font-semibold text-gray-800 mb-3">
-          <Volume2 className="w-5 h-5 inline mr-2" />
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
           Adhan Sound Notifications
         </h3>
-        <div className="space-y-3">
+        <div className="space-y-4">
+          {!supported && (
+            <p className="text-sm text-red-600 text-center">
+              Notifications not supported in this browser
+            </p>
+          )}
+          
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700">Enable Adhan Notifications</span>
-            <Switch checked={isAdhanEnabled} onCheckedChange={handleAdhanToggle} />
-          </div>
-          <div>
-            <label className="text-sm text-gray-700 block mb-2">Volume</label>
-            <div className="relative">
-              <input type="range" min="0" max="100" value={adhanVolume} onChange={e => handleVolumeChange(parseInt(e.target.value))} className="w-full h-2 bg-green-200 rounded-lg appearance-none cursor-pointer" />
-              <div className="absolute right-0 top-3 text-xs text-gray-500">{adhanVolume}%</div>
+            <div className="flex-1">
+              <span className="text-sm font-medium text-gray-800">Enable Adhan Notifications</span>
+              <p className="text-xs text-gray-500 mt-1">
+                Play adhan sound and show notifications during prayer times
+              </p>
+              {permission === 'denied' && (
+                <p className="text-xs text-red-500 mt-1">
+                  Permission denied. Please enable in browser settings.
+                </p>
+              )}
             </div>
+            <Switch 
+              checked={notificationsEnabled} 
+              onCheckedChange={handleNotificationToggle}
+              disabled={!supported || permission === 'denied'}
+            />
           </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">Volume</span>
+            <span className="text-sm font-medium text-gray-800">{adhanVolume}%</span>
+          </div>
+          <Slider
+            value={[adhanVolume]}
+            onValueChange={handleVolumeChange}
+            max={100}
+            min={0}
+            step={5}
+            className="w-full"
+          />
         </div>
       </div>
     </div>;
