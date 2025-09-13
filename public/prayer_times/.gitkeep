@@ -1,0 +1,8 @@
+# This folder will contain static JSON files for prayer times
+# Format: /public/prayer_times/{location_slug}/{YYYY-MM}.json
+# 
+# Examples:
+# - /public/prayer_times/mumbai-central/2025-09.json
+# - /public/prayer_times/delhi-jama-masjid/2025-10.json
+#
+# Only current and next month files are kept to optimize storage

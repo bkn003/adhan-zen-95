@@ -9,6 +9,8 @@ import { SaharToggle } from '@/components/SaharToggle';
 import { useLocations } from '@/hooks/useLocations';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { useHijriDate } from '@/hooks/useHijriDate';
+import { useStaticPrayerTimes, convertToPrayerObject, createForbiddenTimes } from '@/hooks/useStaticPrayerTimes';
+import { getPrayerTimesForDate } from '@/utils/staticPrayerTimes';
 import { usePrayerWorker } from '@/hooks/usePrayerWorker';
 import { usePrayerNotifications } from '@/hooks/usePrayerNotifications';
 import { tamilText } from '@/utils/tamilText';
@@ -53,6 +55,31 @@ export const HomeScreen = ({
     data: hijriDate
   } = useHijriDate(selectedDate);
   console.log('🗓️ HomeScreen hijriDate:', hijriDate);
+  // Try static prayer times first
+  const { data: staticPrayerTimesData, isLoading: isStaticLoading, error: staticError } = useStaticPrayerTimes(
+    selectedLocation?.id || '',
+    selectedDate,
+    selectedLocation
+  );
+
+  // Process prayer times based on data source
+  let processedPrayerTimes, processedForbiddenTimes;
+  
+  if (staticPrayerTimesData && staticPrayerTimesData.times.length > 0) {
+    // Use static data - find prayer times for selected date
+    const dailyPrayerTime = getPrayerTimesForDate(staticPrayerTimesData.times, selectedDate);
+    if (dailyPrayerTime) {
+      processedPrayerTimes = convertToPrayerObject(dailyPrayerTime, false, false);
+      processedForbiddenTimes = createForbiddenTimes(dailyPrayerTime);
+    } else {
+      processedPrayerTimes = [];
+      processedForbiddenTimes = [];
+    }
+  } else {
+    processedPrayerTimes = [];
+    processedForbiddenTimes = [];
+  }
+
   const {
     prayerTimes,
     nextPrayer,
@@ -67,6 +94,10 @@ export const HomeScreen = ({
     saharTime,
     isLoading: prayerTimesLoading
   } = usePrayerTimes(selectedLocation?.id, selectedDate, hijriDate?.monthNumber);
+
+  // Use processed data if available, otherwise use hook data
+  const finalPrayerTimes = processedPrayerTimes.length > 0 ? processedPrayerTimes : prayerTimes;
+  const finalForbiddenTimes = processedForbiddenTimes.length > 0 ? processedForbiddenTimes : forbiddenTimes;
 
   // Initialize prayer worker for background adhan
   const {
@@ -117,7 +148,7 @@ export const HomeScreen = ({
       locationsLoading
     });
   }, [selectedLocation, prayerTimes, prayerTimesLoading, locationsLoading]);
-  const isLoading = locationsLoading || prayerTimesLoading;
+  const isLoading = locationsLoading || (isStaticLoading || (staticError && prayerTimesLoading));
   // Allow all prayers to show in next prayer banner, including Ramadan-specific ones
   const filteredNextPrayer = nextPrayer;
   return <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-white">
@@ -153,8 +184,8 @@ export const HomeScreen = ({
           {[1, 2, 3, 4, 5].map(i => <div key={i} className="animate-pulse">
               <div className="h-16 bg-gray-100 rounded-xl"></div>
             </div>)}
-        </div> : prayerTimes.length > 0 ? <div className="space-y-2">
-          {prayerTimes.map(prayer => <PrayerCard key={prayer.name} prayer={prayer} isNext={filteredNextPrayer?.name === prayer.name} timeUntilNext={filteredNextPrayer?.name === prayer.name ? timeUntilNext : undefined} />)}
+        </div> : finalPrayerTimes.length > 0 ? <div className="space-y-2">
+          {finalPrayerTimes.map(prayer => <PrayerCard key={prayer.name} prayer={prayer} isNext={filteredNextPrayer?.name === prayer.name} timeUntilNext={filteredNextPrayer?.name === prayer.name ? timeUntilNext : undefined} />)}
         </div> : <div className="bg-white rounded-xl p-8 border border-gray-100 text-center">
           <p className="text-gray-500">
             {selectedLocation ? `No prayer times available for ${selectedLocation.mosque_name} today.` : 'Please select a location to view prayer times.'}
@@ -162,7 +193,7 @@ export const HomeScreen = ({
         </div>}
 
         {/* Forbidden Times */}
-        <ForbiddenTimes forbiddenTimes={forbiddenTimes} />
+        <ForbiddenTimes forbiddenTimes={finalForbiddenTimes} />
 
         {/* Ramadan Toggle */}
         <RamadanToggle isRamadan={isRamadan} onToggle={toggleRamadan} onResetAuto={resetAutoRamadan} autoOverride={autoRamadanOverride} isRamadanMonth={hijriDate?.monthNumber === 9} />
