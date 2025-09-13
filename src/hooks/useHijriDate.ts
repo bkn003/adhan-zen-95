@@ -14,16 +14,11 @@ export const useHijriDate = (selectedDate?: Date) => {
     queryFn: async (): Promise<HijriDate> => {
       try {
         const targetDate = selectedDate || new Date();
-        const adjustment = getHijriAdjustment();
-        
-        // Apply adjustment to the target date before conversion
-        const adjustedDate = new Date(targetDate);
-        adjustedDate.setDate(adjustedDate.getDate() + adjustment);
-        
+        // Do NOT apply manual Hijri adjustment to API call date; adjust after fetch in UI
         // Aladhan expects DD-MM-YYYY format, not ISO
-        const dd = String(adjustedDate.getDate()).padStart(2, '0');
-        const mm = String(adjustedDate.getMonth() + 1).padStart(2, '0');
-        const yyyy = adjustedDate.getFullYear();
+        const dd = String(targetDate.getDate()).padStart(2, '0');
+        const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
+        const yyyy = targetDate.getFullYear();
         const dateStr = `${dd}-${mm}-${yyyy}`; // DD-MM-YYYY
         let response = await fetch(`https://api.aladhan.com/v1/gToH/${dateStr}`);
         let data = await response.json();
@@ -50,9 +45,8 @@ export const useHijriDate = (selectedDate?: Date) => {
         throw new Error('Failed to fetch Hijri date');
       } catch (error) {
         console.error('Error fetching Hijri date:', error);
-        // Fallback to static date with default adjustment applied
-        const adjustment = getHijriAdjustment();
-        const fallbackDay = 13 + adjustment;
+        // Fallback to static date without applying manual adjustment (UI will adjust)
+        const fallbackDay = 13;
         return {
           date: fallbackDay.toString(),
           month: 'Rabi al-Awwal',
