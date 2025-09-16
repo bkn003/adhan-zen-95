@@ -51,7 +51,7 @@ export const ForbiddenTimes = ({
                 <span className="text-xs text-gray-500">{getTamilName(time.type)}</span>
               </div>
             </div>
-            <p className="text-xs font-mono font-semibold text-gray-800">{formatTo12Hour(time.time)}</p>
+            <p className="text-xs font-mono font-semibold text-red-600">{formatTo12Hour(time.time)}</p>
           </div>)}
       </div>
     </div>;

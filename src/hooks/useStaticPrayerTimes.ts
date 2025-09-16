@@ -62,8 +62,8 @@ export const useStaticPrayerTimes = (locationId: string, date: Date, locationDat
         times: prayerTimes
       }
     },
-    staleTime: 1000 * 60 * 60 * 24, // 24 hours
-    gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days
+    staleTime: 1000 * 60 * 60 * 24 * 7, // 7 days - much longer cache
+    gcTime: 1000 * 60 * 60 * 24 * 30, // 30 days - keep in memory longer
     enabled: !!locationId && !!locationData && !!locationSlug,
     retry: (failureCount, error) => {
       // If static file fails, we could fallback to the original optimized hook

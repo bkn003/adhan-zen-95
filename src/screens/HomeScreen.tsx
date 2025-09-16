@@ -3,6 +3,7 @@ import { PrayerCard } from '@/components/PrayerCard';
 import { HijriDate } from '@/components/HijriDate';
 import { LocationSelector } from '@/components/LocationSelector';
 import { RamadanToggle } from '@/components/RamadanToggle';
+import { RamadanSpecialTimes } from '@/components/RamadanSpecialTimes';
 import { ForbiddenTimes } from '@/components/ForbiddenTimes';
 import { LocationSearch } from '@/components/LocationSearch';
 import { SaharToggle } from '@/components/SaharToggle';
@@ -179,13 +180,22 @@ export const HomeScreen = ({
         <HijriDate selectedDate={selectedDate} />
 
 
+      {/* Ramadan Special Times */}
+      <RamadanSpecialTimes prayers={finalPrayerTimes} isRamadan={isRamadan} />
+
       {/* Prayer Times Cards */}
       {isLoading ? <div className="space-y-2">
           {[1, 2, 3, 4, 5].map(i => <div key={i} className="animate-pulse">
               <div className="h-16 bg-gray-100 rounded-xl"></div>
             </div>)}
         </div> : finalPrayerTimes.length > 0 ? <div className="space-y-2">
-          {finalPrayerTimes.map(prayer => <PrayerCard key={prayer.name} prayer={prayer} isNext={filteredNextPrayer?.name === prayer.name} timeUntilNext={filteredNextPrayer?.name === prayer.name ? timeUntilNext : undefined} />)}
+          {finalPrayerTimes.map(prayer => {
+            // Filter out special Ramadan times from main prayer list
+            if (isRamadan && (prayer.name === 'Sahar End' || prayer.name === 'Iftar' || prayer.name === 'Tharaweeh')) {
+              return null;
+            }
+            return <PrayerCard key={prayer.name} prayer={prayer} isNext={filteredNextPrayer?.name === prayer.name} timeUntilNext={filteredNextPrayer?.name === prayer.name ? timeUntilNext : undefined} />;
+          })}
         </div> : <div className="bg-white rounded-xl p-8 border border-gray-100 text-center">
           <p className="text-gray-500">
             {selectedLocation ? `No prayer times available for ${selectedLocation.mosque_name} today.` : 'Please select a location to view prayer times.'}
