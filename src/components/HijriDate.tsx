@@ -1,8 +1,8 @@
 import { Calendar, Settings } from 'lucide-react';
 import { useHijriDate } from '@/hooks/useHijriDate';
-import { tamilText } from '@/utils/tamilText';
+import { tamilText } from '@/utils/tamilText'; // keep for future localization, currently unused
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
@@ -56,39 +56,14 @@ export const HijriDate = ({
     day: 'numeric'
   });
 
-  // Apply manual adjustment to Hijri date
-  const adjustHijriDate = (dateStr: string) => {
-    if (hijriAdjustment === 0) return dateStr;
-    
-    const parts = dateStr.split(' ');
-    if (parts.length >= 3) {
-      const day = parseInt(parts[0]) + hijriAdjustment;
-      
-      // Handle month boundaries
-      let adjustedDay = day;
-      let monthName = parts[1];
-      let year = parts[2];
-      
-      if (adjustedDay <= 0) {
-        // Previous month
-        adjustedDay = 30 + adjustedDay; // Approximate month length
-        // You could implement proper month calculation here
-      } else if (adjustedDay > 30) {
-        // Next month 
-        adjustedDay = adjustedDay - 30; // Approximate month length
-        // You could implement proper month calculation here
-      }
-      
-      return `${adjustedDay} ${monthName} ${year}`;
-    }
-    return dateStr;
-  };
+  // API returns Hijri date already adjusted via 'adjustment' param in useHijriDate
+  const displayHijri = hijriDate.adjustedDate;
 
   return <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-xl p-3 text-center px-[4px] py-0">
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <h3 className="text-gray-800 mb-1 text-sm font-bold">
-            {adjustHijriDate(hijriDate.adjustedDate)}
+            {displayHijri}
           </h3>
           <p className="text-sm text-gray-500">{currentDate}</p>
         </div>
@@ -121,8 +96,8 @@ export const HijriDate = ({
                   </Button>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Current: {hijriDate.adjustedDate}<br/>
-                  Adjusted: {adjustHijriDate(hijriDate.adjustedDate)}<br/>
+                  Current: {displayHijri}<br/>
+                  Change the days adjustment and click Apply to update globally.<br/>
                   <span className="text-green-600">Default adjustment: -1 day</span>
                 </p>
               </div>

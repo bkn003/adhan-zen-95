@@ -14,18 +14,18 @@ export const useHijriDate = (selectedDate?: Date) => {
     queryFn: async (): Promise<HijriDate> => {
       try {
         const targetDate = selectedDate || new Date();
-        // Do NOT apply manual Hijri adjustment to API call date; adjust after fetch in UI
-        // Aladhan expects DD-MM-YYYY format, not ISO
+        // Apply manual Hijri adjustment at the API level when available
         const dd = String(targetDate.getDate()).padStart(2, '0');
         const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
         const yyyy = targetDate.getFullYear();
         const dateStr = `${dd}-${mm}-${yyyy}`; // DD-MM-YYYY
-        let response = await fetch(`https://api.aladhan.com/v1/gToH/${dateStr}`);
+        const adj = getHijriAdjustment();
+        let response = await fetch(`https://api.aladhan.com/v1/gToH/${dateStr}?adjustment=${adj}`);
         let data = await response.json();
         
         // Fallback: try query param format if path param fails
         if (data.code !== 200) {
-          response = await fetch(`https://api.aladhan.com/v1/gToH?date=${dateStr}`);
+          response = await fetch(`https://api.aladhan.com/v1/gToH?date=${dateStr}&adjustment=${adj}`);
           data = await response.json();
         }
         

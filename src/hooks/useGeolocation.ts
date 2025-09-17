@@ -22,13 +22,12 @@ export const useGeolocation = () => {
 
   useEffect(() => {
     if (!navigator.geolocation) {
-      setState(prev => ({
-        ...prev,
-        error: 'Geolocation is not supported by this browser.',
-        loading: false,
-      }));
+      setState(prev => ({ ...prev, error: 'Geolocation is not supported by this browser.', loading: false }));
       return;
     }
+
+    let retryIntervalId: number | undefined;
+    let watchId: number | undefined;
 
     const success = (position: GeolocationPosition) => {
       setState(prev => ({
@@ -40,19 +39,53 @@ export const useGeolocation = () => {
       }));
     };
 
-    const error = (error: GeolocationPositionError) => {
-      setState(prev => ({
-        ...prev,
-        error: error.message,
-        loading: false,
-      }));
+    const onGeoError = (err: GeolocationPositionError) => {
+      setState(prev => ({ ...prev, error: err.message, loading: false }));
+      // Keep trying periodically until user grants permission
+      if (err.code === 1 /* PERMISSION_DENIED */) {
+        if (!retryIntervalId) {
+          retryIntervalId = window.setInterval(() => requestOnce(), 15000);
+        }
+      }
     };
 
-    navigator.geolocation.getCurrentPosition(success, error, {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 300000, // 5 minutes
-    });
+    const requestOnce = () => {
+      navigator.geolocation.getCurrentPosition(success, onGeoError, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000, // 5 minutes
+      });
+    };
+
+    // Permissions API to re-attempt when user changes it in settings
+    const anyNavigator: any = navigator as any;
+    if (anyNavigator.permissions?.query) {
+      anyNavigator.permissions
+        .query({ name: 'geolocation' as any })
+        .then((perm: any) => {
+          if (perm.state === 'granted' || perm.state === 'prompt') {
+            requestOnce();
+          } else if (perm.state === 'denied') {
+            // Poll until user flips it
+            retryIntervalId = window.setInterval(() => requestOnce(), 15000);
+          }
+          perm.onchange = () => {
+            if (perm.state === 'granted') {
+              requestOnce();
+              if (retryIntervalId) window.clearInterval(retryIntervalId);
+              retryIntervalId = undefined;
+            }
+          };
+        })
+        .catch(() => requestOnce());
+    } else {
+      requestOnce();
+    }
+
+    // Also start a passive watcher that updates instantly after permission is granted
+    try {
+      watchId = navigator.geolocation.watchPosition(success, () => {}, { enableHighAccuracy: true });
+    } catch {}
 
     // Device orientation setup
     const handleOrientation = (event: DeviceOrientationEvent) => {
@@ -67,19 +100,22 @@ export const useGeolocation = () => {
 
     // Request orientation permissions for iOS
     if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-      (DeviceOrientationEvent as any).requestPermission()
+      (DeviceOrientationEvent as any)
+        .requestPermission()
         .then((permissionState: string) => {
           if (permissionState === 'granted') {
             window.addEventListener('deviceorientation', handleOrientation);
           }
         })
-        .catch(console.error);
+        .catch(() => {});
     } else {
       // For Android and other devices
       window.addEventListener('deviceorientation', handleOrientation);
     }
 
     return () => {
+      if (retryIntervalId) window.clearInterval(retryIntervalId);
+      if (watchId !== undefined) navigator.geolocation.clearWatch(watchId);
       window.removeEventListener('deviceorientation', handleOrientation);
     };
   }, []);
