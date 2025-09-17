@@ -24,12 +24,12 @@ export const SettingsScreen = () => {
   const {
     data: locations
   } = useLocations();
-  const { 
-    permission, 
-    supported, 
-    enabled: notificationsEnabled, 
-    enableNotifications, 
-    disableNotifications 
+  const {
+    permission,
+    supported,
+    enabled: notificationsEnabled,
+    enableNotifications,
+    disableNotifications
   } = useNotifications();
 
   // Load persisted settings
@@ -41,22 +41,18 @@ export const SettingsScreen = () => {
         setSelectedLocation(location);
       }
     }
-    
     const savedDate = sessionStorage.getItem('selectedDate');
     if (savedDate) {
       setSelectedDate(new Date(savedDate));
     }
-    
     const savedRamadanMode = localStorage.getItem('isRamadan');
     if (savedRamadanMode !== null) {
       setIsRamadanMode(savedRamadanMode === 'true');
     }
-    
     const savedSaharEnd = localStorage.getItem('showSahar');
     if (savedSaharEnd !== null) {
       setIsSaharEndEnabled(savedSaharEnd === 'true');
     }
-    
     const savedAdhanVolume = localStorage.getItem('adhanVolume');
     if (savedAdhanVolume) {
       setAdhanVolume(parseInt(savedAdhanVolume));
@@ -88,7 +84,6 @@ export const SettingsScreen = () => {
     setAdhanVolume(value[0]);
     localStorage.setItem('adhanVolume', value[0].toString());
   };
-
   const handleNotificationToggle = async (enabled: boolean) => {
     if (enabled) {
       await enableNotifications();
@@ -96,7 +91,6 @@ export const SettingsScreen = () => {
       disableNotifications();
     }
   };
-
   const handleResetAutoRamadan = () => {
     localStorage.removeItem('autoRamadanOverride');
     localStorage.removeItem('isRamadan');
@@ -116,20 +110,13 @@ export const SettingsScreen = () => {
       {/* Location Settings */}
       <div className="bg-white rounded-xl p-4 border border-gray-100">
         <h3 className="font-semibold text-gray-800 mb-3">Location</h3>
-        <LocationSelector 
-          selectedLocation={selectedLocation} 
-          onLocationChange={handleLocationChange}
-        />
+        <LocationSelector selectedLocation={selectedLocation} onLocationChange={handleLocationChange} />
       </div>
 
       {/* Location Search */}
       <div className="bg-white rounded-xl p-4 border border-gray-100">
         <h3 className="font-semibold text-gray-800 mb-3">Search Mosques</h3>
-        <LocationSearch 
-          selectedLocation={selectedLocation} 
-          onLocationChange={handleLocationChange}
-          placeholder="Search for mosques..."
-        />
+        <LocationSearch selectedLocation={selectedLocation} onLocationChange={handleLocationChange} placeholder="Search for mosques..." />
       </div>
 
       {/* Date Selection */}
@@ -152,29 +139,29 @@ export const SettingsScreen = () => {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent mode="single" selected={selectedDate} onSelect={(date) => {
-                  setSelectedDate(date);
-                  if (date) {
-                    sessionStorage.setItem('selectedDate', date.toISOString());
-                  }
-                }} initialFocus className="pointer-events-auto" />
+                <CalendarComponent mode="single" selected={selectedDate} onSelect={date => {
+                setSelectedDate(date);
+                if (date) {
+                  sessionStorage.setItem('selectedDate', date.toISOString());
+                }
+              }} initialFocus className="pointer-events-auto" />
               </PopoverContent>
             </Popover>
           </div>
           <div className="flex gap-2">
             <button onClick={() => {
-              const today = new Date();
-              setSelectedDate(today);
-              sessionStorage.setItem('selectedDate', today.toISOString());
-            }} className="flex-1 py-2 px-4 bg-green-50 text-green-600 rounded-lg text-sm font-medium">
+            const today = new Date();
+            setSelectedDate(today);
+            sessionStorage.setItem('selectedDate', today.toISOString());
+          }} className="flex-1 py-2 px-4 bg-green-50 text-green-600 rounded-lg text-sm font-medium">
               Today
             </button>
             <button onClick={() => {
-              const tomorrow = new Date();
-              tomorrow.setDate(tomorrow.getDate() + 1);
-              setSelectedDate(tomorrow);
-              sessionStorage.setItem('selectedDate', tomorrow.toISOString());
-            }} className="flex-1 py-2 px-4 bg-gray-50 text-gray-600 rounded-lg text-sm font-medium">
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            setSelectedDate(tomorrow);
+            sessionStorage.setItem('selectedDate', tomorrow.toISOString());
+          }} className="flex-1 py-2 px-4 bg-gray-50 text-gray-600 rounded-lg text-sm font-medium">
               Tomorrow
             </button>
           </div>
@@ -182,20 +169,7 @@ export const SettingsScreen = () => {
       </div>
 
       {/* Theme */}
-      <div className="bg-white rounded-xl p-4 border border-green-100">
-        <h3 className="text-lg font-semibold text-gray-800 mb-3">Theme</h3>
-        <div className="flex gap-2">
-          <button className="flex-1 py-2 px-4 bg-green-500 text-white rounded-lg text-sm font-medium">
-            Islamic
-          </button>
-          <button className="flex-1 py-2 px-4 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium">
-            Purple
-          </button>
-          <button className="flex-1 py-2 px-4 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium">
-            Blue
-          </button>
-        </div>
-      </div>
+      
 
       {/* Prayer Settings */}
       <div className="bg-white rounded-xl p-4 border border-green-100">
@@ -208,19 +182,14 @@ export const SettingsScreen = () => {
             </div>
             <Switch checked={isRamadanMode} onCheckedChange={handleRamadanToggle} />
           </div>
-          {isRamadanMode && (
-            <div className="flex items-center justify-between">
+          {isRamadanMode && <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Clock className="w-5 h-5 text-gray-400" />
                 <span className="text-sm text-gray-700">சஹர் முடிவு நேரம்/Sahar End</span>
               </div>
               <Switch checked={isSaharEndEnabled} onCheckedChange={handleSaharEndToggle} />
-            </div>
-          )}
-          <button
-            onClick={handleResetAutoRamadan}
-            className="w-full py-2 px-4 bg-gray-50 text-gray-600 rounded-lg text-sm font-medium"
-          >
+            </div>}
+          <button onClick={handleResetAutoRamadan} className="w-full py-2 px-4 bg-gray-50 text-gray-600 rounded-lg text-sm font-medium">
             Reset to Auto-detect
           </button>
         </div>
@@ -241,11 +210,9 @@ export const SettingsScreen = () => {
           Adhan Sound Notifications
         </h3>
         <div className="space-y-4">
-          {!supported && (
-            <p className="text-sm text-red-600 text-center">
+          {!supported && <p className="text-sm text-red-600 text-center">
               Notifications not supported in this browser
-            </p>
-          )}
+            </p>}
           
           <div className="flex items-center justify-between">
             <div className="flex-1">
@@ -253,31 +220,18 @@ export const SettingsScreen = () => {
               <p className="text-xs text-gray-500 mt-1">
                 Play adhan sound and show notifications during prayer times
               </p>
-              {permission === 'denied' && (
-                <p className="text-xs text-red-500 mt-1">
+              {permission === 'denied' && <p className="text-xs text-red-500 mt-1">
                   Permission denied. Please enable in browser settings.
-                </p>
-              )}
+                </p>}
             </div>
-            <Switch 
-              checked={notificationsEnabled} 
-              onCheckedChange={handleNotificationToggle}
-              disabled={!supported || permission === 'denied'}
-            />
+            <Switch checked={notificationsEnabled} onCheckedChange={handleNotificationToggle} disabled={!supported || permission === 'denied'} />
           </div>
 
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">Volume</span>
             <span className="text-sm font-medium text-gray-800">{adhanVolume}%</span>
           </div>
-          <Slider
-            value={[adhanVolume]}
-            onValueChange={handleVolumeChange}
-            max={100}
-            min={0}
-            step={5}
-            className="w-full"
-          />
+          <Slider value={[adhanVolume]} onValueChange={handleVolumeChange} max={100} min={0} step={5} className="w-full" />
         </div>
       </div>
     </div>;
