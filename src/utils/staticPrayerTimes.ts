@@ -46,12 +46,12 @@ export async function fetchStaticPrayerTimes(
   month: string
 ): Promise<StaticPrayerTime[]> {
   try {
-    const response = await fetch(`/prayer_times/${locationSlug}/${month}.json`)
-    
+    const response = await fetch(`/prayer_times/${locationSlug}/${month}.json`, {
+      cache: 'force-cache'
+    })
     if (!response.ok) {
       throw new Error(`Failed to fetch prayer times: ${response.status}`)
     }
-    
     const data = await response.json()
     return data as StaticPrayerTime[]
   } catch (error) {

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import type { Location, Prayer, ForbiddenTime } from '@/types/prayer.types'
 import { 
@@ -37,6 +37,16 @@ export const useStaticPrayerTimes = (locationId: string, date: Date, locationDat
   const monthString = getMonthString(date)
   const locationSlug = locationData ? createLocationSlug(locationData.mosque_name) : ''
 
+  // Strong local cache key and initial data
+  const storageKey = locationSlug ? `pt:${locationSlug}:${monthString}` : ''
+  let initialDataFromStorage: StaticPrayerTimesResponse | undefined = undefined
+  if (storageKey) {
+    try {
+      const raw = localStorage.getItem(storageKey)
+      if (raw) initialDataFromStorage = JSON.parse(raw)
+    } catch {}
+  }
+
   return useQuery({
     queryKey: ['static-prayer-times', locationId, monthString, locationSlug],
     queryFn: async (): Promise<StaticPrayerTimesResponse> => {
@@ -44,10 +54,10 @@ export const useStaticPrayerTimes = (locationId: string, date: Date, locationDat
         throw new Error('Location data not available')
       }
 
-      // Fetch static prayer times from JSON file
+      // Fetch static prayer times from JSON file (HTTP cache + localStorage)
       const prayerTimes = await fetchStaticPrayerTimes(locationSlug, monthString)
 
-      return {
+      const result: StaticPrayerTimesResponse = {
         location: {
           id: locationId,
           name: locationData.mosque_name,
@@ -61,15 +71,54 @@ export const useStaticPrayerTimes = (locationId: string, date: Date, locationDat
         month: format(date, 'LLLL'),
         times: prayerTimes
       }
+
+      // Persist to localStorage for instant loads on return navigation
+      if (storageKey) {
+        try { localStorage.setItem(storageKey, JSON.stringify(result)) } catch {}
+      }
+
+      // Prefetch NEXT month in background (do not block UI)
+      try {
+        const nextDate = new Date(date)
+        nextDate.setMonth(nextDate.getMonth() + 1)
+        const nextMonth = getMonthString(nextDate)
+        const nextKey = locationSlug ? `pt:${locationSlug}:${nextMonth}` : ''
+        if (nextKey && !localStorage.getItem(nextKey)) {
+          fetchStaticPrayerTimes(locationSlug, nextMonth)
+            .then((nextTimes) => {
+              const nextPayload: StaticPrayerTimesResponse = {
+                location: {
+                  id: locationId,
+                  name: locationData.mosque_name,
+                  district: locationData.district,
+                  coordinates: {
+                    latitude: Number(locationData.latitude),
+                    longitude: Number(locationData.longitude)
+                  }
+                },
+                range: 'prefetch',
+                month: format(nextDate, 'LLLL'),
+                times: nextTimes
+              }
+              try { localStorage.setItem(nextKey, JSON.stringify(nextPayload)) } catch {}
+            })
+            .catch(() => {})
+        }
+      } catch {}
+
+      return result
     },
     staleTime: 1000 * 60 * 60 * 24 * 7, // 7 days - much longer cache
     gcTime: 1000 * 60 * 60 * 24 * 30, // 30 days - keep in memory longer
     enabled: !!locationId && !!locationData && !!locationSlug,
-    retry: (failureCount, error) => {
-      // If static file fails, we could fallback to the original optimized hook
-      console.error('Static prayer times fetch failed:', error)
-      return failureCount < 2
-    }
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+    placeholderData: keepPreviousData,
+    networkMode: 'offlineFirst',
+    initialData: initialDataFromStorage,
+    initialDataUpdatedAt: initialDataFromStorage ? Date.now() : undefined
   })
 }
 
