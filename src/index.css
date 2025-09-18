@@ -37,6 +37,10 @@ All colors MUST be HSL.
     --ring: 222.2 84% 4.9%;
 
     --radius: 0.5rem;
+    
+    /* Performance optimizations */
+    --transition-fast: 0.15s ease-out;
+    --transition-normal: 0.3s ease-out;
 
     --sidebar-background: 0 0% 98%;
 
