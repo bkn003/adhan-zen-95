@@ -1,7 +1,9 @@
 // Utility functions for static prayer times JSON files
 
 export interface StaticPrayerTime {
-  date: string; // YYYY-MM-DD
+  date?: string; // YYYY-MM-DD (legacy format)
+  date_from?: string; // YYYY-MM-DD (new date range format)
+  date_to?: string; // YYYY-MM-DD (new date range format)
   fajr: string;
   dhuhr: string;
   asr: string;
@@ -40,33 +42,65 @@ export function getMonthString(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
-// Fetch static prayer times for a location and month
+// Fetch static prayer times for a location and month (CDN-first approach)
 export async function fetchStaticPrayerTimes(
   locationSlug: string, 
-  month: string
+  month: string,
+  cdnUrl?: string
 ): Promise<StaticPrayerTime[]> {
-  try {
-    const response = await fetch(`/prayer_times/${locationSlug}/${month}.json`, {
-      cache: 'force-cache'
-    })
-    if (!response.ok) {
-      throw new Error(`Failed to fetch prayer times: ${response.status}`)
-    }
-    const data = await response.json()
-    return data as StaticPrayerTime[]
-  } catch (error) {
-    console.error(`Error fetching static prayer times for ${locationSlug}/${month}:`, error)
-    throw error
+  // Try CDN first for 1M+ users scale (Cloudflare Pages)
+  const urls = [];
+  
+  if (cdnUrl) {
+    urls.push(`${cdnUrl}/prayer_times/${locationSlug}/${month}.json`);
   }
+  
+  // Fallback to local static files
+  urls.push(`/prayer_times/${locationSlug}/${month}.json`);
+  
+  for (const url of urls) {
+    try {
+      console.log(`🔄 Fetching prayer times from: ${url}`);
+      const response = await fetch(url, {
+        cache: 'force-cache',
+        headers: {
+          'Cache-Control': 'max-age=86400' // 24 hours cache
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`✅ Successfully fetched ${data.length} prayer time entries from ${url}`);
+        return data as StaticPrayerTime[];
+      }
+      
+      console.warn(`⚠️ Failed to fetch from ${url}: ${response.status}`);
+    } catch (error) {
+      console.warn(`⚠️ Error fetching from ${url}:`, error);
+    }
+  }
+  
+  throw new Error(`Failed to fetch prayer times from any source for ${locationSlug}/${month}`);
 }
 
-// Get prayer times for a specific date
+// Get prayer times for a specific date (supports both legacy and new date range format)
 export function getPrayerTimesForDate(
   prayerTimes: StaticPrayerTime[], 
   targetDate: Date
 ): StaticPrayerTime | null {
   const dateString = targetDate.toISOString().split('T')[0] // YYYY-MM-DD
-  return prayerTimes.find(pt => pt.date === dateString) || null
+  
+  // First try legacy format (exact date match)
+  const exactMatch = prayerTimes.find(pt => pt.date === dateString);
+  if (exactMatch) return exactMatch;
+  
+  // Try new date range format (date falls within range)
+  return prayerTimes.find(pt => {
+    if (pt.date_from && pt.date_to) {
+      return dateString >= pt.date_from && dateString <= pt.date_to;
+    }
+    return false;
+  }) || null;
 }
 
 // Get date range for current selection (1-5, 6-11, etc.)

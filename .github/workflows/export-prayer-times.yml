@@ -1,0 +1,156 @@
+name: Export Prayer Times to Cloudflare
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # every day at midnight UTC
+  repository_dispatch:
+    types: [regenerate-json]
+  workflow_dispatch: # manual trigger
+
+env:
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install @supabase/supabase-js
+
+      - name: Generate JSON files
+        run: |
+          node -e "
+          import { createClient } from '@supabase/supabase-js';
+          import fs from 'fs';
+          import path from 'path';
+
+          const supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+          );
+
+          const outDir = path.join(process.cwd(), 'public/prayer_times');
+          fs.mkdirSync(outDir, { recursive: true });
+
+          // Remove existing files to start fresh
+          if (fs.existsSync(outDir)) {
+            fs.rmSync(outDir, { recursive: true, force: true });
+            fs.mkdirSync(outDir, { recursive: true });
+          }
+
+          (async () => {
+            console.log('🔄 Fetching locations...');
+            const { data: locations, error: locError } = await supabase
+              .from('locations')
+              .select('id, mosque_name, district');
+            
+            if (locError) {
+              console.error('❌ Error fetching locations:', locError);
+              process.exit(1);
+            }
+
+            console.log('🔄 Fetching prayer times...');
+            const { data: times, error: timesError } = await supabase
+              .from('prayer_times')
+              .select('*')
+              .order('date_from');
+            
+            if (timesError) {
+              console.error('❌ Error fetching prayer times:', timesError);
+              process.exit(1);
+            }
+
+            if (!locations || !times) {
+              console.error('❌ No data found');
+              process.exit(1);
+            }
+
+            console.log(\`📊 Processing \${locations.length} locations and \${times.length} prayer time entries...\`);
+
+            for (const loc of locations) {
+              const locationSlug = loc.mosque_name
+                .toLowerCase()
+                .replace(/[^a-z0-9\\s]/g, '')
+                .trim()
+                .replace(/\\s+/g, '-');
+
+              const locDir = path.join(outDir, locationSlug);
+              fs.mkdirSync(locDir, { recursive: true });
+
+              // Group by month (YYYY-MM format)
+              const grouped = {};
+              for (const t of times.filter(x => x.location_id === loc.id)) {
+                if (t.date_from) {
+                  const month = t.date_from.slice(0, 7); // YYYY-MM
+                  if (!grouped[month]) grouped[month] = [];
+                  
+                  // Transform to static format for CDN
+                  const staticEntry = {
+                    date_from: t.date_from,
+                    date_to: t.date_to,
+                    fajr: t.fajr_adhan,
+                    dhuhr: t.dhuhr_adhan,
+                    asr: t.asr_adhan,
+                    maghrib: t.maghrib_adhan,
+                    isha: t.isha_adhan,
+                    location: loc.mosque_name,
+                    fajr_iqamah: t.fajr_iqamah,
+                    dhuhr_iqamah: t.dhuhr_iqamah,
+                    asr_iqamah: t.asr_iqamah,
+                    maghrib_iqamah: t.maghrib_iqamah,
+                    isha_iqamah: t.isha_iqamah,
+                    jummah_adhan: t.jummah_adhan,
+                    jummah_iqamah: t.jummah_iqamah,
+                    sun_rise: t.sun_rise,
+                    sun_set: t.sun_set,
+                    mid_noon: t.mid_noon,
+                    sahar_end: t.sahar_end,
+                    tharaweeh: t.tharaweeh,
+                    isha_ramadan_iqamah: t.isha_ramadan_iqamah,
+                    fajr_ramadan_iqamah: t.fajr_ramadan_iqamah,
+                    maghrib_ramadan_adhan: t.maghrib_ramadan_adhan,
+                    ifthar_time: t.ifthar_time || t.iftar_time
+                  };
+                  grouped[month].push(staticEntry);
+                }
+              }
+
+              for (const [month, arr] of Object.entries(grouped)) {
+                const filePath = path.join(locDir, \`\${month}.json\`);
+                fs.writeFileSync(filePath, JSON.stringify(arr, null, 2));
+                console.log(\`✅ Written \${filePath} with \${arr.length} entries\`);
+              }
+
+              console.log(\`📁 Completed location: \${loc.mosque_name} (\${locationSlug})\`);
+            }
+
+            console.log('🎉 Export completed successfully!');
+          })();
+          "
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add public/prayer_times/
+          git diff --staged --quiet || git commit -m "🕐 Auto-export prayer times from Supabase - $(date)"
+          git push
+
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: ${{ secrets.CLOUDFLARE_PROJECT_NAME }}
+          directory: ./public
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

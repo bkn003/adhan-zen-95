@@ -49,7 +49,9 @@ export type Database = {
           asr_adhan: string
           asr_iqamah: string
           created_at: string | null
+          date_from: string | null
           date_range: string
+          date_to: string | null
           dhuhr_adhan: string
           dhuhr_iqamah: string
           fajr_adhan: string
@@ -78,7 +80,9 @@ export type Database = {
           asr_adhan: string
           asr_iqamah: string
           created_at?: string | null
+          date_from?: string | null
           date_range: string
+          date_to?: string | null
           dhuhr_adhan: string
           dhuhr_iqamah: string
           fajr_adhan: string
@@ -107,7 +111,9 @@ export type Database = {
           asr_adhan?: string
           asr_iqamah?: string
           created_at?: string | null
+          date_from?: string | null
           date_range?: string
+          date_to?: string | null
           dhuhr_adhan?: string
           dhuhr_iqamah?: string
           fajr_adhan?: string
