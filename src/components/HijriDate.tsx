@@ -18,6 +18,10 @@ export const HijriDate = ({
     return saved !== null ? parseInt(saved) : -1; // Default to -1
   });
   const [tempAdjustment, setTempAdjustment] = useState(hijriAdjustment.toString());
+  const [isOpen, setIsOpen] = useState(false);
+  useEffect(() => {
+    setTempAdjustment(hijriAdjustment.toString());
+  }, [hijriAdjustment]);
   
   const {
     data: hijriDate,
@@ -29,8 +33,8 @@ export const HijriDate = ({
     const adjustment = parseInt(tempAdjustment) || 0;
     setHijriAdjustment(adjustment);
     localStorage.setItem('hijriAdjustment', adjustment.toString());
-    // Force re-render by updating the state immediately
     setTempAdjustment(adjustment.toString());
+    setIsOpen(false);
   };
 
   if (isLoading) {
@@ -68,7 +72,7 @@ export const HijriDate = ({
           <p className="text-sm text-gray-500">{currentDate}</p>
         </div>
         
-        <Dialog>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
               <Settings className="h-4 w-4" />

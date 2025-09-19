@@ -13,19 +13,23 @@ export const useHijriDate = (selectedDate?: Date) => {
     queryKey: ['hijriDate', selectedDate?.toISOString(), getHijriAdjustment()],
     queryFn: async (): Promise<HijriDate> => {
       try {
-        const targetDate = selectedDate || new Date();
-        // Apply manual Hijri adjustment at the API level when available
-        const dd = String(targetDate.getDate()).padStart(2, '0');
-        const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
-        const yyyy = targetDate.getFullYear();
-        const dateStr = `${dd}-${mm}-${yyyy}`; // DD-MM-YYYY
+        const baseDate = selectedDate || new Date();
+        // Apply manual Hijri adjustment by shifting the Gregorian date first
         const adj = getHijriAdjustment();
-        let response = await fetch(`https://api.aladhan.com/v1/gToH/${dateStr}?adjustment=${adj}`);
+        const adjustedGregorian = new Date(baseDate);
+        adjustedGregorian.setDate(adjustedGregorian.getDate() + adj);
+
+        const dd = String(adjustedGregorian.getDate()).padStart(2, '0');
+        const mm = String(adjustedGregorian.getMonth() + 1).padStart(2, '0');
+        const yyyy = adjustedGregorian.getFullYear();
+        const dateStr = `${dd}-${mm}-${yyyy}`; // DD-MM-YYYY
+
+        let response = await fetch(`https://api.aladhan.com/v1/gToH/${dateStr}`);
         let data = await response.json();
         
         // Fallback: try query param format if path param fails
         if (data.code !== 200) {
-          response = await fetch(`https://api.aladhan.com/v1/gToH?date=${dateStr}&adjustment=${adj}`);
+          response = await fetch(`https://api.aladhan.com/v1/gToH?date=${dateStr}`);
           data = await response.json();
         }
         
