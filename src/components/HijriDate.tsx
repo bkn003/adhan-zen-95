@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface HijriDateProps {
   selectedDate?: Date;
@@ -18,18 +19,25 @@ export const HijriDate = ({
     return saved !== null ? parseInt(saved) : -1; // Default to -1
   });
   const [tempAdjustment, setTempAdjustment] = useState(hijriAdjustment.toString());
+  const queryClient = useQueryClient();
   
   const {
     data: hijriDate,
     isLoading,
     error
-  } = useHijriDate(selectedDate);
+  } = useHijriDate(selectedDate, hijriAdjustment);
 
   const handleAdjustmentSave = () => {
     const adjustment = parseInt(tempAdjustment) || 0;
     setHijriAdjustment(adjustment);
     localStorage.setItem('hijriAdjustment', adjustment.toString());
-    // Force re-render by updating the state immediately
+    
+    // Invalidate and refetch the hijri date query to reflect the new adjustment
+    queryClient.invalidateQueries({ 
+      queryKey: ['hijriDate'],
+      exact: false 
+    });
+    
     setTempAdjustment(adjustment.toString());
   };
 

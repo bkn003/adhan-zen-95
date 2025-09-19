@@ -2,15 +2,20 @@
 import { useQuery } from '@tanstack/react-query';
 import type { HijriDate } from '@/types/prayer.types';
 
-export const useHijriDate = (selectedDate?: Date) => {
-  // Get user's Hijri adjustment setting (default -1)
+export const useHijriDate = (selectedDate?: Date, hijriAdjustment?: number) => {
+  // Use passed hijriAdjustment or get from localStorage
   const getHijriAdjustment = () => {
+    if (hijriAdjustment !== undefined) {
+      return hijriAdjustment;
+    }
     const saved = localStorage.getItem('hijriAdjustment');
     return saved !== null ? parseInt(saved) : -1;
   };
 
+  const currentAdjustment = getHijriAdjustment();
+
   return useQuery({
-    queryKey: ['hijriDate', selectedDate?.toISOString(), getHijriAdjustment()],
+    queryKey: ['hijriDate', selectedDate?.toISOString(), currentAdjustment],
     queryFn: async (): Promise<HijriDate> => {
       try {
         const targetDate = selectedDate || new Date();
@@ -19,7 +24,7 @@ export const useHijriDate = (selectedDate?: Date) => {
         const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
         const yyyy = targetDate.getFullYear();
         const dateStr = `${dd}-${mm}-${yyyy}`; // DD-MM-YYYY
-        const adj = getHijriAdjustment();
+        const adj = currentAdjustment;
         let response = await fetch(`https://api.aladhan.com/v1/gToH/${dateStr}?adjustment=${adj}`);
         let data = await response.json();
         
