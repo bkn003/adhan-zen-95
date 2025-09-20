@@ -100,6 +100,47 @@ export const HomeScreen = ({
   const finalPrayerTimes = processedPrayerTimes.length > 0 ? processedPrayerTimes : prayerTimes;
   const finalForbiddenTimes = processedForbiddenTimes.length > 0 ? processedForbiddenTimes : forbiddenTimes;
 
+  // Native Median.co Adhan scheduling integration
+  useEffect(() => {
+    if (finalPrayerTimes.length > 0 && selectedLocation) {
+      // Convert prayer times to required format
+      const todayPrayerTimes: Record<string, string> = {};
+      
+      finalPrayerTimes.forEach(prayer => {
+        switch (prayer.type) {
+          case 'fajr':
+            todayPrayerTimes.fajr = prayer.adhan;
+            break;
+          case 'dhuhr':
+            todayPrayerTimes.dhuhr = prayer.adhan;
+            break;
+          case 'asr':
+            todayPrayerTimes.asr = prayer.adhan;
+            break;
+          case 'maghrib':
+            todayPrayerTimes.maghrib = prayer.adhan;
+            break;
+          case 'isha':
+            todayPrayerTimes.isha = prayer.adhan;
+            break;
+          case 'jummah':
+            // Only include Jummah if today is Friday
+            const today = new Date();
+            if (today.getDay() === 5) { // Friday
+              todayPrayerTimes.jummah = prayer.adhan;
+            }
+            break;
+        }
+      });
+
+      // Call native Median.co integration if available
+      if (typeof window !== 'undefined' && (window as any).saveTodayPrayerTimes) {
+        console.log('📱 Scheduling native Adhan times:', todayPrayerTimes);
+        (window as any).saveTodayPrayerTimes(todayPrayerTimes);
+      }
+    }
+  }, [finalPrayerTimes, selectedLocation]);
+
   // Initialize prayer worker for background adhan
   const {
     requestNotificationPermission
