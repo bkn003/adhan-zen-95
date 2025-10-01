@@ -87,36 +87,69 @@ export const useGeolocation = () => {
       watchId = navigator.geolocation.watchPosition(success, () => {}, { enableHighAccuracy: true });
     } catch {}
 
-    // Device orientation setup
+    // Device orientation setup with enhanced accuracy
     const handleOrientation = (event: DeviceOrientationEvent) => {
-      if (event.alpha !== null) {
+      let calculatedHeading = null;
+      let magneticValue = null;
+
+      // iOS devices provide webkitCompassHeading (true north)
+      if ((event as any).webkitCompassHeading !== undefined && (event as any).webkitCompassHeading !== null) {
+        magneticValue = (event as any).webkitCompassHeading;
+        calculatedHeading = magneticValue;
+      } 
+      // Android and other devices use alpha (magnetic north)
+      else if (event.alpha !== null) {
+        // For Android, alpha represents the rotation around the Z-axis
+        // We need to normalize it to compass heading
+        calculatedHeading = 360 - event.alpha;
+        magneticValue = calculatedHeading;
+      }
+
+      if (calculatedHeading !== null) {
         setState(prev => ({
           ...prev,
-          heading: event.alpha,
-          magneticHeading: (event as any).webkitCompassHeading || event.alpha,
+          heading: calculatedHeading,
+          magneticHeading: magneticValue,
         }));
       }
     };
 
-    // Request orientation permissions for iOS
+    // Also handle absolute orientation for better accuracy
+    const handleAbsoluteOrientation = (event: DeviceOrientationEvent) => {
+      if (event.absolute && event.alpha !== null) {
+        const heading = 360 - event.alpha;
+        setState(prev => ({
+          ...prev,
+          heading: heading,
+          magneticHeading: heading,
+        }));
+      }
+    };
+
+    // Request orientation permissions for iOS 13+
     if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
       (DeviceOrientationEvent as any)
         .requestPermission()
         .then((permissionState: string) => {
           if (permissionState === 'granted') {
-            window.addEventListener('deviceorientation', handleOrientation);
+            window.addEventListener('deviceorientation', handleOrientation, true);
+            window.addEventListener('deviceorientationabsolute', handleAbsoluteOrientation, true);
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          console.log('Device orientation permission denied');
+        });
     } else {
       // For Android and other devices
-      window.addEventListener('deviceorientation', handleOrientation);
+      window.addEventListener('deviceorientation', handleOrientation, true);
+      window.addEventListener('deviceorientationabsolute', handleAbsoluteOrientation, true);
     }
 
     return () => {
       if (retryIntervalId) window.clearInterval(retryIntervalId);
       if (watchId !== undefined) navigator.geolocation.clearWatch(watchId);
       window.removeEventListener('deviceorientation', handleOrientation);
+      window.removeEventListener('deviceorientationabsolute', handleAbsoluteOrientation);
     };
   }, []);
 

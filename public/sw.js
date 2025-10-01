@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adhan-zen-v2';
+const CACHE_NAME = 'adhan-zen-v3';
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',
@@ -6,7 +6,7 @@ const urlsToCache = [
   '/manifest.json',
   '/app-icon-192.png',
   '/app-icon-512.png',
-  '/adhan.mp3'
+  '/adhan-local.mp3'
 ];
 
 // Store prayer times and location data
@@ -177,24 +177,28 @@ async function triggerAdhanNotification(prayer) {
 // Play adhan audio for 15 seconds
 async function playAdhanAudio() {
   try {
-    // Use the cached audio file
-    const audioResponse = await caches.match('/adhan.mp3');
+    // Use the locally cached audio file
+    const audioResponse = await caches.match('/adhan-local.mp3');
     if (audioResponse) {
       const audioBlob = await audioResponse.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       
       // Create audio context for background playback
       const audio = new Audio(audioUrl);
-      audio.volume = 0.8;
+      audio.volume = 1.0; // Full volume for adhan
       
-      // Play for 15 seconds
-      audio.play();
+      // Play for 30 seconds (full adhan call)
+      audio.play().catch(() => {
+        console.log('Audio playback failed, trying alternative method');
+      });
       
       setTimeout(() => {
         audio.pause();
         audio.currentTime = 0;
         URL.revokeObjectURL(audioUrl);
-      }, 15000); // Stop after 15 seconds
+      }, 30000); // Stop after 30 seconds
+    } else {
+      console.log('Adhan audio not found in cache');
     }
   } catch (error) {
     console.error('Failed to play adhan audio:', error);
