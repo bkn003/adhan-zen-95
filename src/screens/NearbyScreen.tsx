@@ -71,7 +71,7 @@ export const NearbyScreen = ({
         </div>
       </div>;
   }
-  return <div className="p-4 pb-20 space-y-4 bg-gradient-to-br from-green-50 via-emerald-50 to-white min-h-screen">
+  return <div className="p-4 pb-20 space-y-4 bg-gradient-to-br from-green-50 via-emerald-50 to-white min-h-screen px-[8px] py-[8px]">
       {/* Header */}
       <div className="bg-white rounded-xl p-4 text-center border border-green-100">
         <div className="flex items-center justify-center gap-2 mb-2">
@@ -87,7 +87,7 @@ export const NearbyScreen = ({
       </div>
 
       {/* Search Bar and Filters */}
-      <div className="bg-white rounded-xl p-4 border border-green-100 space-y-3">
+      <div className="bg-white rounded-xl p-4 border border-green-100 space-y-3 px-[8px] py-[8px]">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input type="text" placeholder="Search mosques..." value={searchQuery} onChange={e => {
@@ -118,7 +118,7 @@ export const NearbyScreen = ({
         length: 5
       }).map((_, index) => <div key={index} className="animate-pulse">
               <div className="h-20 bg-gray-100 rounded-xl"></div>
-            </div>) : sortedLocations && sortedLocations.length > 0 ? sortedLocations.map(location => <div key={location.id} className="bg-white rounded-xl p-4 border border-green-100 space-y-3">
+            </div>) : sortedLocations && sortedLocations.length > 0 ? sortedLocations.map(location => <div key={location.id} className="bg-white rounded-xl p-4 border border-green-100 space-y-3 px-[8px] py-[8px]">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <h3 className="text-gray-800 mb-1 text-base font-bold">
@@ -159,7 +159,7 @@ export const NearbyScreen = ({
                 </div>}
               
               <div className="flex gap-2">
-                <button onClick={() => handleViewPrayerTimings(location)} className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs font-medium py-[2px] px-[16px]">
+                <button onClick={() => handleViewPrayerTimings(location)} className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs font-medium py-[2px] px-[8px]">
                   <Clock className="w-4 h-4" />
                   View Prayer Timings
                 </button>
