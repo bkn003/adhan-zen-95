@@ -5,6 +5,10 @@ export interface Location {
   district: string;
   latitude: number;
   longitude: number;
+  sahar_food_availability?: boolean;
+  sahar_food_contact_number?: string;
+  sahar_food_time?: string;
+  women_prayer_hall?: boolean;
   created_at?: string;
   updated_at?: string;
 }

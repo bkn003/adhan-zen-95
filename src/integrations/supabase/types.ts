@@ -22,7 +22,11 @@ export type Database = {
           latitude: number
           longitude: number
           mosque_name: string
+          sahar_food_availability: boolean | null
+          sahar_food_contact_number: string | null
+          sahar_food_time: string | null
           updated_at: string | null
+          women_prayer_hall: boolean | null
         }
         Insert: {
           created_at?: string | null
@@ -31,7 +35,11 @@ export type Database = {
           latitude: number
           longitude: number
           mosque_name: string
+          sahar_food_availability?: boolean | null
+          sahar_food_contact_number?: string | null
+          sahar_food_time?: string | null
           updated_at?: string | null
+          women_prayer_hall?: boolean | null
         }
         Update: {
           created_at?: string | null
@@ -40,7 +48,11 @@ export type Database = {
           latitude?: number
           longitude?: number
           mosque_name?: string
+          sahar_food_availability?: boolean | null
+          sahar_food_contact_number?: string | null
+          sahar_food_time?: string | null
           updated_at?: string | null
+          women_prayer_hall?: boolean | null
         }
         Relationships: []
       }

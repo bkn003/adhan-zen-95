@@ -7,6 +7,7 @@ import { RamadanSpecialTimes } from '@/components/RamadanSpecialTimes';
 import { ForbiddenTimes } from '@/components/ForbiddenTimes';
 import { LocationSearch } from '@/components/LocationSearch';
 import { SaharToggle } from '@/components/SaharToggle';
+import { NextPrayerCard } from '@/components/NextPrayerCard';
 import { useLocations } from '@/hooks/useLocations';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { useHijriDate } from '@/hooks/useHijriDate';
@@ -194,18 +195,14 @@ export const HomeScreen = ({
   // Allow all prayers to show in next prayer banner, including Ramadan-specific ones
   const filteredNextPrayer = nextPrayer;
   return <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-white">
-      {/* Next Prayer Banner - Sticky */}
-      {filteredNextPrayer && timeUntilNext && <div className="sticky top-0 z-40 bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg mx-2 mb-2">
-          <div className="p-2 text-center px-0">
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-sm font-bold">Next Prayer: {filteredNextPrayer.name}</span>
-              <span className="text-xs">அடுத்த தொழுகை</span>
-              <span className="text-sm font-extrabold">{timeUntilNext} left</span>
-            </div>
-          </div>
-        </div>}
-
       <div className="p-4 space-y-4 px-[4px] py-[2px]">
+        {/* Next Prayer Card */}
+        {filteredNextPrayer && (
+          <NextPrayerCard 
+            nextPrayer={filteredNextPrayer} 
+            selectedLocation={selectedLocation || undefined}
+          />
+        )}
         {/* Combined Location Selector */}
         <div className="bg-white rounded-xl p-4 border border-green-100 shadow-sm py-[2px] px-0">
           
