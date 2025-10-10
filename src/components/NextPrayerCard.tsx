@@ -51,7 +51,7 @@ export const NextPrayerCard = ({
     };
     return tamilNames[nextPrayer.type] || '';
   };
-  return <div className="bg-gradient-to-br from-green-600 to-emerald-600 p-6 shadow-lg px-[8px] py-[4px] rounded-md">
+  return <div className="bg-gradient-to-br from-green-600 to-emerald-600 p-6 shadow-lg px-[8px] py-[4px] rounded-xl">
       <div className="flex items-center justify-between mb-4">
         {getPrayerIcon()}
         <div className="text-center flex-1">
