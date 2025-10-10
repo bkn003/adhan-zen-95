@@ -62,7 +62,7 @@ export const NextPrayerCard = ({
         <Clock className="w-8 h-8 text-white/80" />
       </div>
 
-      <div className="bg-white/10 backdrop-blur-sm p-4 border border-white/20 rounded-md">
+      <div className="bg-white/10 backdrop-blur-sm p-4 border border-white/20 rounded-md px-[8px] py-[4px]">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <div className="text-white/70 text-xs mb-1">Time Remaining</div>
