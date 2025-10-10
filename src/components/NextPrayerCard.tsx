@@ -51,7 +51,7 @@ export const NextPrayerCard = ({
     };
     return tamilNames[nextPrayer.type] || '';
   };
-  return <div className="bg-gradient-to-br from-green-600 to-emerald-600 rounded-2xl p-6 shadow-lg px-[16px] py-[4px]">
+  return <div className="bg-gradient-to-br from-green-600 to-emerald-600 rounded-2xl p-6 shadow-lg px-[8px] py-[4px]">
       <div className="flex items-center justify-between mb-4">
         {getPrayerIcon()}
         <div className="text-center flex-1">
@@ -62,7 +62,7 @@ export const NextPrayerCard = ({
         <Clock className="w-8 h-8 text-white/80" />
       </div>
 
-      <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+      <div className="bg-white/10 backdrop-blur-sm p-4 border border-white/20 rounded-md">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <div className="text-white/70 text-xs mb-1">Time Remaining</div>
@@ -79,12 +79,10 @@ export const NextPrayerCard = ({
         </div>
       </div>
 
-      {selectedLocation && (
-        <div className="mt-3 pt-3 border-t border-white/20">
+      {selectedLocation && <div className="mt-3 pt-3 border-t border-white/20">
           <div className="text-white/70 text-xs">Location</div>
           <div className="text-white text-sm font-medium">{selectedLocation.mosque_name}</div>
           <div className="text-white/60 text-xs">{selectedLocation.district}</div>
-        </div>
-      )}
+        </div>}
     </div>;
 };
