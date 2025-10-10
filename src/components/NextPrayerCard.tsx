@@ -79,6 +79,12 @@ export const NextPrayerCard = ({
         </div>
       </div>
 
-      {selectedLocation}
+      {selectedLocation && (
+        <div className="mt-3 pt-3 border-t border-white/20">
+          <div className="text-white/70 text-xs">Location</div>
+          <div className="text-white text-sm font-medium">{selectedLocation.mosque_name}</div>
+          <div className="text-white/60 text-xs">{selectedLocation.district}</div>
+        </div>
+      )}
     </div>;
 };
