@@ -41,19 +41,19 @@ export const RamadanSpecialTimes = ({
     timeColor: 'text-purple-900'
   }].filter(Boolean);
   if (specialTimes.length === 0) return null;
-  return <div className="grid grid-cols-3 gap-3 mb-4">
-      {specialTimes.map((time, index) => <div key={index} className={`${time.bgColor} rounded-xl p-4 text-center`}>
-          <div className="flex items-center justify-center mb-3">
-            <div className={`p-2 rounded-full ${time.iconBg}`}>
+  return <div className="grid grid-cols-3 gap-2 mb-4">
+      {specialTimes.map((time, index) => <div key={index} className={`${time.bgColor} rounded-lg p-3 text-center`}>
+          <div className="flex items-center justify-center mb-2">
+            <div className={`p-1.5 rounded-full ${time.iconBg}`}>
               <div className={time.textColor}>{time.icon}</div>
             </div>
           </div>
-          <div className="space-y-1">
-            <h4 className={`text-sm font-semibold ${time.textColor}`}>
+          <div className="space-y-0.5">
+            <h4 className={`text-xs font-semibold ${time.textColor}`}>
               {time.name}
             </h4>
             <p className={`text-xs ${time.textColor}`}>{time.tamilName}</p>
-            <p className={`text-lg font-bold ${time.timeColor} mt-2`}>
+            <p className={`text-sm font-bold ${time.timeColor} mt-1`}>
               {formatTo12Hour(time.adhan)}
             </p>
           </div>

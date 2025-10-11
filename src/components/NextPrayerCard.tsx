@@ -42,15 +42,7 @@ export const NextPrayerCard = ({
     return <Sun className="w-8 h-8 text-white" />;
   };
   const getTamilName = () => {
-    const tamilNames: Record<string, string> = {
-      'fajr': 'ஃபஜ்ர்',
-      'dhuhr': 'ளுஹர்',
-      'asr': 'அஸர்',
-      'maghrib': 'மஃக்ரிப்',
-      'isha': 'இஷா',
-      'jummah': 'ஜும்ஆஹ்'
-    };
-    return tamilNames[nextPrayer.type] || '';
+    return tamilText.prayers[nextPrayer.type as keyof typeof tamilText.prayers]?.tamil || '';
   };
   return <div className="bg-gradient-to-br from-green-600 to-emerald-600 p-6 shadow-lg px-[8px] py-[4px] rounded-xl">
       <div className="flex items-center justify-between mb-4">
