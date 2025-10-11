@@ -33,7 +33,7 @@ export const ForbiddenTimes = ({
         return '';
     }
   };
-  return <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+  return <div className="bg-red-50 border border-red-100 rounded-xl p-4 py-[4px] px-[16px]">
       <div className="flex items-center justify-center gap-2 mb-4">
         <AlertTriangle className="w-5 h-5 text-red-600" />
         <h3 className="text-sm font-semibold text-red-600">
