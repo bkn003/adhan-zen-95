@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Clock, Sun, Moon } from 'lucide-react';
 import { tamilText } from '@/utils/tamilText';
+import { formatTo12Hour } from '@/utils/timeFormat';
 import type { Prayer } from '@/types/prayer.types';
 interface NextPrayerCardProps {
   nextPrayer: Prayer;
@@ -73,16 +74,10 @@ export const NextPrayerCard = ({
           <div className="text-right">
             <div className="text-white/70 text-xs mb-1">Prayer Time</div>
             <div className="text-white text-3xl font-bold">
-              {nextPrayer.adhan}
+              {formatTo12Hour(nextPrayer.adhan)}
             </div>
           </div>
         </div>
       </div>
-
-      {selectedLocation && <div className="mt-3 pt-3 border-t border-white/20">
-          <div className="text-white/70 text-xs">Location</div>
-          <div className="text-white text-sm font-medium">{selectedLocation.mosque_name}</div>
-          <div className="text-white/60 text-xs">{selectedLocation.district}</div>
-        </div>}
     </div>;
 };
