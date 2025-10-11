@@ -17,6 +17,9 @@ import { usePrayerWorker } from '@/hooks/usePrayerWorker';
 import { usePrayerNotifications } from '@/hooks/usePrayerNotifications';
 import { tamilText } from '@/utils/tamilText';
 import type { Location } from '@/types/prayer.types';
+import { Capacitor } from '@capacitor/core';
+import { scheduleTodayAdhanNotifications } from '@/native/useNativeAdhanScheduler';
+import { saveDailySchedule } from '@/storage/prayerStore';
 interface HomeScreenProps {
   selectedLocationId?: string;
   onLocationSelect?: (locationId: string) => void;
@@ -141,6 +144,22 @@ export const HomeScreen = ({
       }
     }
   }, [finalPrayerTimes, selectedLocation]);
+
+  // Schedule native local notifications for Adhan (Android via Capacitor)
+  useEffect(() => {
+    if (!selectedLocation || finalPrayerTimes.length === 0) return;
+    if (!Capacitor.isNativePlatform()) return;
+
+    (async () => {
+      try {
+        await scheduleTodayAdhanNotifications(finalPrayerTimes, selectedDate);
+        await saveDailySchedule(selectedLocation.id, selectedDate, finalPrayerTimes);
+        console.log('📅 Scheduled native Adhan notifications for', selectedDate.toDateString());
+      } catch (e) {
+        console.error('Failed to schedule native Adhan notifications', e);
+      }
+    })();
+  }, [selectedLocation?.id, selectedDate, finalPrayerTimes]);
 
   // Initialize prayer worker for background adhan
   const {
