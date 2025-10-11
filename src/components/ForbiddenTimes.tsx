@@ -34,14 +34,11 @@ export const ForbiddenTimes = ({
     }
   };
   return <div className="bg-red-50 border border-red-100 rounded-xl p-4 py-[4px] px-[16px]">
-      <div className="flex items-center justify-center gap-2 mb-4">
+      <div className="flex items-center justify-center gap-2 mb-3">
         <AlertTriangle className="w-5 h-5 text-red-600" />
         <h3 className="text-sm font-semibold text-red-600">
-          {tamilText.general.forbiddenTimes.english}
+          {tamilText.general.forbiddenTimes.english} / {tamilText.general.forbiddenTimes.tamil}
         </h3>
-      </div>
-      <div className="text-center text-xs text-red-500 mb-3">
-        {tamilText.general.forbiddenTimes.tamil}
       </div>
       <div className="grid grid-cols-3 gap-4">
         {forbiddenTimes.map((time, index) => <div key={index} className="flex flex-col items-center gap-2">

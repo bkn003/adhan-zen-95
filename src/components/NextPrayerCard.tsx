@@ -56,9 +56,10 @@ export const NextPrayerCard = ({
       <div className="flex items-center justify-between mb-4">
         {getPrayerIcon()}
         <div className="text-center flex-1">
-          <div className="text-white/80 text-sm mb-1">Next Prayer</div>
-          <div className="text-white text-2xl font-bold">{nextPrayer.name}</div>
-          <div className="text-white/70 text-sm">{getTamilName()}</div>
+          <div className="text-white/80 text-sm mb-1">{tamilText.general.nextPrayer.english}</div>
+          <div className="text-white text-2xl font-bold">
+            {nextPrayer.name}/{getTamilName()}
+          </div>
         </div>
         <Clock className="w-8 h-8 text-white/80" />
       </div>

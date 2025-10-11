@@ -18,30 +18,42 @@ export const RamadanSpecialTimes = ({
   const specialTimes = [saharEnd && {
     ...saharEnd,
     tamilName: 'ஸஹர் முடிவு',
-    icon: <Moon className="w-4 h-4" />
+    icon: <Moon className="w-5 h-5" />,
+    bgColor: 'bg-purple-100',
+    iconBg: 'bg-purple-200',
+    textColor: 'text-purple-800',
+    timeColor: 'text-purple-900'
   }, iftar && {
     ...iftar,
     tamilName: 'இஃப்தார்',
-    icon: <Sun className="w-4 h-4" />
+    icon: <Sun className="w-5 h-5" />,
+    bgColor: 'bg-yellow-100',
+    iconBg: 'bg-yellow-200',
+    textColor: 'text-yellow-800',
+    timeColor: 'text-yellow-900'
   }, tharaweeh && {
     ...tharaweeh,
     tamilName: 'தராவீஹ்',
-    icon: <Moon className="w-4 h-4" />
+    icon: <Moon className="w-5 h-5" />,
+    bgColor: 'bg-purple-100',
+    iconBg: 'bg-purple-200',
+    textColor: 'text-purple-800',
+    timeColor: 'text-purple-900'
   }].filter(Boolean);
   if (specialTimes.length === 0) return null;
-  return <div className="grid grid-cols-3 gap-2 mb-4">
-      {specialTimes.map((time, index) => <div key={index} className="bg-purple-50 border border-purple-100 rounded-xl p-3 text-center px-[12px] py-0">
-          <div className="flex items-center justify-center gap-1 mb-2">
-            <div className="p-1 rounded-full bg-purple-100">
-              <div className="text-purple-600">{time.icon}</div>
+  return <div className="grid grid-cols-3 gap-3 mb-4">
+      {specialTimes.map((time, index) => <div key={index} className={`${time.bgColor} rounded-xl p-4 text-center`}>
+          <div className="flex items-center justify-center mb-3">
+            <div className={`p-2 rounded-full ${time.iconBg}`}>
+              <div className={time.textColor}>{time.icon}</div>
             </div>
           </div>
           <div className="space-y-1">
-            <h4 className="text-xs font-semibold text-purple-800">
+            <h4 className={`text-sm font-semibold ${time.textColor}`}>
               {time.name}
             </h4>
-            <p className="text-xs text-purple-600">{time.tamilName}</p>
-            <p className="text-sm font-mono font-bold text-purple-800">
+            <p className={`text-xs ${time.textColor}`}>{time.tamilName}</p>
+            <p className={`text-lg font-bold ${time.timeColor} mt-2`}>
               {formatTo12Hour(time.adhan)}
             </p>
           </div>
