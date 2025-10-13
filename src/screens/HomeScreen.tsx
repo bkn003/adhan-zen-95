@@ -19,7 +19,8 @@ import { tamilText } from '@/utils/tamilText';
 import type { Location } from '@/types/prayer.types';
 import { Capacitor } from '@capacitor/core';
 import { scheduleTodayAdhanNotifications } from '@/native/useNativeAdhanScheduler';
-import { saveDailySchedule } from '@/storage/prayerStore';
+import { saveDailySchedule, saveSelectedLocation, cacheLocations, cleanOldSchedules } from '@/storage/prayerStore';
+import { initializeOfflineAdhanService } from '@/native/offlineAdhanService';
 interface HomeScreenProps {
   selectedLocationId?: string;
   onLocationSelect?: (locationId: string) => void;
@@ -55,12 +56,28 @@ export const HomeScreen = ({
     }
   }, [selectedDate]);
 
-  // Pre-cache Adhan audio for offline playback (foreground)
+  // Initialize offline capabilities on mount
   useEffect(() => {
+    // Pre-cache Adhan audio for offline playback (foreground)
     import('@/storage/audioStore').then(({ ensureAdhanAudioCached }) => {
-      ensureAdhanAudioCached('https://www.islamcan.com/audio/adhan/azan1.mp3').catch(() => {});
+      ensureAdhanAudioCached('/adhan-native.mp3').catch(() => {});
     });
+
+    // Initialize offline Adhan service for native platforms
+    if (Capacitor.isNativePlatform()) {
+      initializeOfflineAdhanService().catch(console.error);
+    }
+
+    // Clean old schedules periodically
+    cleanOldSchedules().catch(console.error);
   }, []);
+
+  // Cache locations when they load
+  useEffect(() => {
+    if (locations && locations.length > 0) {
+      cacheLocations(locations).catch(console.error);
+    }
+  }, [locations]);
 
   // Get Hijri date for the selected date
   const { data: hijriDate } = useHijriDate(selectedDate);
@@ -151,17 +168,27 @@ export const HomeScreen = ({
   }, [finalPrayerTimes, selectedLocation]);
 
   // Schedule native local notifications for Adhan (Android via Capacitor)
+  // AND save to IndexedDB for offline use
   useEffect(() => {
     if (!selectedLocation || finalPrayerTimes.length === 0) return;
     if (!Capacitor.isNativePlatform()) return;
 
     (async () => {
       try {
+        // Save to IndexedDB for offline use
+        await saveDailySchedule(
+          selectedLocation.id, 
+          selectedDate, 
+          finalPrayerTimes,
+          selectedLocation.mosque_name
+        );
+
+        // Schedule notifications
         await scheduleTodayAdhanNotifications(finalPrayerTimes, selectedDate);
-        await saveDailySchedule(selectedLocation.id, selectedDate, finalPrayerTimes);
-        console.log('📅 Scheduled native Adhan notifications for', selectedDate.toDateString());
+        
+        console.log('✅ Scheduled native Adhan notifications + saved for offline:', selectedDate.toDateString());
       } catch (e) {
-        console.error('Failed to schedule native Adhan notifications', e);
+        console.error('❌ Failed to schedule native Adhan notifications:', e);
       }
     })();
   }, [selectedLocation?.id, selectedDate, finalPrayerTimes]);
@@ -203,6 +230,14 @@ export const HomeScreen = ({
     console.log('Location changed to:', location);
     setSelectedLocation(location);
     localStorage.setItem('selectedLocationId', location.id);
+    
+    // Save to IndexedDB for offline access
+    saveSelectedLocation({
+      id: location.id,
+      mosque_name: location.mosque_name,
+      district: location.district
+    }).catch(console.error);
+    
     onLocationSelect?.(location.id);
   };
 
