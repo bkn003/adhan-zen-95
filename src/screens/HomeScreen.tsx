@@ -55,10 +55,15 @@ export const HomeScreen = ({
     }
   }, [selectedDate]);
 
+  // Pre-cache Adhan audio for offline playback (foreground)
+  useEffect(() => {
+    import('@/storage/audioStore').then(({ ensureAdhanAudioCached }) => {
+      ensureAdhanAudioCached('https://www.islamcan.com/audio/adhan/azan1.mp3').catch(() => {});
+    });
+  }, []);
+
   // Get Hijri date for the selected date
-  const {
-    data: hijriDate
-  } = useHijriDate(selectedDate);
+  const { data: hijriDate } = useHijriDate(selectedDate);
   console.log('🗓️ HomeScreen hijriDate:', hijriDate);
   // Try static prayer times first
   const { data: staticPrayerTimesData, isLoading: isStaticLoading, error: staticError } = useStaticPrayerTimes(

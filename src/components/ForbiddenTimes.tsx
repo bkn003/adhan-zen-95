@@ -33,24 +33,37 @@ export const ForbiddenTimes = ({
         return '';
     }
   };
-  return <div className="bg-red-50 border border-red-100 rounded-xl p-4 py-[4px] px-[16px]">
-      <div className="flex items-center justify-center gap-2 mb-3">
+  return (
+    <div className="rounded-xl border border-red-200 bg-red-50 p-3">
+      <div className="flex items-start gap-2 mb-2">
         <AlertTriangle className="w-5 h-5 text-red-600" />
-        <h3 className="text-sm font-semibold text-red-600">
-          {tamilText.general.forbiddenTimes.english} / {tamilText.general.forbiddenTimes.tamil}
-        </h3>
+        <div>
+          <h3 className="text-sm font-semibold text-red-700">
+            {tamilText.general.forbiddenTimes.english}
+          </h3>
+          <p className="text-xs text-red-600 -mt-0.5">
+            {tamilText.general.forbiddenTimes.tamil}
+          </p>
+        </div>
       </div>
-      <div className="grid grid-cols-3 gap-4">
-        {forbiddenTimes.map((time, index) => <div key={index} className="flex flex-col items-center gap-2">
-            <div className="text-red-600">
+
+      <div className="grid grid-cols-3 gap-2">
+        {forbiddenTimes.map((time, index) => (
+          <div
+            key={index}
+            className="rounded-lg border border-red-100 bg-white/60 p-2 text-center shadow-[0_1px_0_rgba(0,0,0,0.02)]"
+          >
+            <div className="flex items-center justify-center gap-1 text-red-600">
               {getIcon(time.type)}
+              <span className="text-[11px] font-medium">{time.name}</span>
             </div>
-            <div className="text-center">
-              <div className="text-sm font-semibold text-red-600">{time.name}</div>
-              <div className="text-xs text-red-500">{getTamilName(time.type)}</div>
+            <div className="text-[11px] text-red-500">{getTamilName(time.type)}</div>
+            <div className="mt-1 text-sm font-bold text-red-700">
+              {formatTo12Hour(time.time)}
             </div>
-            <div className="text-sm font-bold text-red-700">{formatTo12Hour(time.time)}</div>
-          </div>)}
+          </div>
+        ))}
       </div>
-    </div>;
+    </div>
+  );
 };
