@@ -16,10 +16,10 @@ import { getPrayerTimesForDate } from '@/utils/staticPrayerTimes';
 import { usePrayerWorker } from '@/hooks/usePrayerWorker';
 import { usePrayerNotifications } from '@/hooks/usePrayerNotifications';
 import { tamilText } from '@/utils/tamilText';
-import type { Location } from '@/types/prayer.types';
+import type { Location, Prayer } from '@/types/prayer.types';
 import { Capacitor } from '@capacitor/core';
 import { scheduleTodayAdhanNotifications } from '@/native/useNativeAdhanScheduler';
-import { saveDailySchedule, saveSelectedLocation, cacheLocations, cleanOldSchedules } from '@/storage/prayerStore';
+import { saveDailySchedule, saveSelectedLocation, cacheLocations, cleanOldSchedules, loadDailySchedule } from '@/storage/prayerStore';
 import { initializeOfflineAdhanService } from '@/native/offlineAdhanService';
 import { useRamadanContext } from '@/contexts/RamadanContext';
 interface HomeScreenProps {
@@ -36,6 +36,8 @@ export const HomeScreen = ({
     data: locations,
     isLoading: locationsLoading
   } = useLocations();
+
+  const [offlineFallbackTimes, setOfflineFallbackTimes] = useState<Prayer[]>([]);
 
   // Load selected date from sessionStorage or use current date
   useEffect(() => {
@@ -130,8 +132,29 @@ export const HomeScreen = ({
     setIsRamadan(isRamadan);
   }, [isRamadan, setIsRamadan]);
 
+  // Offline fallback: load stored prayers from IndexedDB when no data available
+  useEffect(() => {
+    if (!selectedLocation || !selectedDate) return;
+    if (processedPrayerTimes.length > 0 || prayerTimes.length > 0) {
+      setOfflineFallbackTimes([]);
+      return;
+    }
+    loadDailySchedule(selectedLocation.id, selectedDate)
+      .then((stored) => {
+        if ((stored as any)?.prayers?.length) {
+          setOfflineFallbackTimes((stored as any).prayers as Prayer[]);
+        }
+      })
+      .catch(console.error);
+  }, [selectedLocation?.id, selectedDate, processedPrayerTimes, prayerTimes]);
+
   // Use processed data if available, otherwise use hook data
-  const finalPrayerTimes = processedPrayerTimes.length > 0 ? processedPrayerTimes : prayerTimes;
+  const finalPrayerTimes =
+    processedPrayerTimes.length > 0
+      ? processedPrayerTimes
+      : prayerTimes.length > 0
+        ? prayerTimes
+        : offlineFallbackTimes;
   const finalForbiddenTimes = processedForbiddenTimes.length > 0 ? processedForbiddenTimes : forbiddenTimes;
 
   // Native Median.co Adhan scheduling integration

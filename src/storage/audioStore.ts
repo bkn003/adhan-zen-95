@@ -12,7 +12,7 @@ export async function ensureAdhanAudioCached(sourceUrl: string): Promise<void> {
     }
 
     console.log('⬇️ Downloading Adhan audio for offline use...');
-    const res = await fetch(sourceUrl, { cache: 'force-cache' });
+    const res = await fetch(sourceUrl, { cache: 'force-cache' }); // expects /adhan-native.mp3
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     
     const blob = await res.blob();
