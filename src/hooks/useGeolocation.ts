@@ -168,19 +168,23 @@ export const useGeolocation = () => {
   const calculateQiblaDirection = (): number => {
     if (!state.latitude || !state.longitude) return 0;
     
-    // Coordinates for Kaaba, Mecca
-    const meccaLat = 21.4225;
-    const meccaLon = 39.8262;
+    // Coordinates for Kaaba, Mecca (improved precision)
+    const meccaLat = 21.422487;
+    const meccaLon = 39.826206;
     
+    // Convert to radians
     const lat1 = state.latitude * (Math.PI / 180);
     const lat2 = meccaLat * (Math.PI / 180);
     const deltaLon = (meccaLon - state.longitude) * (Math.PI / 180);
     
-    const x = Math.sin(deltaLon) * Math.cos(lat2);
-    const y = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLon);
+    // Calculate bearing using the forward azimuth formula
+    const y = Math.sin(deltaLon);
+    const x = Math.cos(lat1) * Math.tan(lat2) - Math.sin(lat1) * Math.cos(deltaLon);
     
-    const bearing = Math.atan2(x, y);
-    return ((bearing * (180 / Math.PI)) + 360) % 360;
+    const bearing = Math.atan2(y, x);
+    const qiblaDirection = ((bearing * (180 / Math.PI)) + 360) % 360;
+    
+    return qiblaDirection;
   };
 
   const getCompassDirection = (degrees: number): string => {

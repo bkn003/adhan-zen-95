@@ -100,5 +100,16 @@ export async function scheduleTodayAdhanNotifications(prayers: Prayer[], baseDat
 
   if (notifications.length) {
     await LocalNotifications.schedule({ notifications });
+    
+    // Store prayer data for boot receiver to reschedule
+    try {
+      const prayerData = {
+        prayers: prayers.map(p => ({ name: p.name, adhan: p.adhan, type: p.type })),
+        date: baseDate.getTime(),
+      };
+      localStorage.setItem('native_prayer_data', JSON.stringify(prayerData));
+    } catch (e) {
+      console.warn('Failed to store prayer data for boot recovery:', e);
+    }
   }
 }

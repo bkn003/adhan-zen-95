@@ -106,13 +106,15 @@ export const QiblaScreen = () => {
         <div className="flex flex-col items-center">
           {/* Compass accuracy indicator */}
           <div className="flex items-center gap-2 mb-4">
-            <div className={`w-3 h-3 rounded-full ${heading !== null ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
+            <div className={`w-3 h-3 rounded-full ${
+              (magneticHeading !== null || heading !== null) ? 'bg-green-500' : 'bg-amber-500'
+            } animate-pulse`}></div>
             <span className="text-sm text-gray-600">
-              {heading !== null ? 'Compass Active' : 'Compass Inactive'}
+              {(magneticHeading !== null || heading !== null) ? 'Compass Active' : 'Calibrating...'}
             </span>
             {deviceHeading && (
               <span className="text-xs text-gray-400 ml-2">
-                Updated {Math.floor((Date.now() - lastUpdate) / 1000)}s ago
+                {Math.round(deviceHeading)}°
               </span>
             )}
           </div>

@@ -38,6 +38,9 @@ class AthanBootReceiver : BroadcastReceiver() {
                 notificationManager.createNotificationChannel(channel)
                 Log.d("AthanBootReceiver", "Adhan channel recreated successfully")
                 
+                // Attempt to reschedule notifications from stored data
+                AdhanRescheduler.rescheduleNotifications(context)
+                
             } catch (e: Exception) {
                 Log.e("AthanBootReceiver", "Failed to recreate channel", e)
             }
