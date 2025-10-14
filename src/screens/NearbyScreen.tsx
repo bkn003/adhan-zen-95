@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { MapPin, Clock, Navigation, Search, Utensils, Users } from 'lucide-react';
 import { useLocations } from '@/hooks/useLocations';
 import { useGeolocation } from '@/hooks/useGeolocation';
+import { useRamadanContext } from '@/contexts/RamadanContext';
 import { tamilText } from '@/utils/tamilText';
 import { Button } from '@/components/ui/button';
 import type { Location } from '@/types/prayer.types';
@@ -26,6 +27,7 @@ export const NearbyScreen = ({
     longitude,
     calculateDistance
   } = useGeolocation();
+  const { isRamadan } = useRamadanContext();
 
   // Filter locations based on search query and filters
   const filteredLocations = locations?.filter(location => {
@@ -134,8 +136,8 @@ export const NearbyScreen = ({
                 </div>
               </div>
               
-              {/* Sahar Food Info */}
-              {location.sahar_food_availability && <div className="bg-green-50 border border-green-100 rounded-lg p-3 space-y-1">
+              {/* Sahar Food Info - Only show during Ramadan */}
+              {isRamadan && location.sahar_food_availability && <div className="bg-green-50 border border-green-100 rounded-lg p-3 space-y-1">
                   <div className="flex items-center gap-2 text-green-700 font-medium text-sm">
                     <Utensils className="w-4 h-4" />
                     <span>Sahar Food Available</span>

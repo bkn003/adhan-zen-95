@@ -21,6 +21,7 @@ import { Capacitor } from '@capacitor/core';
 import { scheduleTodayAdhanNotifications } from '@/native/useNativeAdhanScheduler';
 import { saveDailySchedule, saveSelectedLocation, cacheLocations, cleanOldSchedules } from '@/storage/prayerStore';
 import { initializeOfflineAdhanService } from '@/native/offlineAdhanService';
+import { useRamadanContext } from '@/contexts/RamadanContext';
 interface HomeScreenProps {
   selectedLocationId?: string;
   onLocationSelect?: (locationId: string) => void;
@@ -121,6 +122,13 @@ export const HomeScreen = ({
     saharTime,
     isLoading: prayerTimesLoading
   } = usePrayerTimes(selectedLocation?.id, selectedDate, hijriDate?.monthNumber);
+
+  // Sync Ramadan state to context for use in other screens
+  const { setIsRamadan } = useRamadanContext();
+  
+  useEffect(() => {
+    setIsRamadan(isRamadan);
+  }, [isRamadan, setIsRamadan]);
 
   // Use processed data if available, otherwise use hook data
   const finalPrayerTimes = processedPrayerTimes.length > 0 ? processedPrayerTimes : prayerTimes;
