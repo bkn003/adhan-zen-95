@@ -18,6 +18,7 @@ export const NearbyScreen = ({
   const [isSearching, setIsSearching] = useState(false);
   const [filterSaharFood, setFilterSaharFood] = useState(false);
   const [filterWomenHall, setFilterWomenHall] = useState(false);
+  const [displayCount, setDisplayCount] = useState(10);
   const {
     data: locations,
     isLoading
@@ -57,6 +58,14 @@ export const NearbyScreen = ({
     }
     return a.mosque_name.localeCompare(b.mosque_name);
   });
+
+  // Paginated locations - show only displayCount items
+  const displayedLocations = sortedLocations?.slice(0, displayCount);
+  const hasMore = sortedLocations && sortedLocations.length > displayCount;
+
+  const handleLoadMore = () => {
+    setDisplayCount(prev => prev + 10);
+  };
   const handleGetDirections = (location: Location) => {
     const destination = `${location.latitude},${location.longitude}`;
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
@@ -120,7 +129,7 @@ export const NearbyScreen = ({
         length: 5
       }).map((_, index) => <div key={index} className="animate-pulse">
               <div className="h-20 bg-gray-100 rounded-xl"></div>
-            </div>) : sortedLocations && sortedLocations.length > 0 ? sortedLocations.map(location => <div key={location.id} className="bg-white rounded-xl p-4 border border-green-100 space-y-3 px-[8px] py-[8px]">
+            </div>) : displayedLocations && displayedLocations.length > 0 ? displayedLocations.map(location => <div key={location.id} className="bg-white rounded-xl p-4 border border-green-100 space-y-3 px-[8px] py-[8px]">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <h3 className="text-gray-800 mb-1 text-base font-bold">
@@ -175,6 +184,20 @@ export const NearbyScreen = ({
               {searchQuery || filterSaharFood || filterWomenHall ? 'No mosques found matching your search criteria.' : 'No mosques found nearby.'}
             </p>
           </div>}
+
+        {/* Load More Button */}
+        {hasMore && !isLoading && !isSearching && (
+          <div className="flex justify-center pt-4">
+            <Button 
+              onClick={handleLoadMore}
+              variant="outline"
+              size="lg"
+              className="w-full max-w-xs bg-white hover:bg-green-50 border-green-200 text-green-700 font-semibold"
+            >
+              Load More Mosques
+            </Button>
+          </div>
+        )}
       </div>
     </div>;
 };

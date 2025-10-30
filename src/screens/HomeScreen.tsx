@@ -21,6 +21,7 @@ import { Capacitor } from '@capacitor/core';
 import { scheduleTodayAdhanNotifications } from '@/native/useNativeAdhanScheduler';
 import { saveDailySchedule, saveSelectedLocation, cacheLocations, cleanOldSchedules, loadDailySchedule } from '@/storage/prayerStore';
 import { initializeOfflineAdhanService } from '@/native/offlineAdhanService';
+import { scheduleAdhanWithMedian, savePrayerTimesForBoot, registerMedianPrayerTimesSaver, isMedianApp } from '@/native/medianBridge';
 import { useRamadanContext } from '@/contexts/RamadanContext';
 interface HomeScreenProps {
   selectedLocationId?: string;
@@ -157,46 +158,47 @@ export const HomeScreen = ({
         : offlineFallbackTimes;
   const finalForbiddenTimes = processedForbiddenTimes.length > 0 ? processedForbiddenTimes : forbiddenTimes;
 
-  // Native Median.co Adhan scheduling integration
+  // Enhanced Median.co Adhan scheduling integration
   useEffect(() => {
     if (finalPrayerTimes.length > 0 && selectedLocation) {
-      // Convert prayer times to required format
-      const todayPrayerTimes: Record<string, string> = {};
-      
-      finalPrayerTimes.forEach(prayer => {
-        switch (prayer.type) {
-          case 'fajr':
-            todayPrayerTimes.fajr = prayer.adhan;
-            break;
-          case 'dhuhr':
-            todayPrayerTimes.dhuhr = prayer.adhan;
-            break;
-          case 'asr':
-            todayPrayerTimes.asr = prayer.adhan;
-            break;
-          case 'maghrib':
-            todayPrayerTimes.maghrib = prayer.adhan;
-            break;
-          case 'isha':
-            todayPrayerTimes.isha = prayer.adhan;
-            break;
-          case 'jummah':
-            // Only include Jummah if today is Friday
-            const today = new Date();
-            if (today.getDay() === 5) { // Friday
-              todayPrayerTimes.jummah = prayer.adhan;
-            }
-            break;
-        }
-      });
-
-      // Call native Median.co integration if available
-      if (typeof window !== 'undefined' && (window as any).saveTodayPrayerTimes) {
-        console.log('📱 Scheduling native Adhan times:', todayPrayerTimes);
+      // Schedule via Median.co bridge if available
+      if (isMedianApp()) {
+        scheduleAdhanWithMedian(finalPrayerTimes, selectedDate);
+        savePrayerTimesForBoot(finalPrayerTimes);
+        registerMedianPrayerTimesSaver(finalPrayerTimes);
+      } 
+      // Fallback to legacy window.saveTodayPrayerTimes for compatibility
+      else if (typeof window !== 'undefined' && (window as any).saveTodayPrayerTimes) {
+        const todayPrayerTimes: Record<string, string> = {};
+        finalPrayerTimes.forEach(prayer => {
+          switch (prayer.type) {
+            case 'fajr':
+              todayPrayerTimes.fajr = prayer.adhan;
+              break;
+            case 'dhuhr':
+              todayPrayerTimes.dhuhr = prayer.adhan;
+              break;
+            case 'asr':
+              todayPrayerTimes.asr = prayer.adhan;
+              break;
+            case 'maghrib':
+              todayPrayerTimes.maghrib = prayer.adhan;
+              break;
+            case 'isha':
+              todayPrayerTimes.isha = prayer.adhan;
+              break;
+            case 'jummah':
+              if (selectedDate.getDay() === 5) {
+                todayPrayerTimes.jummah = prayer.adhan;
+              }
+              break;
+          }
+        });
+        console.log('📱 Scheduling native Adhan times (legacy):', todayPrayerTimes);
         (window as any).saveTodayPrayerTimes(todayPrayerTimes);
       }
     }
-  }, [finalPrayerTimes, selectedLocation]);
+  }, [finalPrayerTimes, selectedLocation, selectedDate]);
 
   // Schedule native local notifications for Adhan (Android via Capacitor)
   // AND save to IndexedDB for offline use
