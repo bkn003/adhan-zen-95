@@ -34,6 +34,13 @@
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
 
+        <!-- Foreground Service for Adhan Playback -->
+        <service
+            android:name=".AdhanForegroundService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
         <!-- Boot Receiver for rescheduling notifications after device restart -->
         <receiver
             android:name=".AthanBootReceiver"

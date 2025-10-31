@@ -23,6 +23,7 @@ import { saveDailySchedule, saveSelectedLocation, cacheLocations, cleanOldSchedu
 import { initializeOfflineAdhanService } from '@/native/offlineAdhanService';
 import { scheduleAdhanWithMedian, savePrayerTimesForBoot, registerMedianPrayerTimesSaver, isMedianApp } from '@/native/medianBridge';
 import { useRamadanContext } from '@/contexts/RamadanContext';
+import { useAdhanInitializer } from '@/hooks/useAdhanInitializer';
 interface HomeScreenProps {
   selectedLocationId?: string;
   onLocationSelect?: (locationId: string) => void;
@@ -37,6 +38,9 @@ export const HomeScreen = ({
     data: locations,
     isLoading: locationsLoading
   } = useLocations();
+
+  // Initialize Adhan system (download audio, setup offline support)
+  const { isInitialized, audioReady } = useAdhanInitializer();
 
   const [offlineFallbackTimes, setOfflineFallbackTimes] = useState<Prayer[]>([]);
 

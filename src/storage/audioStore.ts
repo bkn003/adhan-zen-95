@@ -2,6 +2,32 @@ import { get, set } from 'idb-keyval';
 
 const AUDIO_KEY = 'adhan_audio_blob_v2';
 
+/**
+ * Store Adhan audio blob directly to IndexedDB
+ */
+export async function storeAdhanAudio(audioBlob: Blob): Promise<void> {
+  try {
+    await set(AUDIO_KEY, audioBlob);
+    console.log('💾 Adhan audio stored to IndexedDB:', audioBlob.size, 'bytes');
+  } catch (e) {
+    console.error('❌ Failed to store adhan audio:', e);
+    throw e;
+  }
+}
+
+/**
+ * Get cached audio blob
+ */
+export async function getAdhanAudio(): Promise<Blob | undefined> {
+  try {
+    const blob = (await get(AUDIO_KEY)) as Blob | undefined;
+    return blob;
+  } catch (e) {
+    console.error('❌ Failed to get adhan audio:', e);
+    return undefined;
+  }
+}
+
 // Cache the Adhan audio for offline foreground playback
 export async function ensureAdhanAudioCached(sourceUrl: string): Promise<void> {
   try {
