@@ -41,6 +41,14 @@ class AthanBootReceiver : BroadcastReceiver() {
                 // Attempt to reschedule notifications from stored data
                 AdhanRescheduler.rescheduleNotifications(context)
                 
+                // Schedule daily background updates
+                AdhanDailyUpdateReceiver.scheduleDailyUpdate(context)
+                
+                // Immediately fetch new prayer times if internet available
+                Thread {
+                    PrayerTimeFetcher.fetchAndUpdatePrayerTimes(context)
+                }.start()
+                
             } catch (e: Exception) {
                 Log.e("AthanBootReceiver", "Failed to recreate channel", e)
             }

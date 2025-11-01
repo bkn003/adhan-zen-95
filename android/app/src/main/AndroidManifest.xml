@@ -57,6 +57,12 @@
             android:name=".AdhanAlarmReceiver"
             android:enabled="true"
             android:exported="false" />
+
+        <!-- Daily Update Receiver for automatic prayer time updates -->
+        <receiver
+            android:name=".AdhanDailyUpdateReceiver"
+            android:enabled="true"
+            android:exported="false" />
  
      </application>
 
