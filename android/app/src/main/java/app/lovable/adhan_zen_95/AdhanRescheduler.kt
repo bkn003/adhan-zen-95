@@ -16,7 +16,8 @@ import java.util.*
 object AdhanRescheduler {
     
     private const val TAG = "AdhanRescheduler"
-    private const val PREFS_NAME = "prayer_times"
+    // Read from Capacitor Preferences store where JS writes the schedule
+    private const val PREFS_NAME = "CapacitorPreferences"
     private const val KEY_PRAYER_DATA = "today_prayers"
     
     fun rescheduleNotifications(context: Context) {
@@ -45,10 +46,11 @@ object AdhanRescheduler {
                 return
             }
             
-            // Schedule notifications
-            val notifications = mutableListOf<JSObject>()
+            // Schedule exact alarms that will start the foreground service to play Adhan
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
             val now = System.currentTimeMillis()
             var idBase = (baseDate.time / 1000 % 1000000).toInt() * 10
+            var scheduledCount = 0
             
             for (i in 0 until prayers.length()) {
                 val prayer = prayers.getJSONObject(i)
@@ -64,30 +66,27 @@ object AdhanRescheduler {
                 val prayerDate = parseTimeToDate(adhanTime, baseDate)
                 
                 if (prayerDate.time > now) {
-                    val notification = JSObject().apply {
-                        put("id", ++idBase)
-                        put("title", "$prayerName Adhan")
-                        put("body", "It's time for prayer")
-                        put("schedule", JSObject().apply {
-                            put("at", prayerDate.time)
-                            put("allowWhileIdle", true)
-                        })
-                        put("channelId", "adhan_channel")
-                        put("sound", "azan1")
-                        put("smallIcon", "ic_stat_name")
-                        put("actionTypeId", "OPEN_APP")
-                        put("extra", JSObject().apply {
-                            put("type", prayerType)
-                        })
+                    val intent = android.content.Intent(context, AdhanAlarmReceiver::class.java).apply {
+                        action = AdhanForegroundService.ACTION_PLAY_ADHAN
+                        putExtra(AdhanForegroundService.EXTRA_PRAYER_NAME, prayerName)
                     }
-                    notifications.add(notification)
+                    val pendingIntent = android.app.PendingIntent.getBroadcast(
+                        context,
+                        ++idBase,
+                        intent,
+                        android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+                    )
+                    alarmManager.setExactAndAllowWhileIdle(
+                        android.app.AlarmManager.RTC_WAKEUP,
+                        prayerDate.time,
+                        pendingIntent
+                    )
+                    scheduledCount++
                 }
             }
             
-            if (notifications.isNotEmpty()) {
-                Log.d(TAG, "Scheduling ${notifications.size} Adhan notifications")
-                // Note: This would require access to LocalNotificationsPlugin instance
-                // In practice, the JS app should reschedule when opened
+            if (scheduledCount > 0) {
+                Log.d(TAG, "Scheduled $scheduledCount Adhan alarms after boot")
             } else {
                 Log.d(TAG, "No future prayer times to schedule today")
             }

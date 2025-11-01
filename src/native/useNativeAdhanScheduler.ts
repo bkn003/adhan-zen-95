@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications, Channel, LocalNotificationSchema } from '@capacitor/local-notifications';
+import { Preferences } from '@capacitor/preferences';
 import type { Prayer } from '@/types/prayer.types';
 
 // Helper: parse "HH:mm" or "hh:mm AM" into a Date on a given day
@@ -107,7 +108,12 @@ export async function scheduleTodayAdhanNotifications(prayers: Prayer[], baseDat
         prayers: prayers.map(p => ({ name: p.name, adhan: p.adhan, type: p.type })),
         date: baseDate.getTime(),
       };
+      // Helpful for web debugging
       localStorage.setItem('native_prayer_data', JSON.stringify(prayerData));
+      // Persist to Android SharedPreferences via Capacitor Preferences so BootReceiver can read it
+      if (Capacitor.isNativePlatform()) {
+        await Preferences.set({ key: 'today_prayers', value: JSON.stringify(prayerData) });
+      }
     } catch (e) {
       console.warn('Failed to store prayer data for boot recovery:', e);
     }

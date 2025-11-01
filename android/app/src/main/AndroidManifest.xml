@@ -52,7 +52,13 @@
             </intent-filter>
         </receiver>
 
-    </application>
+        <!-- Alarm Receiver to start ForegroundService at prayer times -->
+        <receiver
+            android:name=".AdhanAlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
+ 
+     </application>
 
     <!-- Permissions for notifications, exact alarms, and foreground playback -->
     <uses-permission android:name="android.permission.INTERNET" />
