@@ -5,7 +5,6 @@ import { LocationSelector } from '@/components/LocationSelector';
 import { RamadanToggle } from '@/components/RamadanToggle';
 import { RamadanSpecialTimes } from '@/components/RamadanSpecialTimes';
 import { ForbiddenTimes } from '@/components/ForbiddenTimes';
-import { LocationSearch } from '@/components/LocationSearch';
 import { SaharToggle } from '@/components/SaharToggle';
 import { NextPrayerCard } from '@/components/NextPrayerCard';
 import { useLocations } from '@/hooks/useLocations';
@@ -299,15 +298,9 @@ export const HomeScreen = ({
             selectedLocation={selectedLocation || undefined}
           />
         )}
-        {/* Combined Location Selector */}
-        <div className="bg-white rounded-xl p-4 border border-green-100 shadow-sm py-[2px] px-0">
-          
+        {/* Location Selector */}
+        <div className="bg-white rounded-xl p-4 border border-green-100 shadow-sm">
           <LocationSelector selectedLocation={selectedLocation} onLocationChange={handleLocationChange} />
-        </div>
-
-        {/* Location Search */}
-        <div className="bg-white rounded-xl p-4 border border-gray-100 px-[4px] py-0">
-          <LocationSearch selectedLocation={selectedLocation} onLocationChange={handleLocationChange} placeholder="Search for mosques..." />
         </div>
 
         {/* Hijri Date */}
