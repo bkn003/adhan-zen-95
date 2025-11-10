@@ -12,6 +12,7 @@ export const LocationSelector = ({
   onLocationChange
 }: LocationSelectorProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const {
     data: locations,
     isLoading
@@ -39,15 +40,21 @@ export const LocationSelector = ({
     longitude,
     calculateDistance
   } = useGeolocation();
-  const sortedLocations = locations?.map(location => ({
-    ...location,
-    distance: latitude && longitude ? calculateDistance(latitude, longitude, location.latitude, location.longitude) : null
-  })).sort((a, b) => {
-    if (a.distance !== null && b.distance !== null) {
-      return a.distance - b.distance;
-    }
-    return a.mosque_name.localeCompare(b.mosque_name);
-  });
+  const filteredAndSortedLocations = locations
+    ?.filter(location => 
+      location.mosque_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      location.district.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .map(location => ({
+      ...location,
+      distance: latitude && longitude ? calculateDistance(latitude, longitude, location.latitude, location.longitude) : null
+    }))
+    .sort((a, b) => {
+      if (a.distance !== null && b.distance !== null) {
+        return a.distance - b.distance;
+      }
+      return a.mosque_name.localeCompare(b.mosque_name);
+    });
   const handleGetDirections = (location: Location) => {
     const destination = `${location.latitude},${location.longitude}`;
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -82,29 +89,50 @@ export const LocationSelector = ({
         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
-      {isOpen && <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-          {sortedLocations?.map(location => <div key={location.id} className="flex items-center justify-between p-2 hover:bg-muted transition-colors border-b border-border last:border-b-0">
-              <button onClick={() => {
-          onLocationChange(location);
-          setIsOpen(false);
-        }} className="flex-1 text-left">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{location.mosque_name}</p>
-                    <p className="text-xs text-muted-foreground">{location.district}</p>
-                  </div>
-                  {location.distance && <span className="text-xs text-green-600 font-medium">
-                      {location.distance.toFixed(1)} km
-                    </span>}
+      {isOpen && <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 max-h-64 overflow-hidden">
+          <div className="p-2 border-b border-border bg-card sticky top-0">
+            <input
+              type="text"
+              placeholder="Search for mosques..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              autoFocus
+            />
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {filteredAndSortedLocations?.length === 0 ? (
+              <div className="p-4 text-center text-muted-foreground text-sm">
+                No mosques found
+              </div>
+            ) : (
+              filteredAndSortedLocations?.map(location => (
+                <div key={location.id} className="flex items-center justify-between p-2 hover:bg-muted transition-colors border-b border-border last:border-b-0">
+                  <button onClick={() => {
+                    onLocationChange(location);
+                    setIsOpen(false);
+                    setSearchQuery('');
+                  }} className="flex-1 text-left">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{location.mosque_name}</p>
+                        <p className="text-xs text-muted-foreground">{location.district}</p>
+                      </div>
+                      {location.distance && <span className="text-xs text-green-600 font-medium">
+                        {location.distance.toFixed(1)} km
+                      </span>}
+                    </div>
+                  </button>
+                  <button onClick={e => {
+                    e.stopPropagation();
+                    handleGetDirections(location);
+                  }} className="ml-2 p-1 text-green-600 hover:bg-green-50 rounded transition-colors" title="Get Directions">
+                    <Navigation className="w-3 h-3" />
+                  </button>
                 </div>
-              </button>
-              <button onClick={e => {
-          e.stopPropagation();
-          handleGetDirections(location);
-        }} className="ml-2 p-1 text-green-600 hover:bg-green-50 rounded transition-colors" title="Get Directions">
-                <Navigation className="w-3 h-3" />
-              </button>
-            </div>)}
+              ))
+            )}
+          </div>
         </div>}
     </div>;
 };
