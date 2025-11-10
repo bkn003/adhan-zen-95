@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { MapPin, Calendar, Palette, Volume2, Clock } from 'lucide-react';
 import { tamilText } from '@/utils/tamilText';
 import { LocationSelector } from '@/components/LocationSelector';
-import { LocationSearch } from '@/components/LocationSearch';
 import { HijriAdjustment } from '@/components/HijriAdjustment';
 import { useLocations } from '@/hooks/useLocations';
 import type { Location } from '@/types/prayer.types';
@@ -111,12 +110,6 @@ export const SettingsScreen = () => {
       <div className="bg-white rounded-xl p-4 border border-gray-100">
         <h3 className="font-semibold text-gray-800 mb-3">Location</h3>
         <LocationSelector selectedLocation={selectedLocation} onLocationChange={handleLocationChange} />
-      </div>
-
-      {/* Location Search */}
-      <div className="bg-white rounded-xl p-4 border border-gray-100">
-        <h3 className="font-semibold text-gray-800 mb-3">Search Mosques</h3>
-        <LocationSearch selectedLocation={selectedLocation} onLocationChange={handleLocationChange} placeholder="Search for mosques..." />
       </div>
 
       {/* Date Selection */}
