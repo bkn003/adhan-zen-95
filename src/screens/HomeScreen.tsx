@@ -310,6 +310,45 @@ export const HomeScreen = ({
       {/* Ramadan Special Times */}
       <RamadanSpecialTimes prayers={finalPrayerTimes} isRamadan={isRamadan} />
 
+      {/* Prayer Times Heading */}
+      {!isLoading && finalPrayerTimes.length > 0 && (() => {
+        const now = new Date();
+        const isFriday = now.getDay() === 5;
+        const isJummahTime = isFriday && finalPrayerTimes.some(p => {
+          if (p.name === 'Jummah' || p.name.includes('Dhuhr') || p.name.includes('Zuhr')) {
+            const adhanTime = new Date(p.adhanTime);
+            const iqamahTime = p.iqamahTime ? new Date(p.iqamahTime) : null;
+            if (iqamahTime) {
+              return now >= adhanTime && now <= iqamahTime;
+            }
+          }
+          return false;
+        });
+
+        return (
+          <div className="bg-white rounded-xl border border-green-100 shadow-sm">
+            <div className="grid grid-cols-3 text-center py-3 border-b border-green-100">
+              <div>
+                <p className="text-sm font-semibold text-gray-700">{tamilText.general.prayer.english}</p>
+                <p className="text-xs text-gray-500">{tamilText.general.prayer.tamil}</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-700">{tamilText.times.adhan.english}</p>
+                <p className="text-xs text-gray-500">{tamilText.times.adhan.tamil}</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-700">
+                  {isJummahTime ? tamilText.times.khutbah.english : tamilText.times.iqamah.english}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {isJummahTime ? tamilText.times.khutbah.tamil : tamilText.times.iqamah.tamil}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Prayer Times Cards */}
       {isLoading ? <div className="space-y-2">
           {[1, 2, 3, 4, 5].map(i => <div key={i} className="animate-pulse">

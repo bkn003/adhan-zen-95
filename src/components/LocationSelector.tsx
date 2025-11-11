@@ -89,14 +89,14 @@ export const LocationSelector = ({
         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
-      {isOpen && <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 max-h-64 overflow-hidden">
-          <div className="p-2 border-b border-border bg-card sticky top-0">
+      {isOpen && <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 max-h-64 overflow-hidden w-full">
+          <div className="p-0 border-b border-border bg-card sticky top-0">
             <input
               type="text"
               placeholder="Search for mosques..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 text-sm bg-background border-0 rounded-t-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               autoFocus
             />
           </div>
