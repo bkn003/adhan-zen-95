@@ -153,7 +153,7 @@ export function convertToPrayerObject(
     })
   } else {
     prayers.push({
-      name: 'Dhuhr',
+      name: 'Zuhr',
       adhan: staticPrayerTime.dhuhr,
       iqamah: staticPrayerTime.dhuhr_iqamah || staticPrayerTime.dhuhr,
       type: 'dhuhr'

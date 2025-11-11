@@ -165,7 +165,7 @@ export const usePrayerTimes = (locationId?: string, selectedDate?: Date, hijriMo
           : prayerTimesData.fajr_iqamah || '5:30'
       },
       {
-        name: isFriday ? 'Jummah' : 'Dhuhr',
+        name: isFriday ? 'Jummah' : 'Zuhr',
         type: isFriday ? 'jummah' : 'dhuhr',
         adhan: isFriday ? (prayerTimesData.jummah_adhan || prayerTimesData.dhuhr_adhan || '12:30') : (prayerTimesData.dhuhr_adhan || '12:30'),
         iqamah: isFriday ? (prayerTimesData.jummah_iqamah || prayerTimesData.dhuhr_iqamah || '1:00') : (prayerTimesData.dhuhr_iqamah || '1:00')

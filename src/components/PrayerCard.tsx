@@ -37,7 +37,7 @@ export const PrayerCard = ({
       dhuhr: 'லுஹர்',
       jummah: 'ஜும்ஆ',
       asr: 'அஸர்',
-      maghrib: 'மஃக்ரிப்',
+      maghrib: 'மஃரிப்',
       isha: 'இஷா',
       tarawih: 'தராவீஹ்'
     };
