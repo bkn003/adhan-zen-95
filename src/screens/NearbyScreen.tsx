@@ -18,6 +18,7 @@ export const NearbyScreen = ({
   const [isSearching, setIsSearching] = useState(false);
   const [filterSaharFood, setFilterSaharFood] = useState(false);
   const [filterWomenHall, setFilterWomenHall] = useState(false);
+  const [sortByTime, setSortByTime] = useState(false);
   const [displayCount, setDisplayCount] = useState(10);
   const {
     data: locations,
@@ -26,9 +27,26 @@ export const NearbyScreen = ({
   const {
     latitude,
     longitude,
-    calculateDistance
+    calculateDistance,
+    error: locationError
   } = useGeolocation();
   const { isRamadan } = useRamadanContext();
+
+  // Require location access for this screen
+  if (!latitude || !longitude || locationError) {
+    return <div className="p-4 pb-20 min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-white flex items-center justify-center">
+      <div className="bg-white rounded-xl p-6 text-center border border-green-100 max-w-md">
+        <MapPin className="w-12 h-12 text-green-600 mx-auto mb-4" />
+        <h2 className="text-lg font-bold text-gray-800 mb-2">Location Access Required</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Please enable location access to view nearby mosques and their prayer timings.
+        </p>
+        <p className="text-xs text-gray-500">
+          Go to your browser settings and allow location access for this app.
+        </p>
+      </div>
+    </div>;
+  }
 
   // Filter locations based on search query and filters
   const filteredLocations = locations?.filter(location => {
@@ -51,12 +69,10 @@ export const NearbyScreen = ({
   }) || [];
   const sortedLocations = filteredLocations?.map(location => ({
     ...location,
-    distance: latitude && longitude ? calculateDistance(latitude, longitude, location.latitude, location.longitude) : null
+    distance: calculateDistance(latitude, longitude, location.latitude, location.longitude)
   })).sort((a, b) => {
-    if (a.distance !== null && b.distance !== null) {
-      return a.distance - b.distance;
-    }
-    return a.mosque_name.localeCompare(b.mosque_name);
+    // Sort by distance (nearest first)
+    return a.distance - b.distance;
   });
 
   // Paginated locations - show only displayCount items
@@ -118,6 +134,10 @@ export const NearbyScreen = ({
             <Users className="w-4 h-4" />
             Women Hall
           </Button>
+          <Button variant={sortByTime ? "default" : "outline"} size="sm" onClick={() => setSortByTime(!sortByTime)} className="gap-2">
+            <Clock className="w-4 h-4" />
+            Sort by Time
+          </Button>
         </div>
       </div>
 
@@ -139,9 +159,9 @@ export const NearbyScreen = ({
                     <MapPin className="w-3 h-3" />
                     <span>{location.district}, Tamil Nadu</span>
                   </div>
-                  {location.distance && <p className="text-sm text-green-600 font-semibold">
+                   <p className="text-sm text-green-600 font-semibold">
                       Distance: {location.distance.toFixed(1)} km
-                    </p>}
+                    </p>
                 </div>
               </div>
               
