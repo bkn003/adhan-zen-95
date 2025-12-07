@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { LocalNotifications, Channel, LocalNotificationSchema } from '@capacitor/local-notifications';
 import { Preferences } from '@capacitor/preferences';
 import type { Prayer } from '@/types/prayer.types';
+import { scheduleDndForPrayers, scheduleReliableAlarms, getDndSettings, updateCountdownPrayers } from './dndService';
 
 // Helper: parse "HH:mm" or "hh:mm AM" into a Date on a given day
 function parseTimeToDate(time: string, baseDate: Date): Date {
@@ -101,11 +102,11 @@ export async function scheduleTodayAdhanNotifications(prayers: Prayer[], baseDat
 
   if (notifications.length) {
     await LocalNotifications.schedule({ notifications });
-    
+
     // Store prayer data for boot receiver to reschedule
     try {
       const prayerData = {
-        prayers: prayers.map(p => ({ name: p.name, adhan: p.adhan, type: p.type })),
+        prayers: prayers.map(p => ({ name: p.name, adhan: p.adhan, iqamah: p.iqamah, type: p.type })),
         date: baseDate.getTime(),
       };
       // Helpful for web debugging
@@ -118,4 +119,63 @@ export async function scheduleTodayAdhanNotifications(prayers: Prayer[], baseDat
       console.warn('Failed to store prayer data for boot recovery:', e);
     }
   }
+
+  // === NEW: Schedule reliable AlarmManager alarms (survive app being killed) ===
+  try {
+    const alarmCount = await scheduleReliableAlarms(
+      prayers.filter(p => typesToSchedule.includes(p.type)).map(p => ({
+        name: p.name,
+        adhan: p.adhan,
+        iqamah: p.iqamah,
+        type: p.type
+      })),
+      baseDate
+    );
+    console.log(`⏰ Scheduled ${alarmCount} reliable AlarmManager alarms`);
+  } catch (e) {
+    console.warn('Failed to schedule reliable alarms:', e);
+  }
+
+  // === NEW: Schedule DND for Iqamah times ===
+  try {
+    const dndSettings = await getDndSettings();
+
+    if (dndSettings.enabled) {
+      // Filter prayers to only those enabled for DND
+      const prayersForDnd = prayers.filter(p =>
+        typesToSchedule.includes(p.type) &&
+        dndSettings.enabledPrayers.includes(p.type)
+      );
+
+      const dndCount = await scheduleDndForPrayers(
+        prayersForDnd.map(p => ({
+          name: p.name,
+          adhan: p.adhan,
+          iqamah: p.iqamah,
+          type: p.type
+        })),
+        baseDate,
+        dndSettings.beforeMinutes,
+        dndSettings.afterMinutes
+      );
+      console.log(`🔇 Scheduled DND for ${dndCount} prayers (${dndSettings.beforeMinutes}m before, ${dndSettings.afterMinutes}m after Iqamah)`);
+    } else {
+      console.log('🔇 DND is disabled by user settings');
+    }
+  } catch (e) {
+    console.warn('Failed to schedule DND:', e);
+  }
+
+  // === UPDATE: Update the countdown notification service with prayer times ===
+  try {
+    const countdownPrayers = prayers
+      .filter(p => typesToSchedule.includes(p.type))
+      .map(p => ({ name: p.name, adhan: p.adhan }));
+
+    await updateCountdownPrayers(countdownPrayers);
+    console.log(`🕌 Updated countdown notification with ${countdownPrayers.length} prayers`);
+  } catch (e) {
+    console.warn('Failed to update countdown prayers:', e);
+  }
 }
+

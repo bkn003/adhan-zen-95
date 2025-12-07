@@ -67,7 +67,7 @@ export const HomeScreen = ({
   useEffect(() => {
     // Pre-cache Adhan audio for offline playback (foreground)
     import('@/storage/audioStore').then(({ ensureAdhanAudioCached }) => {
-      ensureAdhanAudioCached('/adhan-native.mp3').catch(() => {});
+      ensureAdhanAudioCached('/adhan-native.mp3').catch(() => { });
     });
 
     // Initialize offline Adhan service for native platforms
@@ -98,7 +98,7 @@ export const HomeScreen = ({
 
   // Process prayer times based on data source
   let processedPrayerTimes, processedForbiddenTimes;
-  
+
   if (staticPrayerTimesData && staticPrayerTimesData.times.length > 0) {
     // Use static data - find prayer times for selected date
     const dailyPrayerTime = getPrayerTimesForDate(staticPrayerTimesData.times, selectedDate);
@@ -131,7 +131,7 @@ export const HomeScreen = ({
 
   // Sync Ramadan state to context for use in other screens
   const { setIsRamadan } = useRamadanContext();
-  
+
   useEffect(() => {
     setIsRamadan(isRamadan);
   }, [isRamadan, setIsRamadan]);
@@ -169,7 +169,7 @@ export const HomeScreen = ({
         scheduleAdhanWithMedian(finalPrayerTimes, selectedDate);
         savePrayerTimesForBoot(finalPrayerTimes);
         registerMedianPrayerTimesSaver(finalPrayerTimes);
-      } 
+      }
       // Fallback to legacy window.saveTodayPrayerTimes for compatibility
       else if (typeof window !== 'undefined' && (window as any).saveTodayPrayerTimes) {
         const todayPrayerTimes: Record<string, string> = {};
@@ -213,16 +213,23 @@ export const HomeScreen = ({
       try {
         // Save to IndexedDB for offline use
         await saveDailySchedule(
-          selectedLocation.id, 
-          selectedDate, 
+          selectedLocation.id,
+          selectedDate,
           finalPrayerTimes,
           selectedLocation.mosque_name
         );
 
         // Schedule notifications
         await scheduleTodayAdhanNotifications(finalPrayerTimes, selectedDate);
-        
-        console.log('✅ Scheduled native Adhan notifications + saved for offline:', selectedDate.toDateString());
+
+        // Update the countdown notification service with prayer times
+        const { updateCountdownPrayers } = await import('@/native/dndService');
+        const countdownPrayers = finalPrayerTimes
+          .filter(p => ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'jummah'].includes(p.type))
+          .map(p => ({ name: p.name, adhan: p.adhan }));
+        await updateCountdownPrayers(countdownPrayers);
+
+        console.log('✅ Scheduled native Adhan notifications + updated countdown + saved for offline:', selectedDate.toDateString());
       } catch (e) {
         console.error('❌ Failed to schedule native Adhan notifications:', e);
       }
@@ -266,14 +273,14 @@ export const HomeScreen = ({
     console.log('Location changed to:', location);
     setSelectedLocation(location);
     localStorage.setItem('selectedLocationId', location.id);
-    
+
     // Save to IndexedDB for offline access
     saveSelectedLocation({
       id: location.id,
       mosque_name: location.mosque_name,
       district: location.district
     }).catch(console.error);
-    
+
     onLocationSelect?.(location.id);
   };
 
@@ -290,21 +297,21 @@ export const HomeScreen = ({
   // Allow all prayers to show in next prayer banner, including Ramadan-specific ones
   const filteredNextPrayer = nextPrayer;
   return <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-white">
-      <div className="p-4 space-y-4 px-[4px] py-[2px]">
-        {/* Next Prayer Card */}
-        {filteredNextPrayer && (
-          <NextPrayerCard 
-            nextPrayer={filteredNextPrayer} 
-            selectedLocation={selectedLocation || undefined}
-          />
-        )}
-        {/* Location Selector */}
-        <div className="bg-white rounded-xl p-4 border border-green-100 shadow-sm">
-          <LocationSelector selectedLocation={selectedLocation} onLocationChange={handleLocationChange} />
-        </div>
+    <div className="p-4 space-y-4 px-[4px] py-[2px]">
+      {/* Next Prayer Card */}
+      {filteredNextPrayer && (
+        <NextPrayerCard
+          nextPrayer={filteredNextPrayer}
+          selectedLocation={selectedLocation || undefined}
+        />
+      )}
+      {/* Location Selector */}
+      <div className="bg-white rounded-xl p-4 border border-green-100 shadow-sm">
+        <LocationSelector selectedLocation={selectedLocation} onLocationChange={handleLocationChange} />
+      </div>
 
-        {/* Hijri Date */}
-        <HijriDate selectedDate={selectedDate} />
+      {/* Hijri Date */}
+      <HijriDate selectedDate={selectedDate} />
 
 
       {/* Ramadan Special Times */}
@@ -351,28 +358,28 @@ export const HomeScreen = ({
 
       {/* Prayer Times Cards */}
       {isLoading ? <div className="space-y-2">
-          {[1, 2, 3, 4, 5].map(i => <div key={i} className="animate-pulse">
-              <div className="h-16 bg-gray-100 rounded-xl"></div>
-            </div>)}
-        </div> : finalPrayerTimes.length > 0 ? <div className="space-y-2">
-          {finalPrayerTimes.map(prayer => {
-            // Filter out special Ramadan times from main prayer list
-            if (isRamadan && (prayer.name === 'Sahar End' || prayer.name === 'Iftar' || prayer.name === 'Tharaweeh')) {
-              return null;
-            }
-            return <PrayerCard key={prayer.name} prayer={prayer} isNext={filteredNextPrayer?.name === prayer.name} timeUntilNext={filteredNextPrayer?.name === prayer.name ? timeUntilNext : undefined} />;
-          })}
-        </div> : <div className="bg-white rounded-xl p-8 border border-gray-100 text-center">
-          <p className="text-gray-500">
-            {selectedLocation ? `No prayer times available for ${selectedLocation.mosque_name} today.` : 'Please select a location to view prayer times.'}
-          </p>
-        </div>}
+        {[1, 2, 3, 4, 5].map(i => <div key={i} className="animate-pulse">
+          <div className="h-16 bg-gray-100 rounded-xl"></div>
+        </div>)}
+      </div> : finalPrayerTimes.length > 0 ? <div className="space-y-2">
+        {finalPrayerTimes.map(prayer => {
+          // Filter out special Ramadan times from main prayer list
+          if (isRamadan && (prayer.name === 'Sahar End' || prayer.name === 'Iftar' || prayer.name === 'Tharaweeh')) {
+            return null;
+          }
+          return <PrayerCard key={prayer.name} prayer={prayer} isNext={filteredNextPrayer?.name === prayer.name} timeUntilNext={filteredNextPrayer?.name === prayer.name ? timeUntilNext : undefined} />;
+        })}
+      </div> : <div className="bg-white rounded-xl p-8 border border-gray-100 text-center">
+        <p className="text-gray-500">
+          {selectedLocation ? `No prayer times available for ${selectedLocation.mosque_name} today.` : 'Please select a location to view prayer times.'}
+        </p>
+      </div>}
 
-        {/* Forbidden Times */}
-        <ForbiddenTimes forbiddenTimes={finalForbiddenTimes} />
+      {/* Forbidden Times */}
+      <ForbiddenTimes forbiddenTimes={finalForbiddenTimes} />
 
-        {/* Ramadan Toggle */}
-        <RamadanToggle isRamadan={isRamadan} onToggle={toggleRamadan} onResetAuto={resetAutoRamadan} autoOverride={autoRamadanOverride} isRamadanMonth={hijriDate?.monthNumber === 9} />
-      </div>
-    </div>;
+      {/* Ramadan Toggle */}
+      <RamadanToggle isRamadan={isRamadan} onToggle={toggleRamadan} onResetAuto={resetAutoRamadan} autoOverride={autoRamadanOverride} isRamadanMonth={hijriDate?.monthNumber === 9} />
+    </div>
+  </div>;
 };

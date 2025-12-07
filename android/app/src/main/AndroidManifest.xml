@@ -10,7 +10,7 @@
         android:theme="@style/AppTheme">
 
         <activity
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
             android:name=".MainActivity"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
@@ -41,7 +41,14 @@
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
-        <!-- Boot Receiver for rescheduling notifications after device restart -->
+        <!-- Foreground Service for Prayer Countdown Notification -->
+        <service
+            android:name=".PrayerCountdownService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- Boot Receiver for rescheduling after restart -->
         <receiver
             android:name=".AthanBootReceiver"
             android:enabled="true"
@@ -52,21 +59,32 @@
             </intent-filter>
         </receiver>
 
-        <!-- Alarm Receiver to start ForegroundService at prayer times -->
+        <!-- Alarm Receiver for prayer times -->
         <receiver
             android:name=".AdhanAlarmReceiver"
             android:enabled="true"
             android:exported="false" />
 
-        <!-- Daily Update Receiver for automatic prayer time updates -->
+        <!-- Daily Update Receiver -->
         <receiver
             android:name=".AdhanDailyUpdateReceiver"
             android:enabled="true"
             android:exported="false" />
- 
-     </application>
 
-    <!-- Permissions for notifications, exact alarms, and foreground playback -->
+        <!-- DND Receiver for Do Not Disturb -->
+        <receiver
+            android:name=".DndReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="app.lovable.adhan_zen_95.DND_ON" />
+                <action android:name="app.lovable.adhan_zen_95.DND_OFF" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+
+    <!-- Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -77,8 +95,11 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <!-- Foreground service (optional but recommended for robust audio) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- DND (Do Not Disturb) access -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
 
 </manifest>
+
