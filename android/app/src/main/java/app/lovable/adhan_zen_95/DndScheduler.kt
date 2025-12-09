@@ -30,6 +30,11 @@ object DndScheduler {
         Log.d(TAG, "DND ON time ($minutesBefore mins before): ${java.util.Date(dndOnTime)}")
         Log.d(TAG, "Current time: ${java.util.Date(System.currentTimeMillis())}")
         
+        // Check DND permission - still schedule even if not granted (DndReceiver will use AudioManager fallback)
+        if (!DndManager.hasPermission(context)) {
+            Log.w(TAG, "⚠️ DND permission not granted - will use AudioManager fallback when triggered")
+        }
+        
         if (dndOnTime <= System.currentTimeMillis()) {
             Log.w(TAG, "⚠️ DND ON time already passed - skipping")
             return
@@ -38,17 +43,26 @@ object DndScheduler {
         val intent = Intent(context, DndReceiver::class.java).apply {
             action = DndReceiver.ACTION_DND_ON
             putExtra(DndReceiver.EXTRA_PRAYER_NAME, prayerName)
+            putExtra("prayer_index", prayerIndex)
         }
         
-        val pendingIntent = PendingIntent.getBroadcast(context, REQUEST_CODE_DND_ON_BASE + prayerIndex, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context, 
+            REQUEST_CODE_DND_ON_BASE + prayerIndex, 
+            intent, 
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && alarmManager.canScheduleExactAlarms()) {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dndOnTime, pendingIntent)
-                Log.d(TAG, "✅ Scheduled EXACT DND ON alarm for $prayerName")
+            // Use setAlarmClock - this is the MOST RELIABLE alarm type
+            // It will wake the device even in deep doze mode and show alarm icon in status bar
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                val alarmInfo = AlarmManager.AlarmClockInfo(dndOnTime, pendingIntent)
+                alarmManager.setAlarmClock(alarmInfo, pendingIntent)
+                Log.d(TAG, "✅ Scheduled ALARM_CLOCK for DND ON at ${java.util.Date(dndOnTime)}")
             } else {
-                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dndOnTime, pendingIntent)
-                Log.d(TAG, "✅ Scheduled INEXACT DND ON alarm for $prayerName")
+                alarmManager.setExact(AlarmManager.RTC_WAKEUP, dndOnTime, pendingIntent)
+                Log.d(TAG, "✅ Scheduled EXACT alarm for DND ON")
             }
             
             // Store for recovery
@@ -81,17 +95,25 @@ object DndScheduler {
         val intent = Intent(context, DndReceiver::class.java).apply {
             action = DndReceiver.ACTION_DND_OFF
             putExtra(DndReceiver.EXTRA_PRAYER_NAME, prayerName)
+            putExtra("prayer_index", prayerIndex)
         }
         
-        val pendingIntent = PendingIntent.getBroadcast(context, REQUEST_CODE_DND_OFF_BASE + prayerIndex, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val pendingIntent = PendingIntent.getBroadcast(
+            context, 
+            REQUEST_CODE_DND_OFF_BASE + prayerIndex, 
+            intent, 
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && alarmManager.canScheduleExactAlarms()) {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dndOffTime, pendingIntent)
-                Log.d(TAG, "✅ Scheduled EXACT DND OFF alarm for $prayerName")
+            // Use setAlarmClock - this is the MOST RELIABLE alarm type
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                val alarmInfo = AlarmManager.AlarmClockInfo(dndOffTime, pendingIntent)
+                alarmManager.setAlarmClock(alarmInfo, pendingIntent)
+                Log.d(TAG, "✅ Scheduled ALARM_CLOCK for DND OFF at ${java.util.Date(dndOffTime)}")
             } else {
-                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dndOffTime, pendingIntent)
-                Log.d(TAG, "✅ Scheduled INEXACT DND OFF alarm for $prayerName")
+                alarmManager.setExact(AlarmManager.RTC_WAKEUP, dndOffTime, pendingIntent)
+                Log.d(TAG, "✅ Scheduled EXACT alarm for DND OFF")
             }
             
             // Store for recovery

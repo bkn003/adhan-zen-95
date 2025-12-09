@@ -32,6 +32,7 @@ class PrayerCountdownService : Service() {
     private var nextPrayerName: String = "Next Prayer"
     private var nextPrayerTimeMillis: Long = 0L
     private var prayers: List<PrayerInfo> = emptyList()
+    private var lastKnownDay: Int = -1  // Track day for midnight reset
     
     data class PrayerInfo(
         val name: String,
@@ -98,46 +99,55 @@ class PrayerCountdownService : Service() {
     }
     
     private fun createNotification(): Notification {
-        val countdown = getCountdownText()
-        
         val pendingIntent = PendingIntent.getActivity(
             this, 0,
             Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         
-        // Get prayer-specific color
-        val prayerColor = getPrayerColor(nextPrayerName)
+        // Calculate countdown
+        val diff = if (nextPrayerTimeMillis > 0) nextPrayerTimeMillis - System.currentTimeMillis() else 0
+        val hours = (diff / (1000 * 60 * 60)).coerceAtLeast(0)
+        val minutes = ((diff % (1000 * 60 * 60)) / (1000 * 60)).coerceAtLeast(0)
+        val seconds = ((diff % (1000 * 60)) / 1000).coerceAtLeast(0)
         
-        // Get large icon from app launcher icon
-        val largeIcon = android.graphics.BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher)
-        
-        // Format time for display
+        // Format adhan time
         val adhanTimeText = if (nextPrayerTimeMillis > 0) {
             val sdf = java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault())
-            "Adhan at ${sdf.format(java.util.Date(nextPrayerTimeMillis))}"
+            sdf.format(java.util.Date(nextPrayerTimeMillis))
         } else {
-            "Loading..."
+            "--:--"
         }
+        
+        // Create custom notification view
+        val customView = android.widget.RemoteViews(packageName, R.layout.notification_countdown)
+        customView.setTextViewText(R.id.prayer_name, "$nextPrayerName Prayer")
+        customView.setTextViewText(R.id.hours, String.format("%02d", hours))
+        customView.setTextViewText(R.id.minutes, String.format("%02d", minutes))
+        customView.setTextViewText(R.id.seconds, String.format("%02d", seconds))
+        customView.setTextViewText(R.id.adhan_time, adhanTimeText)
+        
+        // Get prayer-specific color for fallback
+        val prayerColor = getPrayerColor(nextPrayerName)
+        val countdownText = getCountdownText()
+        
+        // Get large icon
+        val largeIcon = android.graphics.BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher)
         
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setLargeIcon(largeIcon)
-            .setContentTitle("🕌 $nextPrayerName Prayer")
-            .setContentText("⏱️ $countdown")
-            .setSubText(adhanTimeText)
+            .setCustomContentView(customView)
+            .setCustomBigContentView(customView)
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setColor(prayerColor)
             .setColorized(true)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setContentIntent(pendingIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setStyle(NotificationCompat.BigTextStyle()
-                .setBigContentTitle("🕌 $nextPrayerName Prayer")
-                .setSummaryText("Adhan Zen")
-                .bigText("⏱️ $countdown remaining\n📿 $adhanTimeText\n📍 Tap to open app"))
             .build()
     }
     
@@ -151,6 +161,17 @@ class PrayerCountdownService : Service() {
             prayerName.contains("Isha", ignoreCase = true) -> 0xFF8B5CF6.toInt() // Purple
             else -> 0xFF10B981.toInt() // Emerald (default)
         }
+    }
+    
+    /**
+     * Check if a prayer is a regular prayer (not Ramadan-specific).
+     * Ramadan-specific times like Sahar End, Iftar, and Tharaweeh should NOT
+     * appear in the persistent countdown notification.
+     */
+    private fun isRegularPrayer(prayerName: String): Boolean {
+        val ramadanSpecificNames = listOf("sahar", "iftar", "tharaweeh", "taraweeh", "tarawih")
+        val lowerName = prayerName.lowercase()
+        return ramadanSpecificNames.none { lowerName.contains(it) }
     }
     
     private fun getCountdownText(): String {
@@ -181,6 +202,8 @@ class PrayerCountdownService : Service() {
     }
     
     private fun startCountdown() {
+        // Initialize lastKnownDay on start
+        lastKnownDay = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
         updateNextPrayer()
         
         runnable = object : Runnable {
@@ -188,6 +211,16 @@ class PrayerCountdownService : Service() {
             private val maxRetries = 30  // Try for 5 minutes (10s * 30)
             
             override fun run() {
+                // Midnight detection: check if day has changed
+                val currentDay = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+                if (currentDay != lastKnownDay && lastKnownDay != -1) {
+                    Log.d(TAG, "🌅 Midnight detected! Day changed from $lastKnownDay to $currentDay")
+                    lastKnownDay = currentDay
+                    
+                    // Reload prayers with new day's date
+                    reloadPrayersForNewDay()
+                }
+                
                 updateNotification()
                 
                 // Check if we need to update next prayer
@@ -212,6 +245,54 @@ class PrayerCountdownService : Service() {
         Log.d(TAG, "⏱️ Countdown started")
     }
     
+    /**
+     * Reload prayers for the new day after midnight.
+     * This fixes the issue where countdown gets stuck on "Fajr (Tomorrow)" after midnight.
+     */
+    private fun reloadPrayersForNewDay() {
+        Log.d(TAG, "🔄 Reloading prayers for new day...")
+        
+        // Re-parse existing prayer times with today's date
+        if (prayers.isNotEmpty()) {
+            val today = Calendar.getInstance()
+            val year = today.get(Calendar.YEAR)
+            val month = today.get(Calendar.MONTH)
+            val day = today.get(Calendar.DAY_OF_MONTH)
+            
+            // Recalculate prayer times for today
+            val updatedPrayers = prayers.map { prayer ->
+                // Re-parse the time string with today's date
+                val newMillis = if (prayer.adhanTime.isNotEmpty()) {
+                    parseTimeToMillis(prayer.adhanTime, year, month, day)
+                } else {
+                    val cal = Calendar.getInstance()
+                    cal.set(year, month, day)
+                    // Keep same hour/minute from old millis
+                    val oldCal = Calendar.getInstance()
+                    oldCal.timeInMillis = prayer.adhanMillis
+                    cal.set(Calendar.HOUR_OF_DAY, oldCal.get(Calendar.HOUR_OF_DAY))
+                    cal.set(Calendar.MINUTE, oldCal.get(Calendar.MINUTE))
+                    cal.set(Calendar.SECOND, 0)
+                    cal.set(Calendar.MILLISECOND, 0)
+                    cal.timeInMillis
+                }
+                
+                // Remove "(Tomorrow)" suffix if present
+                val cleanName = prayer.name.replace(" (Tomorrow)", "")
+                PrayerInfo(cleanName, prayer.adhanTime, newMillis)
+            }.sortedBy { it.adhanMillis }
+            
+            prayers = updatedPrayers
+            Log.d(TAG, "📿 Reloaded ${prayers.size} prayers for today: ${prayers.map { "${it.name}@${Date(it.adhanMillis)}" }}")
+        } else {
+            // Try loading from prefs if we don't have any prayers
+            loadPrayersFromPrefs()
+        }
+        
+        updateNextPrayer()
+        updateNotification()
+    }
+    
     private fun stopCountdown() {
         runnable?.let { handler?.removeCallbacks(it) }
         runnable = null
@@ -227,8 +308,12 @@ class PrayerCountdownService : Service() {
         val now = System.currentTimeMillis()
         val todayCalendar = Calendar.getInstance()
         
-        // Find the next prayer that hasn't happened yet
-        val upcomingPrayers = prayers.filter { it.adhanMillis > now }
+        // Filter out Ramadan-specific prayers (Sahar End, Iftar, Tharaweeh)
+        // Only show regular prayers in the countdown notification
+        val regularPrayers = prayers.filter { isRegularPrayer(it.name) }
+        
+        // Find the next regular prayer that hasn't happened yet
+        val upcomingPrayers = regularPrayers.filter { it.adhanMillis > now }
         
         if (upcomingPrayers.isNotEmpty()) {
             val next = upcomingPrayers.first()
@@ -236,9 +321,9 @@ class PrayerCountdownService : Service() {
             nextPrayerTimeMillis = next.adhanMillis
             Log.d(TAG, "📿 Next prayer: $nextPrayerName at ${Date(nextPrayerTimeMillis)}")
         } else {
-            // All prayers for today have passed, show first prayer for tomorrow
-            if (prayers.isNotEmpty()) {
-                val first = prayers.first()
+            // All prayers for today have passed, show first regular prayer for tomorrow
+            if (regularPrayers.isNotEmpty()) {
+                val first = regularPrayers.first()
                 nextPrayerName = first.name + " (Tomorrow)"
                 // Add 24 hours to the first prayer time
                 nextPrayerTimeMillis = first.adhanMillis + (24 * 60 * 60 * 1000)
@@ -418,6 +503,32 @@ class PrayerCountdownService : Service() {
         super.onDestroy()
         stopCountdown()
         Log.d(TAG, "🛑 PrayerCountdownService destroyed")
+    }
+    
+    /**
+     * Called when user swipes away the app from recent apps.
+     * We restart the service to keep the notification visible.
+     */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        Log.d(TAG, "📱 App killed by user - restarting countdown service...")
+        
+        // Restart the service to keep notification visible
+        val restartIntent = Intent(applicationContext, PrayerCountdownService::class.java).apply {
+            action = ACTION_START
+        }
+        
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                startForegroundService(restartIntent)
+            } else {
+                startService(restartIntent)
+            }
+            Log.d(TAG, "✅ Service restart scheduled")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to restart service", e)
+        }
+        
+        super.onTaskRemoved(rootIntent)
     }
     
     override fun onBind(intent: Intent?): IBinder? = null

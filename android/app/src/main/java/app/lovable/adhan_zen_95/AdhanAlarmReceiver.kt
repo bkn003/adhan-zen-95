@@ -11,7 +11,7 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "AdhanAlarmReceiver"
         private const val PREFS_NAME = "adhan_alarm_prefs"
-        private const val DEBOUNCE_TIME_MS = 30000L // 30 seconds debounce
+        private const val DEBOUNCE_TIME_MS = 30000L // 30 seconds debounce (reduced from 2 minutes)
     }
     
     override fun onReceive(context: Context, intent: Intent) {
@@ -23,19 +23,46 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
             Log.d(TAG, "Prayer: $prayerName (index: $prayerIndex)")
             Log.d(TAG, "Time: ${java.util.Date()}")
             
-            // Debounce check to prevent duplicate notifications
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val now = System.currentTimeMillis()
+            
+            // Get today's date string for daily tracking
+            val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+            
+            // IMPORTANT: Clear old daily flags FIRST (from previous days) to prevent stale flags
+            clearOldDailyFlags(prefs, today)
+            
+            val dailyTriggerKey = "triggered_${prayerName}_$today"
+            
+            // Check if already triggered today for this prayer
+            if (prefs.getBoolean(dailyTriggerKey, false)) {
+                // Double-check with time-based debounce to avoid false positives
+                val lastTriggerKey = "last_trigger_$prayerName"
+                val lastTrigger = prefs.getLong(lastTriggerKey, 0)
+                
+                // If last trigger was more than 30 seconds ago, allow re-trigger (might be legitimate)
+                if (now - lastTrigger < DEBOUNCE_TIME_MS) {
+                    Log.w(TAG, "⚠️ Already triggered $prayerName today within ${DEBOUNCE_TIME_MS}ms - skipping duplicate")
+                    return
+                } else {
+                    Log.d(TAG, "ℹ️ Daily flag was set but last trigger was ${(now - lastTrigger) / 1000}s ago - allowing re-trigger")
+                }
+            }
+            
+            // Time-based debounce as primary check
             val lastTriggerKey = "last_trigger_$prayerName"
             val lastTrigger = prefs.getLong(lastTriggerKey, 0)
-            val now = System.currentTimeMillis()
             
             if (now - lastTrigger < DEBOUNCE_TIME_MS) {
                 Log.w(TAG, "⚠️ Debounce: Already triggered for $prayerName within ${DEBOUNCE_TIME_MS}ms - skipping")
                 return
             }
             
-            // Update last trigger time
-            prefs.edit { putLong(lastTriggerKey, now) }
+            // Mark as triggered for today and update timestamp
+            prefs.edit { 
+                putBoolean(dailyTriggerKey, true)
+                putLong(lastTriggerKey, now) 
+            }
             
             // Check if adhan is already playing
             if (AdhanForegroundService.isCurrentlyPlaying()) {
@@ -54,6 +81,25 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Failed to start adhan service", e)
+        }
+    }
+    
+    private fun clearOldDailyFlags(prefs: android.content.SharedPreferences, today: String) {
+        try {
+            val keysToRemove = mutableListOf<String>()
+            prefs.all.forEach { (key, _) ->
+                if (key.startsWith("triggered_") && !key.endsWith(today)) {
+                    keysToRemove.add(key)
+                }
+            }
+            if (keysToRemove.isNotEmpty()) {
+                prefs.edit {
+                    keysToRemove.forEach { remove(it) }
+                }
+                Log.d(TAG, "🧹 Cleared ${keysToRemove.size} old daily trigger flags")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to clear old flags", e)
         }
     }
 }

@@ -12,7 +12,7 @@ export const usePrayerTimes = (locationId?: string, selectedDate?: Date, hijriMo
   // Load initial state from localStorage on mount
   useEffect(() => {
     console.log('🏁 Initial state loading effect running');
-    
+
     // Load Sahar preference
     const savedSaharMode = localStorage.getItem('showSahar');
     if (savedSaharMode !== null) {
@@ -43,9 +43,9 @@ export const usePrayerTimes = (locationId?: string, selectedDate?: Date, hijriMo
       return;
     }
 
-    console.log('🔄 Ramadan auto-detection effect running', { 
-      hijriMonth, 
-      currentDate: new Date().toISOString() 
+    console.log('🔄 Ramadan auto-detection effect running', {
+      hijriMonth,
+      currentDate: new Date().toISOString()
     });
 
     const savedAutoOverrideFlag = localStorage.getItem('autoRamadanOverride') === 'true';
@@ -78,52 +78,107 @@ export const usePrayerTimes = (locationId?: string, selectedDate?: Date, hijriMo
   const targetDate = selectedDate || new Date();
   const formattedDate = targetDate.toISOString().split('T')[0]; // YYYY-MM-DD format
 
+
   const fetchPrayerTimes = async () => {
     if (!locationId) {
       console.log('No location ID provided');
       return null;
     }
-    
+
     // Get target date info
     const currentDay = targetDate.getDate();
     const currentMonth = targetDate.toLocaleString('en-US', { month: 'long' });
-    
-    console.log('Fetching prayer times for:', { 
-      locationId, 
-      currentDay, 
-      currentMonth, 
-      targetDate: targetDate.toDateString() 
-    });
-    
-    // Fetch all prayer times for current month and location
-    const { data, error } = await supabase
-      .from('prayer_times')
-      .select('*')
-      .eq('location_id', locationId)
-      .eq('month', currentMonth);
 
-    if (error) {
-      console.error('Error fetching prayer times:', error);
-      return null;
+    console.log('Fetching prayer times for:', {
+      locationId,
+      currentDay,
+      currentMonth,
+      targetDate: targetDate.toDateString()
+    });
+
+    // Import cache functions dynamically to avoid circular deps
+    const { getPrayerDataFromCache, setPrayerDataInCache } = await import('@/utils/prayerCache');
+
+    // Try cache first (reduces Supabase API calls significantly)
+    const cachedData = getPrayerDataFromCache(locationId, currentMonth);
+    if (cachedData && cachedData.length > 0) {
+      console.log('🚀 Using CACHED prayer times - no API call needed!');
+      const matchingRecord = cachedData.find(record => {
+        const dateRange = record.date_range;
+        const rangeMatch = dateRange.match(/(\d+)-(\d+)/);
+        if (rangeMatch) {
+          const startDay = parseInt(rangeMatch[1]);
+          const endDay = parseInt(rangeMatch[2]);
+          return currentDay >= startDay && currentDay <= endDay;
+        }
+        return false;
+      });
+      if (matchingRecord) {
+        return matchingRecord;
+      }
     }
 
-    // Find the appropriate date range for current day
-    const matchingRecord = data?.find(record => {
-      const dateRange = record.date_range;
-      
-      // Parse date ranges like "1-5 May", "6-11 Nov", "12-17 Sep"
-      const rangeMatch = dateRange.match(/(\d+)-(\d+)/);
-      if (rangeMatch) {
-        const startDay = parseInt(rangeMatch[1]);
-        const endDay = parseInt(rangeMatch[2]);
-        return currentDay >= startDay && currentDay <= endDay;
-      }
-      
-      return false;
-    });
+    // Cache miss - fetch from Supabase
+    console.log('📡 Cache miss - fetching from Supabase...');
+    try {
+      const { data, error } = await supabase
+        .from('prayer_times')
+        .select('*')
+        .eq('location_id', locationId)
+        .eq('month', currentMonth);
 
-    console.log('Fetched prayer times data:', matchingRecord);
-    return matchingRecord || null;
+      if (error) {
+        throw error;
+      }
+
+      // Store in cache for future use (saves API calls)
+      if (data && data.length > 0) {
+        setPrayerDataInCache(locationId, currentMonth, data);
+        console.log('💾 Cached', data.length, 'prayer records for', currentMonth);
+      }
+
+      // Find the appropriate date range for current day
+      const matchingRecord = data?.find(record => {
+        const dateRange = record.date_range;
+
+        // Parse date ranges like "1-5 May", "6-11 Nov", "12-17 Sep"
+        const rangeMatch = dateRange.match(/(\d+)-(\d+)/);
+        if (rangeMatch) {
+          const startDay = parseInt(rangeMatch[1]);
+          const endDay = parseInt(rangeMatch[2]);
+          return currentDay >= startDay && currentDay <= endDay;
+        }
+
+        return false;
+      });
+
+      console.log('Fetched prayer times data:', matchingRecord);
+      return matchingRecord || null;
+    } catch (error) {
+      console.error('Error fetching prayer times from Supabase:', error);
+
+      // Offline fallback: try to get expired cache data
+      console.log('🔄 Trying expired cache for offline fallback...');
+      const expiredCacheData = getPrayerDataFromCache(locationId, currentMonth, true);
+      if (expiredCacheData && expiredCacheData.length > 0) {
+        console.log('📦 Using expired cache data for offline fallback');
+        const matchingRecord = expiredCacheData.find(record => {
+          const dateRange = record.date_range;
+          const rangeMatch = dateRange.match(/(\d+)-(\d+)/);
+          if (rangeMatch) {
+            const startDay = parseInt(rangeMatch[1]);
+            const endDay = parseInt(rangeMatch[2]);
+            return currentDay >= startDay && currentDay <= endDay;
+          }
+          return false;
+        });
+        if (matchingRecord) {
+          return matchingRecord;
+        }
+      }
+
+      return null;
+    }
   };
 
   const { data: prayerTimesData, isLoading, refetch } = useQuery({
@@ -151,7 +206,7 @@ export const usePrayerTimes = (locationId?: string, selectedDate?: Date, hijriMo
     }
 
     console.log('Processing prayer times data:', prayerTimesData);
-    
+
     // Check if target date is Friday
     const isFriday = targetDate.getDay() === 5;
 
@@ -160,8 +215,8 @@ export const usePrayerTimes = (locationId?: string, selectedDate?: Date, hijriMo
         name: 'Fajr',
         type: 'fajr',
         adhan: prayerTimesData.fajr_adhan || '5:00',
-        iqamah: isRamadan && prayerTimesData.fajr_ramadan_iqamah 
-          ? prayerTimesData.fajr_ramadan_iqamah 
+        iqamah: isRamadan && prayerTimesData.fajr_ramadan_iqamah
+          ? prayerTimesData.fajr_ramadan_iqamah
           : prayerTimesData.fajr_iqamah || '5:30'
       },
       {
@@ -285,7 +340,7 @@ export const usePrayerTimes = (locationId?: string, selectedDate?: Date, hijriMo
     const timeStr = nextPrayer.adhan.split(':');
     const hours = parseInt(timeStr[0], 10);
     const minutes = parseInt(timeStr[1], 10);
-    
+
     const prayerTime = new Date(now);
     prayerTime.setHours(hours, minutes, 0, 0);
 

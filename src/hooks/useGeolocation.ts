@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface GeolocationState {
   latitude: number | null;
@@ -8,7 +7,27 @@ interface GeolocationState {
   loading: boolean;
   heading: number | null;
   magneticHeading: number | null;
+  accuracy: number | null;
+  isCalibrated: boolean;
 }
+
+// Low-pass filter for smooth compass movement
+const smoothAngle = (currentAngle: number, targetAngle: number, alpha: number = 0.15): number => {
+  // Handle the 360/0 degree wrap-around
+  let diff = targetAngle - currentAngle;
+
+  // Normalize difference to -180 to 180
+  while (diff > 180) diff -= 360;
+  while (diff < -180) diff += 360;
+
+  let result = currentAngle + alpha * diff;
+
+  // Normalize result to 0-360
+  while (result < 0) result += 360;
+  while (result >= 360) result -= 360;
+
+  return result;
+};
 
 export const useGeolocation = () => {
   const [state, setState] = useState<GeolocationState>({
@@ -18,7 +37,14 @@ export const useGeolocation = () => {
     loading: true,
     heading: null,
     magneticHeading: null,
+    accuracy: null,
+    isCalibrated: false,
   });
+
+  // Use refs for smooth heading updates
+  const smoothedHeadingRef = useRef<number>(0);
+  const lastUpdateTimeRef = useRef<number>(0);
+  const headingHistoryRef = useRef<number[]>([]);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -28,12 +54,14 @@ export const useGeolocation = () => {
 
     let retryIntervalId: number | undefined;
     let watchId: number | undefined;
+    let animationFrameId: number | undefined;
 
     const success = (position: GeolocationPosition) => {
       setState(prev => ({
         ...prev,
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
         error: null,
         loading: false,
       }));
@@ -41,8 +69,7 @@ export const useGeolocation = () => {
 
     const onGeoError = (err: GeolocationPositionError) => {
       setState(prev => ({ ...prev, error: err.message, loading: false }));
-      // Keep trying periodically until user grants permission
-      if (err.code === 1 /* PERMISSION_DENIED */) {
+      if (err.code === 1) {
         if (!retryIntervalId) {
           retryIntervalId = window.setInterval(() => requestOnce(), 15000);
         }
@@ -53,11 +80,10 @@ export const useGeolocation = () => {
       navigator.geolocation.getCurrentPosition(success, onGeoError, {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 300000, // 5 minutes
+        maximumAge: 60000,
       });
     };
 
-    // Permissions API to re-attempt when user changes it in settings
     const anyNavigator: any = navigator as any;
     if (anyNavigator.permissions?.query) {
       anyNavigator.permissions
@@ -66,7 +92,6 @@ export const useGeolocation = () => {
           if (perm.state === 'granted' || perm.state === 'prompt') {
             requestOnce();
           } else if (perm.state === 'denied') {
-            // Poll until user flips it
             retryIntervalId = window.setInterval(() => requestOnce(), 15000);
           }
           perm.onchange = () => {
@@ -82,46 +107,90 @@ export const useGeolocation = () => {
       requestOnce();
     }
 
-    // Also start a passive watcher that updates instantly after permission is granted
     try {
-      watchId = navigator.geolocation.watchPosition(success, () => {}, { enableHighAccuracy: true });
-    } catch {}
+      watchId = navigator.geolocation.watchPosition(success, () => { }, {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 5000,
+      });
+    } catch { }
 
-    // Device orientation setup with enhanced accuracy
+    // Enhanced device orientation handler with smoothing
     const handleOrientation = (event: DeviceOrientationEvent) => {
-      let calculatedHeading = null;
-      let magneticValue = null;
+      const now = Date.now();
 
-      // iOS devices provide webkitCompassHeading (true north)
+      let rawHeading: number | null = null;
+
+      // iOS devices - webkitCompassHeading is most accurate
       if ((event as any).webkitCompassHeading !== undefined && (event as any).webkitCompassHeading !== null) {
-        magneticValue = (event as any).webkitCompassHeading;
-        calculatedHeading = magneticValue;
-      } 
-      // Android and other devices use alpha (magnetic north)
+        rawHeading = (event as any).webkitCompassHeading;
+      }
+      // Android and other devices
       else if (event.alpha !== null) {
-        // For Android, alpha represents the rotation around the Z-axis
-        // We need to normalize it to compass heading
-        calculatedHeading = 360 - event.alpha;
-        magneticValue = calculatedHeading;
+        // Check if absolute orientation
+        if (event.absolute || (event as any).webkitCompassAccuracy !== undefined) {
+          rawHeading = (360 - event.alpha) % 360;
+        } else {
+          rawHeading = (360 - event.alpha) % 360;
+        }
       }
 
-      if (calculatedHeading !== null) {
+      if (rawHeading !== null) {
+        // Add to history for median filtering (reduces noise)
+        headingHistoryRef.current.push(rawHeading);
+        if (headingHistoryRef.current.length > 5) {
+          headingHistoryRef.current.shift();
+        }
+
+        // Calculate median of recent readings
+        const sortedHistory = [...headingHistoryRef.current].sort((a, b) => a - b);
+        const medianHeading = sortedHistory[Math.floor(sortedHistory.length / 2)];
+
+        // Apply smooth interpolation
+        const timeDelta = now - lastUpdateTimeRef.current;
+        const smoothingFactor = Math.min(0.3, timeDelta / 100 * 0.1); // Adaptive smoothing
+
+        const smoothedHeading = smoothAngle(
+          smoothedHeadingRef.current || medianHeading,
+          medianHeading,
+          smoothingFactor
+        );
+
+        smoothedHeadingRef.current = smoothedHeading;
+        lastUpdateTimeRef.current = now;
+
+        // Check calibration based on accuracy
+        const accuracy = (event as any).webkitCompassAccuracy;
+        const isCalibrated = accuracy === undefined || accuracy < 25;
+
         setState(prev => ({
           ...prev,
-          heading: calculatedHeading,
-          magneticHeading: magneticValue,
+          heading: Math.round(smoothedHeading * 10) / 10, // Round to 1 decimal
+          magneticHeading: Math.round(smoothedHeading * 10) / 10,
+          isCalibrated,
         }));
       }
     };
 
-    // Also handle absolute orientation for better accuracy
+    // Absolute orientation is preferred when available
     const handleAbsoluteOrientation = (event: DeviceOrientationEvent) => {
       if (event.absolute && event.alpha !== null) {
-        const heading = 360 - event.alpha;
+        const rawHeading = (360 - event.alpha) % 360;
+
+        // Smooth the absolute heading
+        const smoothedHeading = smoothAngle(
+          smoothedHeadingRef.current || rawHeading,
+          rawHeading,
+          0.2
+        );
+
+        smoothedHeadingRef.current = smoothedHeading;
+
         setState(prev => ({
           ...prev,
-          heading: heading,
-          magneticHeading: heading,
+          heading: Math.round(smoothedHeading * 10) / 10,
+          magneticHeading: Math.round(smoothedHeading * 10) / 10,
+          isCalibrated: true,
         }));
       }
     };
@@ -140,7 +209,6 @@ export const useGeolocation = () => {
           console.log('Device orientation permission denied');
         });
     } else {
-      // For Android and other devices
       window.addEventListener('deviceorientation', handleOrientation, true);
       window.addEventListener('deviceorientationabsolute', handleAbsoluteOrientation, true);
     }
@@ -148,13 +216,14 @@ export const useGeolocation = () => {
     return () => {
       if (retryIntervalId) window.clearInterval(retryIntervalId);
       if (watchId !== undefined) navigator.geolocation.clearWatch(watchId);
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
       window.removeEventListener('deviceorientation', handleOrientation);
       window.removeEventListener('deviceorientationabsolute', handleAbsoluteOrientation);
     };
   }, []);
 
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371; // Radius of the Earth in kilometers
+  const calculateDistance = useCallback((lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371;
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
     const a =
@@ -163,41 +232,41 @@ export const useGeolocation = () => {
       Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
-  };
+  }, []);
 
-  const calculateQiblaDirection = (): number => {
+  const calculateQiblaDirection = useCallback((): number => {
     if (!state.latitude || !state.longitude) return 0;
-    
-    // Coordinates for Kaaba, Mecca (improved precision)
+
+    // Coordinates for Kaaba  (precise)
     const meccaLat = 21.422487;
     const meccaLon = 39.826206;
-    
-    // Convert to radians
+
     const lat1 = state.latitude * (Math.PI / 180);
     const lat2 = meccaLat * (Math.PI / 180);
     const deltaLon = (meccaLon - state.longitude) * (Math.PI / 180);
-    
-    // Calculate bearing using the forward azimuth formula
+
+    // Forward azimuth formula
     const y = Math.sin(deltaLon);
     const x = Math.cos(lat1) * Math.tan(lat2) - Math.sin(lat1) * Math.cos(deltaLon);
-    
+
     const bearing = Math.atan2(y, x);
     const qiblaDirection = ((bearing * (180 / Math.PI)) + 360) % 360;
-    
-    return qiblaDirection;
-  };
 
-  const getCompassDirection = (degrees: number): string => {
+    return Math.round(qiblaDirection * 10) / 10;
+  }, [state.latitude, state.longitude]);
+
+  const getCompassDirection = useCallback((degrees: number): string => {
     const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
     const index = Math.round(degrees / 22.5) % 16;
     return directions[index];
-  };
+  }, []);
 
-  const getRelativeQiblaDirection = (): number => {
+  const getRelativeQiblaDirection = useCallback((): number => {
     const qiblaDirection = calculateQiblaDirection();
     const deviceHeading = state.magneticHeading || state.heading || 0;
-    return (qiblaDirection - deviceHeading + 360) % 360;
-  };
+    let relative = (qiblaDirection - deviceHeading + 360) % 360;
+    return Math.round(relative * 10) / 10;
+  }, [calculateQiblaDirection, state.magneticHeading, state.heading]);
 
   return {
     ...state,

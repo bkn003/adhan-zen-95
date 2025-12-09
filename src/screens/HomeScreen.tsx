@@ -371,7 +371,12 @@ export const HomeScreen = ({
         })}
       </div> : <div className="bg-white rounded-xl p-8 border border-gray-100 text-center">
         <p className="text-gray-500">
-          {selectedLocation ? `No prayer times available for ${selectedLocation.mosque_name} today.` : 'Please select a location to view prayer times.'}
+          {selectedLocation
+            ? (!navigator.onLine
+              ? `📶 Turn on internet to view prayer times for ${selectedLocation.mosque_name}. No cached data available for this location.`
+              : `No prayer times available for ${selectedLocation.mosque_name} today.`)
+            : 'Please select a location to view prayer times.'
+          }
         </p>
       </div>}
 

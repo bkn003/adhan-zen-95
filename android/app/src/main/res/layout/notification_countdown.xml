@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/notification_gradient_bg">
+    
+    <!-- Prayer Name Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        
+        <TextView
+            android:id="@+id/prayer_emoji"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🕌"
+            android:textSize="24sp"
+            android:layout_marginEnd="8dp"/>
+        
+        <TextView
+            android:id="@+id/prayer_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Isha Prayer"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"/>
+        
+        <TextView
+            android:id="@+id/adhan_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ADHAN"
+            android:textColor="#FFFFFFBB"
+            android:textSize="10sp"
+            android:letterSpacing="0.1"/>
+    </LinearLayout>
+    
+    <!-- Countdown Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingTop="12dp"
+        android:paddingBottom="8dp">
+        
+        <!-- Hours -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginEnd="8dp">
+            
+            <TextView
+                android:id="@+id/hours"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="01"
+                android:textColor="#FFFFFF"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:fontFamily="monospace"/>
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="HOURS"
+                android:textColor="#FFFFFFAA"
+                android:textSize="8sp"
+                android:letterSpacing="0.1"/>
+        </LinearLayout>
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=":"
+            android:textColor="#FFFFFF"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:layout_marginEnd="8dp"/>
+        
+        <!-- Minutes -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginEnd="8dp">
+            
+            <TextView
+                android:id="@+id/minutes"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="09"
+                android:textColor="#FFFFFF"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:fontFamily="monospace"/>
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="MINUTES"
+                android:textColor="#FFFFFFAA"
+                android:textSize="8sp"
+                android:letterSpacing="0.1"/>
+        </LinearLayout>
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=":"
+            android:textColor="#FFFFFF"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:layout_marginEnd="8dp"/>
+        
+        <!-- Seconds -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center">
+            
+            <TextView
+                android:id="@+id/seconds"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="00"
+                android:textColor="#FFFFFF"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:fontFamily="monospace"/>
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SECONDS"
+                android:textColor="#FFFFFFAA"
+                android:textSize="8sp"
+                android:letterSpacing="0.1"/>
+        </LinearLayout>
+        
+        <!-- Adhan Time -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginStart="16dp">
+            
+            <TextView
+                android:id="@+id/adhan_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="07:25 PM"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+    </LinearLayout>
+    
+    <!-- Location Row -->
+    <TextView
+        android:id="@+id/mosque_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:drawableStart="@android:drawable/ic_menu_mylocation"
+        android:drawablePadding="6dp"
+        android:drawableTint="#FFFFFFCC"
+        android:text="📍 Tap to open app"
+        android:textColor="#FFFFFFCC"
+        android:textSize="11sp"
+        android:gravity="center_horizontal"/>
+    
+</LinearLayout>

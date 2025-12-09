@@ -21,6 +21,15 @@ object ReliableAlarmScheduler {
         Log.d(TAG, "Adhan time: ${java.util.Date(adhanTimeMillis)}")
         Log.d(TAG, "Current time: ${java.util.Date(System.currentTimeMillis())}")
         
+        val timeDiffMs = adhanTimeMillis - System.currentTimeMillis()
+        val timeDiffMinutes = timeDiffMs / (1000 * 60)
+        Log.d(TAG, "Time until alarm: ${timeDiffMinutes} minutes ($timeDiffMs ms)")
+        
+        // Fajr-specific logging
+        if (prayerName.contains("Fajr", ignoreCase = true)) {
+            Log.d(TAG, "🌅 FAJR ALARM SCHEDULING - This is an early morning prayer")
+        }
+        
         if (adhanTimeMillis <= System.currentTimeMillis()) {
             Log.w(TAG, "⚠️ Adhan time already passed - skipping")
             return
@@ -37,7 +46,7 @@ object ReliableAlarmScheduler {
             // Use setAlarmClock for maximum reliability - this wakes device even in Doze mode
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 alarmManager.setAlarmClock(AlarmManager.AlarmClockInfo(adhanTimeMillis, pendingIntent), pendingIntent)
-                Log.d(TAG, "✅ Scheduled AlarmClock for $prayerName")
+                Log.d(TAG, "✅ Scheduled AlarmClock for $prayerName at ${java.util.Date(adhanTimeMillis)}")
             } else {
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, adhanTimeMillis, pendingIntent)
                 Log.d(TAG, "✅ Scheduled exact alarm for $prayerName")
@@ -50,6 +59,8 @@ object ReliableAlarmScheduler {
                 putLong("iqamah_$prayerIndex", iqamahTimeMillis)
                 putLong("last_scheduled", System.currentTimeMillis())
             }
+            
+            Log.d(TAG, "💾 Stored alarm info in SharedPreferences for $prayerName")
         } catch (e: Exception) {
             Log.e(TAG, "❌ Failed to schedule alarm", e)
         }

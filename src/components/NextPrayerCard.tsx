@@ -48,13 +48,13 @@ export const NextPrayerCard = ({
   const getPrayerIcon = () => {
     switch (nextPrayer.type) {
       case 'fajr':
-        return <Sunrise className="w-10 h-10 text-amber-300" />;
+        return <Sunrise className="w-7 h-7 text-amber-300" />;
       case 'maghrib':
-        return <Sunset className="w-10 h-10 text-orange-300" />;
+        return <Sunset className="w-7 h-7 text-orange-300" />;
       case 'isha':
-        return <Moon className="w-10 h-10 text-blue-300" />;
+        return <Moon className="w-7 h-7 text-blue-300" />;
       default:
-        return <Sun className="w-10 h-10 text-yellow-300" />;
+        return <Sun className="w-7 h-7 text-yellow-300" />;
     }
   };
 
@@ -82,61 +82,57 @@ export const NextPrayerCard = ({
 
   const TimeBlock = ({ value, label }: { value: number; label: string }) => (
     <div className="flex flex-col items-center">
-      <div className={`text-4xl font-bold font-mono tabular-nums ${isUrgent ? 'text-red-300 animate-pulse' : 'text-white'}`}>
+      <div className={`text-2xl font-bold font-mono tabular-nums ${isUrgent ? 'text-red-300 animate-pulse' : 'text-white'}`}>
         {String(value).padStart(2, '0')}
       </div>
-      <div className="text-white/60 text-xs uppercase tracking-wider mt-1">{label}</div>
+      <div className="text-white/60 text-[10px] uppercase tracking-wider">{label}</div>
     </div>
   );
 
   return (
-    <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${getGradient()} p-6 shadow-2xl shadow-black/20`}>
-      {/* Animated background patterns */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-0 left-0 w-32 h-32 bg-white rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 right-0 w-40 h-40 bg-white rounded-full blur-3xl animate-pulse delay-500" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-          <Star className="w-64 h-64 opacity-5" />
-        </div>
+    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${getGradient()} p-4 shadow-xl`}>
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <Star className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48" />
       </div>
 
       {/* Content */}
       <div className="relative z-10">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-white/10 backdrop-blur-sm rounded-2xl">
+        {/* Header - Compact */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/10 backdrop-blur-sm rounded-xl">
               {getPrayerIcon()}
             </div>
             <div>
-              <div className="text-white/70 text-sm font-medium">{tamilText.general.nextPrayer.english}</div>
-              <div className="text-white text-2xl font-bold tracking-tight">
+              <div className="text-white/70 text-xs font-medium">{tamilText.general.nextPrayer.english}</div>
+              <div className="text-white text-lg font-bold tracking-tight">
                 {nextPrayer.name}
               </div>
-              <div className="text-white/60 text-sm">{getTamilName()}</div>
+              <div className="text-white/60 text-xs">{getTamilName()}</div>
             </div>
           </div>
 
           <div className="text-right">
-            <div className="text-white/60 text-xs uppercase tracking-wider mb-1">Adhan</div>
-            <div className="text-white text-2xl font-bold">
+            <div className="text-white/60 text-[10px] uppercase tracking-wider">Adhan</div>
+            <div className="text-white text-lg font-bold">
               {formatTo12Hour(nextPrayer.adhan)}
             </div>
           </div>
         </div>
 
-        {/* Countdown Timer */}
-        <div className="bg-black/20 backdrop-blur-sm rounded-2xl p-5 border border-white/10">
-          <div className="flex items-center justify-center gap-3">
-            <TimeBlock value={timeRemaining.hours} label="Hours" />
-            <div className="text-3xl text-white/50 font-light">:</div>
-            <TimeBlock value={timeRemaining.minutes} label="Minutes" />
-            <div className="text-3xl text-white/50 font-light">:</div>
-            <TimeBlock value={timeRemaining.seconds} label="Seconds" />
+        {/* Countdown Timer - Compact */}
+        <div className="bg-black/20 backdrop-blur-sm rounded-xl p-3 border border-white/10">
+          <div className="flex items-center justify-center gap-2">
+            <TimeBlock value={timeRemaining.hours} label="Hrs" />
+            <div className="text-xl text-white/50 font-light">:</div>
+            <TimeBlock value={timeRemaining.minutes} label="Min" />
+            <div className="text-xl text-white/50 font-light">:</div>
+            <TimeBlock value={timeRemaining.seconds} label="Sec" />
           </div>
 
           {/* Progress bar */}
-          <div className="mt-4 h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div className="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-1000 ${isUrgent ? 'bg-red-400' : 'bg-white/50'}`}
               style={{
@@ -146,11 +142,11 @@ export const NextPrayerCard = ({
           </div>
         </div>
 
-        {/* Location indicator */}
+        {/* Location indicator - Compact */}
         {selectedLocation && (
-          <div className="mt-4 flex items-center justify-center gap-2 text-white/50 text-sm">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            <span className="truncate max-w-[200px]">{selectedLocation.mosque_name}</span>
+          <div className="mt-2 flex items-center justify-center gap-1.5 text-white/50 text-xs">
+            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+            <span className="truncate max-w-[180px]">{selectedLocation.mosque_name}</span>
           </div>
         )}
       </div>

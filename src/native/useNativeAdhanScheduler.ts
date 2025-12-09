@@ -29,14 +29,14 @@ function parseTimeToDate(time: string, baseDate: Date): Date {
 }
 
 async function ensureChannel(): Promise<void> {
-  // Android: create a channel with custom sound (placed in android/app/src/main/res/raw/azan1.mp3)
+  // Android: create a channel with custom sound (placed in android/app/src/main/res/raw/adhan.mp3)
   const channel: Channel = {
     id: 'adhan_channel',
     name: 'Adhan',
     description: 'Prayer time Adhan alerts',
     importance: 5,
     visibility: 1,
-    sound: 'azan1', // file name without extension, must exist under res/raw
+    sound: 'adhan', // file name without extension, must exist under res/raw
     lights: true,
     vibration: true,
   };
@@ -62,7 +62,7 @@ function buildNotification(prayer: Prayer, when: Date, idBase: number): LocalNot
     body: 'It\'s time for prayer',
     schedule: { at: when, allowWhileIdle: true } as any,
     channelId: 'adhan_channel',
-    sound: 'azan1', // Android: plays res/raw/azan1
+    sound: 'adhan', // Android: plays res/raw/adhan
     smallIcon: 'ic_stat_name',
     actionTypeId: 'OPEN_APP',
     extra: { type: prayer.type },
@@ -77,48 +77,36 @@ export async function scheduleTodayAdhanNotifications(prayers: Prayer[], baseDat
   await ensureChannel();
 
   const now = new Date();
-  const notifications: LocalNotificationSchema[] = [];
-  let id = Math.floor((baseDate.getTime() / 1000) % 1000000) * 10; // deterministic-ish daily id base
-
   const typesToSchedule: Prayer['type'][] = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
 
-  prayers.forEach((p) => {
-    if (!typesToSchedule.includes(p.type)) return;
+  // Count future prayers for logging
+  const futurePrayers = prayers.filter((p) => {
+    if (!typesToSchedule.includes(p.type)) return false;
     const when = parseTimeToDate(p.adhan, baseDate);
-    if (when > now) {
-      notifications.push(buildNotification(p, when, ++id));
-    }
+    return when > now;
   });
 
-  // Optional: schedule Jummah if Friday
-  const isFriday = baseDate.getDay() === 5;
-  if (isFriday) {
-    const jummah = prayers.find((p) => p.type === 'jummah');
-    if (jummah) {
-      const when = parseTimeToDate(jummah.adhan, baseDate);
-      if (when > now) notifications.push(buildNotification(jummah, when, ++id));
+  // NOTE: We do NOT use LocalNotifications.schedule() anymore to avoid duplicate notifications.
+  // The AlarmManager via scheduleReliableAlarms() is the ONLY source of Adhan notifications.
+  // This prevents multiple notification systems from triggering for the same prayer.
+  console.log(`📱 Preparing ${futurePrayers.length} prayers for AlarmManager scheduling (LocalNotifications disabled to prevent duplicates)`);
+
+  // Store prayer data for boot receiver to reschedule
+  try {
+    const prayerData = {
+      prayers: prayers.map(p => ({ name: p.name, adhan: p.adhan, iqamah: p.iqamah, type: p.type })),
+      date: baseDate.getTime(),
+    };
+    // Helpful for web debugging
+    localStorage.setItem('native_prayer_data', JSON.stringify(prayerData));
+    // Persist to Android SharedPreferences via Capacitor Preferences so BootReceiver can read it
+    if (Capacitor.isNativePlatform()) {
+      await Preferences.set({ key: 'today_prayers', value: JSON.stringify(prayerData) });
     }
+  } catch (e) {
+    console.warn('Failed to store prayer data for boot recovery:', e);
   }
 
-  if (notifications.length) {
-    await LocalNotifications.schedule({ notifications });
-
-    // Store prayer data for boot receiver to reschedule
-    try {
-      const prayerData = {
-        prayers: prayers.map(p => ({ name: p.name, adhan: p.adhan, iqamah: p.iqamah, type: p.type })),
-        date: baseDate.getTime(),
-      };
-      // Helpful for web debugging
-      localStorage.setItem('native_prayer_data', JSON.stringify(prayerData));
-      // Persist to Android SharedPreferences via Capacitor Preferences so BootReceiver can read it
-      if (Capacitor.isNativePlatform()) {
-        await Preferences.set({ key: 'today_prayers', value: JSON.stringify(prayerData) });
-      }
-    } catch (e) {
-      console.warn('Failed to store prayer data for boot recovery:', e);
-    }
-  }
 
   // === NEW: Schedule reliable AlarmManager alarms (survive app being killed) ===
   try {
