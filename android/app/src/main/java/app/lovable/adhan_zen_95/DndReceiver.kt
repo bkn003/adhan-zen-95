@@ -45,7 +45,10 @@ class DndReceiver : BroadcastReceiver() {
             ACTION_DND_ON -> {
                 Log.d(TAG, "🔇 ========== ENABLING DND FOR $prayerName ==========")
                 
-                // DndManager now handles all fallback mechanisms (NotificationManager + AudioManager)
+                // Play activation sound BEFORE enabling DND (so user hears it)
+                DndManager.playStatusSound(context, isActivating = true)
+                
+                // DndManager uses NotificationManager (proper DND) or AudioManager fallback
                 val success = DndManager.enableDnd(context, prayerName)
                 
                 if (success) {
@@ -66,6 +69,11 @@ class DndReceiver : BroadcastReceiver() {
                 if (wasEnabled) {
                     Log.d(TAG, "✅ DND DISABLED successfully - showing notification")
                     showDndNotification(context, prayerName, false)
+                    
+                    // Play deactivation sound AFTER disabling DND (so phone is unmuted and user hears it)
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        DndManager.playStatusSound(context, isActivating = false)
+                    }, 500) // Small delay to ensure phone is unmuted
                 } else {
                     Log.d(TAG, "ℹ️ DND was not enabled by app - NOT showing deactivation notification")
                 }

@@ -248,9 +248,21 @@ class PrayerCountdownService : Service() {
     /**
      * Reload prayers for the new day after midnight.
      * This fixes the issue where countdown gets stuck on "Fajr (Tomorrow)" after midnight.
+     * Also reschedules AlarmManager alarms as a backup to AdhanDailyUpdateReceiver.
      */
     private fun reloadPrayersForNewDay() {
         Log.d(TAG, "🔄 Reloading prayers for new day...")
+        
+        // CRITICAL: Also reschedule AlarmManager alarms for the new day
+        // This provides redundancy if AdhanDailyUpdateReceiver fails
+        try {
+            Log.d(TAG, "⏰ Rescheduling alarms from countdown service (redundancy)...")
+            ReliableAlarmScheduler.rescheduleForNewDay(applicationContext)
+            DndScheduler.rescheduleForNewDay(applicationContext)
+            Log.d(TAG, "✅ Alarms rescheduled from countdown service")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to reschedule alarms from countdown service", e)
+        }
         
         // Re-parse existing prayer times with today's date
         if (prayers.isNotEmpty()) {
@@ -510,7 +522,7 @@ class PrayerCountdownService : Service() {
      * We restart the service to keep the notification visible.
      */
     override fun onTaskRemoved(rootIntent: Intent?) {
-        Log.d(TAG, "📱 App killed by user - restarting countdown service...")
+        Log.d(TAG, "📱 App killed by user (onTaskRemoved) - aggressively restarting countdown service...")
         
         // Restart the service to keep notification visible
         val restartIntent = Intent(applicationContext, PrayerCountdownService::class.java).apply {
@@ -518,14 +530,17 @@ class PrayerCountdownService : Service() {
         }
         
         try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                startForegroundService(restartIntent)
-            } else {
-                startService(restartIntent)
-            }
-            Log.d(TAG, "✅ Service restart scheduled")
+            val pendingIntent = PendingIntent.getService(
+                applicationContext, 1, restartIntent, PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            )
+            
+            // Use AlarmManager to restart service after 1 second (more reliable than direct startService in some cases)
+            val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 1000, pendingIntent)
+            
+            Log.d(TAG, "✅ Service restart scheduled via AlarmManager")
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to restart service", e)
+            Log.e(TAG, "❌ Failed to schedule restart", e)
         }
         
         super.onTaskRemoved(rootIntent)

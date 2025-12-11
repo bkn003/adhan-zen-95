@@ -246,11 +246,24 @@ export const HomeScreen = ({
 
   // Load persisted location or auto-select first location
   useEffect(() => {
+    const syncLocationToNative = async (locationId: string) => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const { saveSelectedLocation: saveNativeLocation } = await import('@/native/dndService');
+          await saveNativeLocation(locationId);
+          console.log('📍 Synced location to native for background fetching');
+        } catch (e) {
+          console.error('Failed to sync location to native:', e);
+        }
+      }
+    };
+
     if (selectedLocationId && locations) {
       const location = locations.find(loc => loc.id === selectedLocationId);
       if (location) {
         console.log('Setting location from prop:', location);
         setSelectedLocation(location);
+        syncLocationToNative(location.id);
         return;
       }
     }
@@ -260,6 +273,7 @@ export const HomeScreen = ({
       if (location) {
         console.log('Setting location from localStorage:', location);
         setSelectedLocation(location);
+        syncLocationToNative(location.id);
         return;
       }
     }
@@ -267,9 +281,10 @@ export const HomeScreen = ({
       console.log('Auto-selecting first location:', locations[0]);
       setSelectedLocation(locations[0]);
       localStorage.setItem('selectedLocationId', locations[0].id);
+      syncLocationToNative(locations[0].id);
     }
   }, [locations, selectedLocation, selectedLocationId]);
-  const handleLocationChange = (location: Location) => {
+  const handleLocationChange = async (location: Location) => {
     console.log('Location changed to:', location);
     setSelectedLocation(location);
     localStorage.setItem('selectedLocationId', location.id);
@@ -280,6 +295,18 @@ export const HomeScreen = ({
       mosque_name: location.mosque_name,
       district: location.district
     }).catch(console.error);
+
+    // Save to native storage for background prayer time fetching
+    // This is CRITICAL for alarms to work when app hasn't been opened for days
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const { saveSelectedLocation: saveNativeLocation } = await import('@/native/dndService');
+        await saveNativeLocation(location.id);
+        console.log('📍 Saved location to native for background fetching');
+      } catch (e) {
+        console.error('Failed to save location to native:', e);
+      }
+    }
 
     onLocationSelect?.(location.id);
   };

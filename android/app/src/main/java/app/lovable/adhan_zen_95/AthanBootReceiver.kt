@@ -48,7 +48,15 @@ class AthanBootReceiver : BroadcastReceiver() {
                 }
                 
                 // Background fetch for updated prayer times
-                Thread { PrayerTimeFetcher.fetchAndUpdatePrayerTimes(context) }.start()
+                Thread { 
+                    PrayerTimeFetcher.fetchAndUpdatePrayerTimes(context)
+                    
+                    // Schedule prayer change notification check
+                    PrayerChangeReceiver.scheduleFromStoredData(context)
+                    
+                    // Pre-cache upcoming prayer data for offline use
+                    PrayerChangeNotifier.preCacheUpcomingData(context)
+                }.start()
                 
                 Log.d("AthanBootReceiver", "✅ Boot recovery complete")
             } catch (e: Exception) {

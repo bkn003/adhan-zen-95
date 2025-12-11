@@ -40,6 +40,10 @@ interface AdhanNativePlugin {
             adhan: string;
         }>;
     }): Promise<{ success: boolean }>;
+    // New methods for background prayer time fetching
+    saveSelectedLocation(options: { locationId: string }): Promise<{ success: boolean }>;
+    getSelectedLocation(): Promise<{ locationId: string | null }>;
+    refreshPrayerTimes(): Promise<{ success: boolean }>;
 }
 
 export interface DndSettings {
@@ -322,6 +326,64 @@ export async function updateCountdownPrayers(
         return result.success;
     } catch (error) {
         console.error('❌ Error updating countdown prayers:', error);
+        return false;
+    }
+}
+
+/**
+ * Save the selected location ID for background prayer time fetching.
+ * This MUST be called whenever the user selects a different location.
+ * It enables the app to fetch correct prayer times even when closed for days.
+ */
+export async function saveSelectedLocation(locationId: string): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) {
+        console.log('⚠️ Save selected location - not on native platform');
+        return false;
+    }
+
+    try {
+        const result = await AdhanNative.saveSelectedLocation({ locationId });
+        console.log(`📍 Saved selected location: ${locationId}`);
+        return result.success;
+    } catch (error) {
+        console.error('❌ Error saving selected location:', error);
+        return false;
+    }
+}
+
+/**
+ * Get the currently selected location ID from native storage.
+ */
+export async function getSelectedLocation(): Promise<string | null> {
+    if (!Capacitor.isNativePlatform()) {
+        return null;
+    }
+
+    try {
+        const result = await AdhanNative.getSelectedLocation();
+        return result.locationId;
+    } catch (error) {
+        console.error('❌ Error getting selected location:', error);
+        return null;
+    }
+}
+
+/**
+ * Manually trigger a background fetch of prayer times from Supabase.
+ * Useful for testing or forcing an update.
+ */
+export async function refreshPrayerTimes(): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) {
+        console.log('⚠️ Refresh prayer times - not on native platform');
+        return false;
+    }
+
+    try {
+        const result = await AdhanNative.refreshPrayerTimes();
+        console.log('🔄 Refreshed prayer times from Supabase');
+        return result.success;
+    } catch (error) {
+        console.error('❌ Error refreshing prayer times:', error);
         return false;
     }
 }

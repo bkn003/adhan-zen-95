@@ -60,9 +60,11 @@ class AdhanNativePlugin : Plugin() {
                 val type = p.getString("type")
                 val idx = types.indexOf(type)
                 if (idx >= 0 && p.has("iqamah")) {
-                    val iqamahMillis = parseTime(p.getString("iqamah"), year, month, day)
+                    val iqamahStr = p.getString("iqamah")
+                    val iqamahMillis = parseTime(iqamahStr, year, month, day)
                     if (iqamahMillis > System.currentTimeMillis()) {
-                        DndScheduler.scheduleDndForPrayer(context, iqamahMillis, p.getString("name"), idx, beforeMin, afterMin)
+                        // Pass the time string for new day rescheduling
+                        DndScheduler.scheduleDndForPrayer(context, iqamahMillis, p.getString("name"), idx, beforeMin, afterMin, iqamahStr)
                         count++
                     }
                 }
@@ -95,9 +97,13 @@ class AdhanNativePlugin : Plugin() {
                 val type = p.getString("type")
                 val idx = types.indexOf(type)
                 if (idx >= 0 && p.has("adhan")) {
-                    val adhanMillis = parseTime(p.getString("adhan"), year, month, day)
+                    val adhanStr = p.getString("adhan")
+                    val iqamahStr = if (p.has("iqamah")) p.getString("iqamah") else ""
+                    val adhanMillis = parseTime(adhanStr, year, month, day)
+                    val iqamahMillis = if (iqamahStr.isNotEmpty()) parseTime(iqamahStr, year, month, day) else 0L
                     if (adhanMillis > System.currentTimeMillis()) {
-                        ReliableAlarmScheduler.scheduleAdhanAlarm(context, adhanMillis, p.getString("name"), idx)
+                        // Pass time strings for new day rescheduling
+                        ReliableAlarmScheduler.scheduleAdhanAlarm(context, adhanMillis, p.getString("name"), idx, iqamahMillis, adhanStr, iqamahStr)
                         count++
                     }
                 }
@@ -201,6 +207,51 @@ class AdhanNativePlugin : Plugin() {
         cal.set(java.util.Calendar.HOUR_OF_DAY, h)
         cal.set(java.util.Calendar.MINUTE, m)
         return cal.timeInMillis
+    }
+    
+    /**
+     * Save the user's selected location ID for background prayer time fetching.
+     * This must be called whenever the user selects a different location.
+     */
+    @PluginMethod
+    fun saveSelectedLocation(call: PluginCall) {
+        val locationId = call.getString("locationId") ?: return call.reject("Missing locationId")
+        
+        PrayerTimeFetcher.saveSelectedLocation(context, locationId)
+        Log.d("AdhanNativePlugin", "💾 Saved selected location: $locationId")
+        
+        call.resolve(JSObject().apply { put("success", true) })
+    }
+    
+    /**
+     * Get the currently selected location ID.
+     */
+    @PluginMethod
+    fun getSelectedLocation(call: PluginCall) {
+        val locationId = PrayerTimeFetcher.getSelectedLocation(context)
+        val result = JSObject()
+        result.put("locationId", locationId)
+        call.resolve(result)
+    }
+    
+    /**
+     * Manually trigger a background fetch of prayer times.
+     * Useful for testing or forcing an update.
+     */
+    @PluginMethod
+    fun refreshPrayerTimes(call: PluginCall) {
+        Thread {
+            try {
+                PrayerTimeFetcher.fetchAndUpdatePrayerTimes(context)
+                activity?.runOnUiThread {
+                    call.resolve(JSObject().apply { put("success", true) })
+                }
+            } catch (e: Exception) {
+                activity?.runOnUiThread {
+                    call.reject("Error: ${e.message}")
+                }
+            }
+        }.start()
     }
 }
 

@@ -13,7 +13,7 @@ object ReliableAlarmScheduler {
     private const val PREFS_NAME = "reliable_alarm_prefs"
     private const val REQUEST_CODE_BASE = 3000
     
-    fun scheduleAdhanAlarm(context: Context, adhanTimeMillis: Long, prayerName: String, prayerIndex: Int, iqamahTimeMillis: Long = 0L) {
+    fun scheduleAdhanAlarm(context: Context, adhanTimeMillis: Long, prayerName: String, prayerIndex: Int, iqamahTimeMillis: Long = 0L, adhanTimeStr: String = "", iqamahTimeStr: String = "") {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         
         Log.d(TAG, "=== SCHEDULING ADHAN ALARM ===")
@@ -52,12 +52,20 @@ object ReliableAlarmScheduler {
                 Log.d(TAG, "✅ Scheduled exact alarm for $prayerName")
             }
             
-            // Store for recovery after reboot/app kill
+            // Store for recovery after reboot/app kill AND for new day rescheduling
+            // Also store the time strings so we can recalculate for new days
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
                 putLong("adhan_$prayerIndex", adhanTimeMillis)
                 putString("prayer_name_$prayerIndex", prayerName)
                 putLong("iqamah_$prayerIndex", iqamahTimeMillis)
                 putLong("last_scheduled", System.currentTimeMillis())
+                // Store time strings for new day rescheduling
+                if (adhanTimeStr.isNotEmpty()) {
+                    putString("adhan_time_str_$prayerIndex", adhanTimeStr)
+                }
+                if (iqamahTimeStr.isNotEmpty()) {
+                    putString("iqamah_time_str_$prayerIndex", iqamahTimeStr)
+                }
             }
             
             Log.d(TAG, "💾 Stored alarm info in SharedPreferences for $prayerName")
@@ -91,6 +99,97 @@ object ReliableAlarmScheduler {
         Log.d(TAG, "📅 Rescheduled $rescheduledCount alarms")
     }
     
+    /**
+     * Reschedule alarms for a new day by recalculating timestamps from stored time strings.
+     * This is called by AdhanDailyUpdateReceiver at midnight.
+     */
+    fun rescheduleForNewDay(context: Context) {
+        Log.d(TAG, "🌅 Rescheduling alarms for NEW DAY...")
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        var rescheduledCount = 0
+        
+        val today = java.util.Calendar.getInstance()
+        val year = today.get(java.util.Calendar.YEAR)
+        val month = today.get(java.util.Calendar.MONTH)
+        val day = today.get(java.util.Calendar.DAY_OF_MONTH)
+        
+        for (i in 0..4) {
+            val name = prefs.getString("prayer_name_$i", null) ?: continue
+            val adhanTimeStr = prefs.getString("adhan_time_str_$i", null)
+            val iqamahTimeStr = prefs.getString("iqamah_time_str_$i", null)
+            
+            if (adhanTimeStr != null) {
+                // Recalculate the alarm time for today
+                val newAdhanMillis = parseTimeToMillis(adhanTimeStr, year, month, day)
+                val newIqamahMillis = if (iqamahTimeStr != null) parseTimeToMillis(iqamahTimeStr, year, month, day) else 0L
+                
+                if (newAdhanMillis > System.currentTimeMillis()) {
+                    scheduleAdhanAlarm(context, newAdhanMillis, name, i, newIqamahMillis, adhanTimeStr, iqamahTimeStr ?: "")
+                    rescheduledCount++
+                    
+                    // Also reschedule DND
+                    if (newIqamahMillis > System.currentTimeMillis()) {
+                        DndScheduler.scheduleDndForPrayer(context, newIqamahMillis, name, i)
+                    }
+                    
+                    Log.d(TAG, "📿 Rescheduled $name for today at ${java.util.Date(newAdhanMillis)}")
+                }
+            } else {
+                // Fallback: just shift yesterday's timestamp by 24 hours
+                val oldTime = prefs.getLong("adhan_$i", 0)
+                if (oldTime > 0) {
+                    val newTime = oldTime + (24 * 60 * 60 * 1000L)
+                    val now = System.currentTimeMillis()
+                    
+                    // Only schedule if the new time is in the future
+                    if (newTime > now) {
+                        val oldIqamahTime = prefs.getLong("iqamah_$i", 0)
+                        val newIqamahTime = if (oldIqamahTime > 0) oldIqamahTime + (24 * 60 * 60 * 1000L) else 0L
+                        
+                        scheduleAdhanAlarm(context, newTime, name, i, newIqamahTime)
+                        rescheduledCount++
+                        
+                        if (newIqamahTime > now) {
+                            DndScheduler.scheduleDndForPrayer(context, newIqamahTime, name, i)
+                        }
+                        
+                        Log.d(TAG, "📿 Rescheduled $name (fallback +24h) for ${java.util.Date(newTime)}")
+                    }
+                }
+            }
+        }
+        
+        Log.d(TAG, "🌅 Rescheduled $rescheduledCount alarms for new day")
+    }
+    
+    private fun parseTimeToMillis(timeStr: String, year: Int, month: Int, day: Int): Long {
+        val cal = java.util.Calendar.getInstance()
+        cal.set(year, month, day, 0, 0, 0)
+        cal.set(java.util.Calendar.MILLISECOND, 0)
+        
+        val t = timeStr.trim()
+        var h: Int
+        var m: Int
+        
+        if (t.contains("AM", true) || t.contains("PM", true)) {
+            val pts = t.split(" ")
+            val hm = pts[0].split(":")
+            h = hm[0].toInt()
+            m = hm[1].toInt()
+            if (pts[1].equals("PM", true) && h != 12) h += 12
+            else if (pts[1].equals("AM", true) && h == 12) h = 0
+        } else {
+            val hm = t.split(":")
+            h = hm[0].toInt()
+            m = hm[1].toInt()
+        }
+        
+        cal.set(java.util.Calendar.HOUR_OF_DAY, h)
+        cal.set(java.util.Calendar.MINUTE, m)
+        
+        return cal.timeInMillis
+    }
+    
     fun cancelAllAlarms(context: Context) {
         Log.d(TAG, "🚫 Cancelling all alarms...")
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -110,6 +209,14 @@ object ReliableAlarmScheduler {
         for (i in 0..4) {
             val time = prefs.getLong("adhan_$i", 0)
             if (time > now) return true
+        }
+        return false
+    }
+    
+    fun hasStoredPrayerData(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        for (i in 0..4) {
+            if (prefs.getString("prayer_name_$i", null) != null) return true
         }
         return false
     }

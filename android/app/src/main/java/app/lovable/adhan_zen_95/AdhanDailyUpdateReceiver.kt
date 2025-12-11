@@ -6,10 +6,16 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import androidx.core.content.ContextCompat
 import java.util.Calendar
 
+/**
+ * BroadcastReceiver that triggers at 12:05 AM daily to reschedule all alarms for the new day.
+ * This is CRITICAL for ensuring Adhan alarms and DND work on consecutive days.
+ */
 class AdhanDailyUpdateReceiver : BroadcastReceiver() {
     companion object {
+        private const val TAG = "AdhanDailyUpdate"
         private const val REQUEST_CODE = 9999
         
         fun scheduleDailyUpdate(context: Context) {
@@ -25,12 +31,53 @@ class AdhanDailyUpdateReceiver : BroadcastReceiver() {
             }
             
             alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, AlarmManager.INTERVAL_DAY, pendingIntent)
-            Log.d("AdhanDailyUpdate", "Scheduled daily update at ${calendar.time}")
+            Log.d(TAG, "📅 Scheduled daily update at ${calendar.time}")
         }
     }
     
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d("AdhanDailyUpdate", "Daily update triggered")
-        Thread { PrayerTimeFetcher.fetchAndUpdatePrayerTimes(context) }.start()
+        Log.d(TAG, "╔════════════════════════════════════════╗")
+        Log.d(TAG, "║    DAILY UPDATE RECEIVER TRIGGERED     ║")
+        Log.d(TAG, "╠════════════════════════════════════════╣")
+        Log.d(TAG, "║ Time: ${java.util.Date()}")
+        Log.d(TAG, "╚════════════════════════════════════════╝")
+        
+        // Run in background thread since we're making network calls
+        Thread {
+            try {
+                // CRITICAL: Fetch new prayer times from Supabase for TODAY
+                // This handles the case where prayer times change daily
+                Log.d(TAG, "🌐 Fetching updated prayer times from Supabase...")
+                PrayerTimeFetcher.fetchAndUpdatePrayerTimes(context)
+                
+                // Also start/restart the countdown notification service
+                Log.d(TAG, "📊 Starting countdown service...")
+                try {
+                    val serviceIntent = Intent(context, PrayerCountdownService::class.java).apply {
+                        action = PrayerCountdownService.ACTION_START
+                    }
+                    ContextCompat.startForegroundService(context, serviceIntent)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to start countdown service", e)
+                }
+                
+                // Pre-cache upcoming prayer data for offline change notifications
+                Log.d(TAG, "📦 Pre-caching upcoming prayer data...")
+                PrayerChangeNotifier.preCacheUpcomingData(context)
+                
+                Log.d(TAG, "✅ Daily update complete")
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Daily update failed", e)
+                
+                // Fallback to stored times if network fails
+                try {
+                    ReliableAlarmScheduler.rescheduleForNewDay(context)
+                    DndScheduler.rescheduleForNewDay(context)
+                } catch (e2: Exception) {
+                    Log.e(TAG, "❌ Fallback also failed", e2)
+                }
+            }
+        }.start()
     }
 }
+

@@ -83,6 +83,12 @@
             </intent-filter>
         </receiver>
 
+        <!-- Prayer Change Receiver - notifies about tomorrow's prayer time changes -->
+        <receiver
+            android:name=".PrayerChangeReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
     </application>
 
     <!-- Permissions -->
