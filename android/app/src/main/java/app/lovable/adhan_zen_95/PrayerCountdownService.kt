@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.*
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -55,6 +56,9 @@ class PrayerCountdownService : Service() {
                 loadPrayersFromPrefs()
                 startForeground(NOTIFICATION_ID, createNotification())
                 startCountdown()
+                
+                // Schedule periodic WorkManager to ensure service stays alive
+                ServiceRestartWorker.schedulePeriodicRestart(applicationContext)
             }
             ACTION_STOP -> {
                 stopCountdown()
@@ -75,6 +79,9 @@ class PrayerCountdownService : Service() {
                 loadPrayersFromPrefs()
                 startForeground(NOTIFICATION_ID, createNotification())
                 startCountdown()
+                
+                // Schedule periodic WorkManager to ensure service stays alive
+                ServiceRestartWorker.schedulePeriodicRestart(applicationContext)
             }
         }
         
@@ -519,12 +526,20 @@ class PrayerCountdownService : Service() {
     
     /**
      * Called when user swipes away the app from recent apps.
-     * We restart the service to keep the notification visible.
+     * We use multiple mechanisms to restart the service reliably.
      */
     override fun onTaskRemoved(rootIntent: Intent?) {
         Log.d(TAG, "📱 App killed by user (onTaskRemoved) - aggressively restarting countdown service...")
         
-        // Restart the service to keep notification visible
+        // Method 1: Use WorkManager (most reliable, survives app kill)
+        try {
+            ServiceRestartWorker.triggerImmediateRestart(applicationContext)
+            Log.d(TAG, "✅ WorkManager restart triggered")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ WorkManager restart failed", e)
+        }
+        
+        // Method 2: Use AlarmManager as backup
         val restartIntent = Intent(applicationContext, PrayerCountdownService::class.java).apply {
             action = ACTION_START
         }
@@ -534,13 +549,20 @@ class PrayerCountdownService : Service() {
                 applicationContext, 1, restartIntent, PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
             )
             
-            // Use AlarmManager to restart service after 1 second (more reliable than direct startService in some cases)
             val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
             alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 1000, pendingIntent)
             
-            Log.d(TAG, "✅ Service restart scheduled via AlarmManager")
+            Log.d(TAG, "✅ AlarmManager restart scheduled as backup")
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to schedule restart", e)
+            Log.e(TAG, "❌ AlarmManager restart failed", e)
+        }
+        
+        // Method 3: Direct start (may work on some devices)
+        try {
+            ContextCompat.startForegroundService(applicationContext, restartIntent)
+            Log.d(TAG, "✅ Direct foreground service start attempted")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Direct start failed", e)
         }
         
         super.onTaskRemoved(rootIntent)
