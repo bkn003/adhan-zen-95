@@ -10,6 +10,7 @@ import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -17,6 +18,8 @@ import androidx.core.content.ContextCompat
 class AdhanForegroundService : Service() {
     private var mediaPlayer: MediaPlayer? = null
     private var volumeReceiver: BroadcastReceiver? = null
+    private var screenReceiver: BroadcastReceiver? = null
+    private var initialVolume: Int = -1
     private val CHANNEL_ID = "adhan_playback_channel"
     private val NOTIFICATION_ID = 1001
     
@@ -26,9 +29,11 @@ class AdhanForegroundService : Service() {
         const val ACTION_STOP_ADHAN = "app.lovable.adhan_zen_95.STOP_ADHAN"
         const val EXTRA_PRAYER_NAME = "prayer_name"
         
+        @Volatile
         private var isPlaying = false
         
         fun stopAdhan(context: Context) {
+            Log.d(TAG, "Static stopAdhan called")
             val intent = Intent(context, AdhanForegroundService::class.java).apply {
                 action = ACTION_STOP_ADHAN
             }
@@ -40,53 +45,107 @@ class AdhanForegroundService : Service() {
     
     override fun onCreate() {
         super.onCreate()
+        Log.d(TAG, "Service onCreate")
         createNotificationChannel()
-        registerVolumeReceiver()
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d(TAG, "onStartCommand: action=${intent?.action}")
+        
         when (intent?.action) {
             ACTION_STOP_ADHAN -> {
-                Log.d(TAG, "Stop action received - stopping Adhan")
-                stopAdhan()
-                stopSelf()
+                Log.d(TAG, "🛑 Stop action received - stopping Adhan IMMEDIATELY")
+                stopAdhanAndService()
                 return START_NOT_STICKY
             }
             ACTION_PLAY_ADHAN -> {
                 val prayerName = intent.getStringExtra(EXTRA_PRAYER_NAME) ?: "Prayer"
-                Log.d(TAG, "Play Adhan for $prayerName")
+                Log.d(TAG, "▶️ Play Adhan for $prayerName")
+                
+                // Start foreground first
                 startForeground(NOTIFICATION_ID, createNotification(prayerName))
+                
+                // Register receivers AFTER starting foreground
+                registerVolumeReceiver()
+                registerScreenReceiver()
+                
+                // Play adhan
                 playAdhan()
             }
         }
         return START_NOT_STICKY
     }
     
+    /**
+     * Register volume change receiver - stops adhan when any volume button is pressed
+     */
     private fun registerVolumeReceiver() {
-        // Listen for volume button presses to stop adhan
+        if (volumeReceiver != null) return // Already registered
+        
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        initialVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        Log.d(TAG, "📊 Initial volume: $initialVolume")
+        
         volumeReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action == "android.media.VOLUME_CHANGED_ACTION") {
+                    val streamType = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1)
+                    Log.d(TAG, "🔊 Volume changed detected! Stream: $streamType")
+                    
+                    // Stop on ANY volume change (up or down, any stream)
+                    Log.d(TAG, "🛑 Stopping adhan due to volume button press")
+                    stopAdhanAndService()
+                }
+            }
+        }
+        
+        val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(volumeReceiver, filter, Context.RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(volumeReceiver, filter)
+        }
+        Log.d(TAG, "✅ Volume receiver registered")
+    }
+    
+    /**
+     * Register screen receiver - stops adhan when power button is pressed (screen on/off)
+     */
+    private fun registerScreenReceiver() {
+        if (screenReceiver != null) return // Already registered
+        
+        screenReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
                 when (intent?.action) {
-                    "android.media.VOLUME_CHANGED_ACTION",
                     Intent.ACTION_SCREEN_OFF -> {
-                        Log.d(TAG, "Volume/screen action detected - stopping adhan")
-                        stopAdhan()
-                        stopSelf()
+                        Log.d(TAG, "📱 Screen OFF (power button pressed) - stopping adhan")
+                        stopAdhanAndService()
+                    }
+                    Intent.ACTION_SCREEN_ON -> {
+                        Log.d(TAG, "📱 Screen ON (power button pressed) - stopping adhan")
+                        stopAdhanAndService()
+                    }
+                    Intent.ACTION_USER_PRESENT -> {
+                        Log.d(TAG, "📱 User present (device unlocked) - stopping adhan")
+                        stopAdhanAndService()
                     }
                 }
             }
         }
         
         val filter = IntentFilter().apply {
-            addAction("android.media.VOLUME_CHANGED_ACTION")
             addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_USER_PRESENT)
         }
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(volumeReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            registerReceiver(screenReceiver, filter, Context.RECEIVER_EXPORTED)
         } else {
-            registerReceiver(volumeReceiver, filter)
+            registerReceiver(screenReceiver, filter)
         }
+        Log.d(TAG, "✅ Screen receiver registered")
     }
     
     private fun createNotificationChannel() {
@@ -107,11 +166,9 @@ class AdhanForegroundService : Service() {
             PendingIntent.FLAG_IMMUTABLE
         )
         
-        // Stop action
-        val stopIntent = Intent(this, AdhanForegroundService::class.java).apply {
-            action = ACTION_STOP_ADHAN
-        }
-        val stopPendingIntent = PendingIntent.getService(
+        // Stop action - uses broadcast receiver for more reliable stopping
+        val stopIntent = Intent(this, AdhanStopReceiver::class.java)
+        val stopPendingIntent = PendingIntent.getBroadcast(
             this, 0, stopIntent, 
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -120,17 +177,17 @@ class AdhanForegroundService : Service() {
         
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("🕌 $prayerName Adhan")
-            .setContentText("Tap STOP or press volume button to stop")
+            .setContentText("Tap STOP, press volume/power button, or swipe to stop")
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(prayerColor)
             .setColorized(true)
             .setContentIntent(pendingIntent)
-            .setOngoing(true)
+            .setOngoing(false)  // Allow swipe to dismiss
             .setAutoCancel(false)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .addAction(android.R.drawable.ic_media_pause, "STOP", stopPendingIntent)
+            .addAction(android.R.drawable.ic_media_pause, "🛑 STOP", stopPendingIntent)
             .setDeleteIntent(stopPendingIntent) // Stop when notification is swiped
             .build()
     }
@@ -158,12 +215,12 @@ class AdhanForegroundService : Service() {
                     .setUsage(AudioAttributes.USAGE_ALARM)
                     .build())
                 setOnCompletionListener { 
-                    Log.d(TAG, "Adhan playback completed")
+                    Log.d(TAG, "✅ Adhan playback completed naturally")
                     Companion.isPlaying = false
                     stopSelf() 
                 }
                 setOnErrorListener { _, what, extra -> 
-                    Log.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
+                    Log.e(TAG, "❌ MediaPlayer error: what=$what, extra=$extra")
                     Companion.isPlaying = false
                     stopSelf()
                     true 
@@ -171,41 +228,79 @@ class AdhanForegroundService : Service() {
                 prepare()
                 start()
                 Companion.isPlaying = true
-                Log.d(TAG, "Adhan playback started")
+                Log.d(TAG, "▶️ Adhan playback started")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to play adhan", e)
-            Companion.isPlaying = false
+            Log.e(TAG, "❌ Failed to play adhan", e)
+            isPlaying = false
             stopSelf()
         }
     }
     
     private fun stopAdhan() {
         try {
-            mediaPlayer?.apply {
-                if (this.isPlaying) {
-                    stop()
-                    Log.d(TAG, "Adhan stopped")
+            mediaPlayer?.let { player ->
+                if (player.isPlaying) {
+                    player.stop()
+                    Log.d(TAG, "🛑 Adhan audio stopped")
                 }
-                release()
+                player.release()
             }
             mediaPlayer = null
-            Companion.isPlaying = false
+            isPlaying = false
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping adhan", e)
+            mediaPlayer = null
+            isPlaying = false
         }
+    }
+    
+    private fun stopAdhanAndService() {
+        Log.d(TAG, "🛑 stopAdhanAndService called")
+        stopAdhan()
+        unregisterReceivers()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+    
+    private fun unregisterReceivers() {
+        try {
+            volumeReceiver?.let { 
+                unregisterReceiver(it) 
+                Log.d(TAG, "Volume receiver unregistered")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error unregistering volume receiver", e)
+        }
+        volumeReceiver = null
+        
+        try {
+            screenReceiver?.let { 
+                unregisterReceiver(it) 
+                Log.d(TAG, "Screen receiver unregistered")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error unregistering screen receiver", e)
+        }
+        screenReceiver = null
     }
     
     override fun onDestroy() {
+        Log.d(TAG, "Service onDestroy")
         super.onDestroy()
         stopAdhan()
-        try {
-            volumeReceiver?.let { unregisterReceiver(it) }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error unregistering receiver", e)
-        }
-        volumeReceiver = null
+        unregisterReceivers()
     }
     
     override fun onBind(intent: Intent?): IBinder? = null
+}
+
+/**
+ * Separate broadcast receiver for stop action - more reliable than service intent
+ */
+class AdhanStopReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent?) {
+        Log.d("AdhanStopReceiver", "🛑 Stop broadcast received")
+        AdhanForegroundService.stopAdhan(context)
+    }
 }

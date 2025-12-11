@@ -90,6 +90,12 @@
             android:enabled="true"
             android:exported="false" />
 
+        <!-- Adhan Stop Receiver - stops adhan from notification button/swipe -->
+        <receiver
+            android:name=".AdhanStopReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
     </application>
 
     <!-- Permissions -->
