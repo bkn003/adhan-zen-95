@@ -42,6 +42,10 @@ class AdhanDailyUpdateReceiver : BroadcastReceiver() {
         Log.d(TAG, "║ Time: ${java.util.Date()}")
         Log.d(TAG, "╚════════════════════════════════════════╝")
         
+        // CRITICAL: Clear ALL stale trigger flags FIRST to ensure Fajr alarm works
+        // This fixes the bug where Fajr worked yesterday but not today
+        clearAllStaleTriggerFlags(context)
+        
         // Run in background thread since we're making network calls
         Thread {
             try {
@@ -78,6 +82,45 @@ class AdhanDailyUpdateReceiver : BroadcastReceiver() {
                 }
             }
         }.start()
+    }
+    
+    /**
+     * Clear all stale trigger flags from previous days.
+     * This is CRITICAL for Fajr alarm to work - if flags from yesterday aren't cleared,
+     * the AdhanAlarmReceiver will skip the alarm thinking it already triggered today.
+     */
+    private fun clearAllStaleTriggerFlags(context: Context) {
+        try {
+            val prefs = context.getSharedPreferences("adhan_alarm_prefs", Context.MODE_PRIVATE)
+            val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+            
+            val keysToRemove = mutableListOf<String>()
+            prefs.all.forEach { (key, _) ->
+                // Clear all trigger flags that are NOT from today
+                if (key.startsWith("triggered_") && !key.endsWith(today)) {
+                    keysToRemove.add(key)
+                }
+                // Also clear old last_trigger timestamps (older than 24 hours)
+                if (key.startsWith("last_trigger_")) {
+                    val timestamp = prefs.getLong(key, 0)
+                    if (System.currentTimeMillis() - timestamp > 24 * 60 * 60 * 1000) {
+                        keysToRemove.add(key)
+                    }
+                }
+            }
+            
+            if (keysToRemove.isNotEmpty()) {
+                prefs.edit().apply {
+                    keysToRemove.forEach { remove(it) }
+                    apply()
+                }
+                Log.d(TAG, "🧹 Cleared ${keysToRemove.size} stale trigger flags at midnight")
+            } else {
+                Log.d(TAG, "ℹ️ No stale flags to clear")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "⚠️ Failed to clear stale flags", e)
+        }
     }
 }
 

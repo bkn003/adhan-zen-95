@@ -44,6 +44,43 @@ interface AdhanNativePlugin {
     saveSelectedLocation(options: { locationId: string }): Promise<{ success: boolean }>;
     getSelectedLocation(): Promise<{ locationId: string | null }>;
     refreshPrayerTimes(): Promise<{ success: boolean }>;
+    // Battery optimization methods
+    checkBatteryOptimization(): Promise<BatteryOptimizationStatus>;
+    requestBatteryOptimization(): Promise<void>;
+    openManufacturerBatterySettings(): Promise<void>;
+    ignoreBatteryOptimizationPrompt(): Promise<void>;
+    // Adhan sound selection methods
+    getAvailableAdhans(): Promise<{ adhans: AdhanSound[] }>;
+    getAdhanSettings(): Promise<AdhanSettings>;
+    setAdhanSelection(options: { adhanId?: string; isFajr?: boolean; volume?: number }): Promise<{ success: boolean }>;
+    // Vibration methods
+    getVibrationSettings(): Promise<VibrationSettings>;
+    setVibrationSettings(options: { enabled?: boolean; patternId?: string }): Promise<void>;
+}
+
+export interface AdhanSound {
+    id: string;
+    name: string;
+    description: string;
+}
+
+export interface AdhanSettings {
+    selectedAdhan: string;
+    fajrAdhan: string;
+    volume: number;
+}
+
+export interface VibrationSettings {
+    enabled: boolean;
+    patternId: string;
+    patterns: Array<{ id: string; name: string }>;
+}
+
+export interface BatteryOptimizationStatus {
+    isIgnoring: boolean;
+    isAggressiveDevice: boolean;
+    manufacturer: string;
+    shouldShowPrompt: boolean;
 }
 
 export interface DndSettings {
@@ -384,6 +421,180 @@ export async function refreshPrayerTimes(): Promise<boolean> {
         return result.success;
     } catch (error) {
         console.error('❌ Error refreshing prayer times:', error);
+        return false;
+    }
+}
+
+// ========== Battery Optimization Functions ==========
+
+/**
+ * Check battery optimization status
+ */
+export async function checkBatteryOptimization(): Promise<BatteryOptimizationStatus | null> {
+    if (!Capacitor.isNativePlatform()) {
+        console.log('⚠️ Battery optimization check - not on native platform');
+        return null;
+    }
+
+    try {
+        const result = await AdhanNative.checkBatteryOptimization();
+        console.log('🔋 Battery optimization status:', result);
+        return result;
+    } catch (error) {
+        console.error('❌ Error checking battery optimization:', error);
+        return null;
+    }
+}
+
+/**
+ * Request to disable battery optimization (shows system dialog)
+ */
+export async function requestBatteryOptimization(): Promise<void> {
+    if (!Capacitor.isNativePlatform()) {
+        console.log('⚠️ Cannot request battery optimization - not on native platform');
+        return;
+    }
+
+    try {
+        await AdhanNative.requestBatteryOptimization();
+        console.log('📱 Opened battery optimization settings');
+    } catch (error) {
+        console.error('❌ Error requesting battery optimization:', error);
+    }
+}
+
+/**
+ * Open manufacturer-specific battery/autostart settings
+ * (Xiaomi, Oppo, Vivo, Huawei, Samsung, etc.)
+ */
+export async function openManufacturerBatterySettings(): Promise<void> {
+    if (!Capacitor.isNativePlatform()) {
+        console.log('⚠️ Cannot open manufacturer settings - not on native platform');
+        return;
+    }
+
+    try {
+        await AdhanNative.openManufacturerBatterySettings();
+        console.log('⚙️ Opened manufacturer battery settings');
+    } catch (error) {
+        console.error('❌ Error opening manufacturer settings:', error);
+    }
+}
+
+/**
+ * Mark battery optimization prompt as ignored by user
+ */
+export async function ignoreBatteryOptimizationPrompt(): Promise<void> {
+    if (!Capacitor.isNativePlatform()) return;
+
+    try {
+        await AdhanNative.ignoreBatteryOptimizationPrompt();
+        console.log('✅ Battery optimization prompt ignored');
+    } catch (error) {
+        console.error('❌ Error ignoring battery optimization prompt:', error);
+    }
+}
+
+// ========== Adhan Sound Managment Functions ==========
+
+/**
+ * Get available adhan sounds
+ */
+export async function getAvailableAdhans(): Promise<AdhanSound[]> {
+    if (!Capacitor.isNativePlatform()) return [];
+
+    try {
+        const result = await AdhanNative.getAvailableAdhans();
+        return result.adhans;
+    } catch (error) {
+        console.error('❌ Error getting available adhans:', error);
+        return [];
+    }
+}
+
+/**
+ * Get current adhan settings (selected sound, volume)
+ */
+export async function getAdhanSettings(): Promise<AdhanSettings | null> {
+    if (!Capacitor.isNativePlatform()) return null;
+
+    try {
+        const result = await AdhanNative.getAdhanSettings();
+        return result;
+    } catch (error) {
+        console.error('❌ Error getting adhan settings:', error);
+        return null;
+    }
+}
+
+/**
+ * Set selected adhan sound
+ */
+export async function setSelectedAdhan(adhanId: string, isFajr: boolean = false): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) return false;
+
+    try {
+        await AdhanNative.setAdhanSelection({ adhanId, isFajr });
+        console.log(`✅ Selected ${isFajr ? 'Fajr ' : ''}adhan: ${adhanId}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Error setting adhan:', error);
+        return false;
+    }
+}
+
+/**
+ * Set adhan volume (0-100)
+ */
+export async function setAdhanVolume(volume: number): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) return false;
+
+    try {
+        await AdhanNative.setAdhanSelection({ volume });
+        console.log(`🔊 Set adhan volume: ${volume}%`);
+        return true;
+    } catch (error) {
+        console.error('❌ Error setting adhan volume:', error);
+        return false;
+    }
+}
+
+// ========== Vibration Settings Functions ==========
+
+export async function getVibrationSettings(): Promise<VibrationSettings | null> {
+    if (!Capacitor.isNativePlatform()) return null;
+
+    try {
+        const result = await AdhanNative.getVibrationSettings();
+        return result;
+    } catch (error) {
+        console.error('❌ Error getting vibration settings:', error);
+        return null;
+    }
+}
+
+export async function setVibrationEnabled(enabled: boolean): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) return false;
+
+    try {
+        await AdhanNative.setVibrationSettings({ enabled });
+        console.log(`📳 Vibration enabled: ${enabled}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Error setting vibration enabled:', error);
+        return false;
+    }
+}
+
+export async function setVibrationPattern(patternId: string): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) return false;
+
+    try {
+        await AdhanNative.setVibrationSettings({ patternId });
+        console.log(`📳 Vibration pattern set: ${patternId}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Error setting vibration pattern:', error);
         return false;
     }
 }

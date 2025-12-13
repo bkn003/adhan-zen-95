@@ -155,14 +155,18 @@ object PrayerTimeFetcher {
         val month = today.get(Calendar.MONTH)
         val day = today.get(Calendar.DAY_OF_MONTH)
         
-        Log.d(TAG, "⏰ Scheduling alarms for $day/${month+1}/$year")
+        // CRITICAL FIX: Always use the CURRENT day of week, not the cached isFriday parameter
+        // This fixes the bug where "Jummah" shows on Saturday when using cached Friday data
+        val actuallyFriday = today.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY
         
-        // Prayer times from the record
+        Log.d(TAG, "⏰ Scheduling alarms for $day/${month+1}/$year (Friday: $actuallyFriday, cached isFriday: $isFriday)")
+        
+        // Prayer times from the record - use actuallyFriday for name, but still check record for times
         val prayers = listOf(
             Triple(0, "Fajr", record.getString("fajr_adhan") to record.getString("fajr_iqamah")),
-            Triple(1, if (isFriday) "Jummah" else "Zuhr", 
-                (if (isFriday && record.has("jummah_adhan")) record.getString("jummah_adhan") else record.getString("dhuhr_adhan")) to
-                (if (isFriday && record.has("jummah_iqamah")) record.getString("jummah_iqamah") else record.getString("dhuhr_iqamah"))),
+            Triple(1, if (actuallyFriday) "Jummah" else "Zuhr", 
+                (if (actuallyFriday && record.has("jummah_adhan")) record.getString("jummah_adhan") else record.getString("dhuhr_adhan")) to
+                (if (actuallyFriday && record.has("jummah_iqamah")) record.getString("jummah_iqamah") else record.getString("dhuhr_iqamah"))),
             Triple(2, "Asr", record.getString("asr_adhan") to record.getString("asr_iqamah")),
             Triple(3, "Maghrib", record.getString("maghrib_adhan") to record.getString("maghrib_iqamah")),
             Triple(4, "Isha", record.getString("isha_adhan") to record.getString("isha_iqamah"))

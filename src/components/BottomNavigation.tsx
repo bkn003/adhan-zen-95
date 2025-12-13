@@ -1,4 +1,4 @@
-import { Home, MapPin, Compass, Settings } from 'lucide-react';
+import { Home, MapPin, Compass, Settings, RotateCcw, CalendarCheck } from 'lucide-react';
 import { tamilText } from '@/utils/tamilText';
 import type { Screen } from '@/types/navigation.types';
 
@@ -31,6 +31,12 @@ export const BottomNavigation = ({
       activeColor: 'bg-amber-500'
     },
     {
+      id: 'qaza' as Screen,
+      icon: CalendarCheck,
+      label: { english: 'Tracker', tamil: 'கண்காணிப்பு' },
+      activeColor: 'bg-indigo-500'
+    },
+    {
       id: 'settings' as Screen,
       icon: Settings,
       label: tamilText.general.settings,
@@ -53,8 +59,8 @@ export const BottomNavigation = ({
               key={item.id}
               onClick={() => onScreenChange(item.id)}
               className={`flex flex-col items-center justify-center flex-1 h-full px-2 py-1 rounded-xl transition-all duration-200 ${isActive
-                  ? `${item.activeColor} text-white mx-1 shadow-lg`
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                ? `${item.activeColor} text-white mx-1 shadow-lg`
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                 }`}
               style={{ minWidth: '60px', maxWidth: '90px' }}
             >

@@ -43,6 +43,12 @@ class DndReceiver : BroadcastReceiver() {
         
         when (intent.action) {
             ACTION_DND_ON -> {
+                // CRITICAL FIX: Check user settings BEFORE enabling DND
+                if (!shouldEnableDndForPrayer(context, prayerName)) {
+                    Log.d(TAG, "⏭️ Skipping DND for $prayerName - disabled in user settings")
+                    return
+                }
+                
                 Log.d(TAG, "🔇 ========== ENABLING DND FOR $prayerName ==========")
                 
                 // Play activation sound BEFORE enabling DND (so user hears it)
@@ -83,6 +89,45 @@ class DndReceiver : BroadcastReceiver() {
             }
         }
     }
+    
+    /**
+     * Check if DND should be enabled for this prayer based on user settings.
+     * Checks both global DND toggle and per-prayer toggle.
+     */
+    private fun shouldEnableDndForPrayer(context: Context, prayerName: String): Boolean {
+        val prefs = context.getSharedPreferences("dnd_user_settings", Context.MODE_PRIVATE)
+        
+        // Check global DND enabled toggle
+        val globalEnabled = prefs.getBoolean("dnd_enabled", true)
+        if (!globalEnabled) {
+            Log.d(TAG, "⚠️ DND globally disabled in settings")
+            return false
+        }
+        
+        // Check per-prayer setting
+        val prayerType = prayerName.lowercase().let {
+            when {
+                it.contains("fajr") -> "fajr"
+                it.contains("dhuhr") || it.contains("jummah") || it.contains("zuhr") -> "dhuhr"
+                it.contains("asr") -> "asr"
+                it.contains("maghrib") -> "maghrib"
+                it.contains("isha") -> "isha"
+                else -> null
+            }
+        }
+        
+        if (prayerType != null) {
+            val prayerEnabled = prefs.getBoolean("dnd_$prayerType", true)
+            if (!prayerEnabled) {
+                Log.d(TAG, "⚠️ DND disabled for $prayerType in settings")
+                return false
+            }
+        }
+        
+        Log.d(TAG, "✅ DND enabled for $prayerName in settings")
+        return true
+    }
+    
     
     private fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

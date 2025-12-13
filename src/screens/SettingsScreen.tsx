@@ -14,6 +14,8 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Capacitor } from '@capacitor/core';
+import { AdhanSoundSelector } from '@/components/AdhanSoundSelector';
+import { VibrationSelector } from '@/components/VibrationSelector';
 
 // Modern Settings Card Component
 const SettingsCard = ({
@@ -192,6 +194,13 @@ export const SettingsScreen = () => {
   const handleVolumeChange = (value: number[]) => {
     setAdhanVolume(value[0]);
     localStorage.setItem('adhanVolume', value[0].toString());
+
+    // Also update native volume setting if on Android
+    if (isNative) {
+      import('@/native/dndService').then(({ setAdhanVolume }) => {
+        setAdhanVolume(value[0]);
+      });
+    }
   };
 
   const handleNotificationToggle = async (enabled: boolean) => {
@@ -208,26 +217,85 @@ export const SettingsScreen = () => {
     setIsRamadanMode(false);
   };
 
-  const handleDndEnabledToggle = (enabled: boolean) => {
+  const handleDndEnabledToggle = async (enabled: boolean) => {
     setDndEnabled(enabled);
     localStorage.setItem('dndEnabled', enabled.toString());
+
+    // CRITICAL: Sync to native layer so DND actually works
+    await syncDndToNative(enabled, dndPerPrayer, dndBeforeIqamah, dndAfterIqamah);
   };
 
-  const handleDndBeforeChange = (value: number[]) => {
+  const handleDndBeforeChange = async (value: number[]) => {
     setDndBeforeIqamah(value[0]);
     localStorage.setItem('dndBeforeIqamah', value[0].toString());
+
+    // Sync to native
+    await syncDndToNative(dndEnabled, dndPerPrayer, value[0], dndAfterIqamah);
   };
 
-  const handleDndAfterChange = (value: number[]) => {
+  const handleDndAfterChange = async (value: number[]) => {
     setDndAfterIqamah(value[0]);
     localStorage.setItem('dndAfterIqamah', value[0].toString());
+
+    // Sync to native
+    await syncDndToNative(dndEnabled, dndPerPrayer, dndBeforeIqamah, value[0]);
   };
 
-  const handlePrayerDndToggle = (prayer: keyof typeof dndPerPrayer, enabled: boolean) => {
+  const handlePrayerDndToggle = async (prayer: keyof typeof dndPerPrayer, enabled: boolean) => {
     const updated = { ...dndPerPrayer, [prayer]: enabled };
     setDndPerPrayer(updated);
     localStorage.setItem('dndPerPrayer', JSON.stringify(updated));
+
+    // Sync to native
+    await syncDndToNative(dndEnabled, updated, dndBeforeIqamah, dndAfterIqamah);
   };
+
+  // CRITICAL: Sync DND settings to native layer
+  const syncDndToNative = async (
+    enabled: boolean,
+    perPrayer: typeof dndPerPrayer,
+    beforeMin: number,
+    afterMin: number
+  ) => {
+    if (!isNative) return;
+
+    try {
+      const { Capacitor } = await import('@capacitor/core');
+      const { registerPlugin } = Capacitor;
+      const AdhanNative = registerPlugin('AdhanNative');
+
+      // Build array of enabled prayers
+      const enabledPrayers: string[] = [];
+      if (enabled) {
+        Object.entries(perPrayer).forEach(([prayer, isEnabled]) => {
+          if (isEnabled) enabledPrayers.push(prayer);
+        });
+      }
+
+      await (AdhanNative as any).saveDndSettings({
+        enabled,
+        beforeMinutes: beforeMin,
+        afterMinutes: afterMin,
+        enabledPrayers
+      });
+
+      console.log('✅ DND settings synced to native:', { enabled, enabledPrayers, beforeMin, afterMin });
+    } catch (e) {
+      console.error('❌ Failed to sync DND to native:', e);
+    }
+  };
+
+  // Sync DND settings on initial load
+  useEffect(() => {
+    if (isNative) {
+      // Small delay to ensure settings are loaded
+      const timer = setTimeout(() => {
+        syncDndToNative(dndEnabled, dndPerPrayer, dndBeforeIqamah, dndAfterIqamah);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isNative]);
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/30 p-3 pb-28 space-y-3">
@@ -461,6 +529,18 @@ export const SettingsScreen = () => {
             onChange={handleNotificationToggle}
             disabled={!supported || permission === 'denied'}
           />
+
+
+
+          {isNative && notificationsEnabled && (
+            <div className="p-3 bg-white rounded-xl border border-gray-100">
+              <AdhanSoundSelector />
+            </div>
+          )}
+
+          {isNative && (
+            <VibrationSelector />
+          )}
 
           <div className="p-3 bg-white rounded-xl border border-gray-100">
             <div className="flex items-center justify-between mb-2">

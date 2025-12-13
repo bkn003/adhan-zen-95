@@ -21,6 +21,12 @@ object DndScheduler {
     const val DEFAULT_DND_AFTER_IQAMAH = 15
     
     fun scheduleDndOn(context: Context, iqamahTimeMillis: Long, prayerName: String, prayerIndex: Int, minutesBefore: Int = DEFAULT_DND_BEFORE_IQAMAH, iqamahTimeStr: String = "") {
+        // CRITICAL FIX: Check user settings BEFORE scheduling DND
+        if (!isDndEnabledForPrayer(context, prayerName)) {
+            Log.d(TAG, "⏭️ Skipping DND schedule for $prayerName - disabled in user settings")
+            return
+        }
+        
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val dndOnTime = iqamahTimeMillis - (minutesBefore * 60 * 1000L)
         
@@ -245,6 +251,43 @@ object DndScheduler {
             }
         }
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit { clear() }
+    }
+    
+    /**
+     * Check if DND is enabled for a specific prayer based on user settings.
+     * Checks both global DND toggle and per-prayer toggle.
+     */
+    private fun isDndEnabledForPrayer(context: Context, prayerName: String): Boolean {
+        val prefs = context.getSharedPreferences("dnd_user_settings", Context.MODE_PRIVATE)
+        
+        // Check global DND enabled toggle
+        val globalEnabled = prefs.getBoolean("dnd_enabled", true)
+        if (!globalEnabled) {
+            Log.d(TAG, "⚠️ DND globally disabled in settings")
+            return false
+        }
+        
+        // Check per-prayer setting
+        val prayerType = prayerName.lowercase().let {
+            when {
+                it.contains("fajr") -> "fajr"
+                it.contains("dhuhr") || it.contains("jummah") || it.contains("zuhr") -> "dhuhr"
+                it.contains("asr") -> "asr"
+                it.contains("maghrib") -> "maghrib"
+                it.contains("isha") -> "isha"
+                else -> null
+            }
+        }
+        
+        if (prayerType != null) {
+            val prayerEnabled = prefs.getBoolean("dnd_$prayerType", true)
+            if (!prayerEnabled) {
+                Log.d(TAG, "⚠️ DND disabled for $prayerType in settings")
+                return false
+            }
+        }
+        
+        return true
     }
 }
 

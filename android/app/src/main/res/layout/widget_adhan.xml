@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@drawable/notification_gradient_bg">
+    
+    <TextView
+        android:id="@+id/widget_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="NEXT PRAYER"
+        android:textColor="#FFFFFFBB"
+        android:textSize="10sp"
+        android:letterSpacing="0.1"
+        android:gravity="center"
+        android:layout_marginBottom="4dp"/>
+        
+    <TextView
+        android:id="@+id/widget_prayer_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Fajr"
+        android:textColor="#FFFFFF"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:gravity="center"/>
+        
+    <TextView
+        android:id="@+id/widget_prayer_time"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="05:30 AM"
+        android:textColor="#FFFFFF"
+        android:textSize="28sp"
+        android:fontFamily="sans-serif-medium"
+        android:gravity="center"
+        android:layout_marginBottom="8dp"/>
+        
+    <TextView
+        android:id="@+id/widget_location"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Open App"
+        android:textColor="#FFFFFFCC"
+        android:textSize="10sp"
+        android:gravity="center"/>
+        
+</LinearLayout>

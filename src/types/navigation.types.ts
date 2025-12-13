@@ -1,5 +1,5 @@
 
-export type Screen = 'home' | 'nearby' | 'qibla' | 'settings';
+export type Screen = 'home' | 'nearby' | 'qibla' | 'qaza' | 'settings';
 
 export interface NavigationItem {
   id: Screen;

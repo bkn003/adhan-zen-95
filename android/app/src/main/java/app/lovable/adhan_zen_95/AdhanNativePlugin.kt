@@ -253,5 +253,135 @@ class AdhanNativePlugin : Plugin() {
             }
         }.start()
     }
-}
+    
+    // ========== Battery Optimization Methods ==========
+    
+    /**
+     * Check if app is ignoring battery optimizations
+     */
+    @PluginMethod
+    fun checkBatteryOptimization(call: PluginCall) {
+        val result = JSObject()
+        result.put("isIgnoring", BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context))
+        result.put("isAggressiveDevice", BatteryOptimizationHelper.isAggressiveBatteryManufacturer())
+        result.put("manufacturer", BatteryOptimizationHelper.getDeviceManufacturer())
+        result.put("shouldShowPrompt", BatteryOptimizationHelper.shouldShowPrompt(context))
+        call.resolve(result)
+    }
+    
+    /**
+     * Request to disable battery optimization (shows system dialog)
+     */
+    @PluginMethod
+    fun requestBatteryOptimization(call: PluginCall) {
+        BatteryOptimizationHelper.requestDisableBatteryOptimization(context)
+        call.resolve()
+    }
+    
+    /**
+     * Open manufacturer-specific battery/autostart settings
+     */
+    @PluginMethod
+    fun openManufacturerBatterySettings(call: PluginCall) {
+        BatteryOptimizationHelper.openManufacturerBatterySettings(context)
+        call.resolve()
+    }
+    
+    /**
+     * Mark battery optimization prompt as ignored by user
+     */
+    @PluginMethod
+    fun ignoreBatteryOptimizationPrompt(call: PluginCall) {
+        BatteryOptimizationHelper.ignoreOptimizationPrompt(context)
+        call.resolve()
+    }
 
+    // ========== Adhan Sound Selection Methods ==========
+    
+    @PluginMethod
+    fun getAvailableAdhans(call: PluginCall) {
+        val adhans = AdhanSoundManager.getAvailableAdhans()
+        val jsonArray = JSArray()
+        adhans.forEach { 
+            val obj = JSObject()
+            obj.put("id", it["id"])
+            obj.put("name", it["name"])
+            obj.put("description", it["description"])
+            jsonArray.put(obj)
+        }
+        
+        val result = JSObject()
+        result.put("adhans", jsonArray)
+        call.resolve(result)
+    }
+    
+    @PluginMethod
+    fun getAdhanSettings(call: PluginCall) {
+        val result = JSObject()
+        result.put("selectedAdhan", AdhanSoundManager.getSelectedAdhan(context).resourceName)
+        result.put("fajrAdhan", AdhanSoundManager.getFajrAdhan(context).resourceName)
+        result.put("volume", AdhanSoundManager.getAdhanVolume(context))
+        call.resolve(result)
+    }
+    
+    @PluginMethod
+    fun setAdhanSelection(call: PluginCall) {
+        try {
+            val adhanId = call.getString("adhanId")
+            val isFajr = call.getBoolean("isFajr") ?: false
+            
+            if (adhanId != null) {
+                val type = AdhanSoundManager.AdhanType.fromResourceName(adhanId)
+                if (isFajr) {
+                    AdhanSoundManager.setFajrAdhan(context, type)
+                } else {
+                    AdhanSoundManager.setSelectedAdhan(context, type)
+                }
+            }
+            
+            val volume = call.getInt("volume")
+            if (volume != null) {
+                AdhanSoundManager.setAdhanVolume(context, volume)
+            }
+            
+            call.resolve(JSObject().apply { put("success", true) })
+        } catch (e: Exception) {
+            call.reject("Error saving adhan settings: ${e.message}")
+        }
+    }
+    
+    // ========== Vibration Settings Methods ==========
+    
+    @PluginMethod
+    fun getVibrationSettings(call: PluginCall) {
+        val result = JSObject()
+        result.put("enabled", AdhanSoundManager.getVibrationEnabled(context))
+        result.put("patternId", AdhanSoundManager.getVibrationPattern(context).id)
+        
+        val patterns = JSArray()
+        AdhanSoundManager.getAvailableVibrationPatterns().forEach {
+            val obj = JSObject()
+            obj.put("id", it["id"])
+            obj.put("name", it["name"])
+            patterns.put(obj)
+        }
+        result.put("patterns", patterns)
+        
+        call.resolve(result)
+    }
+
+    @PluginMethod
+    fun setVibrationSettings(call: PluginCall) {
+        val enabled = call.getBoolean("enabled")
+        if (enabled != null) {
+             AdhanSoundManager.setVibrationEnabled(context, enabled)
+        }
+        
+        val patternId = call.getString("patternId")
+        if (patternId != null) {
+            AdhanSoundManager.setVibrationPattern(context, patternId)
+        }
+        
+        call.resolve()
+    }
+}

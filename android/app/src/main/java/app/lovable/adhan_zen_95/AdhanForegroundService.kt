@@ -11,6 +11,8 @@ import android.media.MediaPlayer
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -19,9 +21,11 @@ class AdhanForegroundService : Service() {
     private var mediaPlayer: MediaPlayer? = null
     private var volumeReceiver: BroadcastReceiver? = null
     private var screenReceiver: BroadcastReceiver? = null
+    private var vibrator: Vibrator? = null
     private var initialVolume: Int = -1
     private val CHANNEL_ID = "adhan_playback_channel"
     private val NOTIFICATION_ID = 1001
+    private var currentPrayerName: String? = null
     
     companion object {
         const val TAG = "AdhanForegroundService"
@@ -60,6 +64,7 @@ class AdhanForegroundService : Service() {
             }
             ACTION_PLAY_ADHAN -> {
                 val prayerName = intent.getStringExtra(EXTRA_PRAYER_NAME) ?: "Prayer"
+                currentPrayerName = prayerName
                 Log.d(TAG, "▶️ Play Adhan for $prayerName")
                 
                 // Start foreground first
@@ -208,12 +213,30 @@ class AdhanForegroundService : Service() {
         try {
             stopAdhan() // Stop any existing playback
             
+            // Get the selected adhan sound based on user preference and prayer
+            val prayerName = currentPrayerName ?: "Prayer"
+            val adhanResourceName = AdhanSoundManager.getAdhanForPrayer(applicationContext, prayerName)
+            val adhanResId = AdhanSoundManager.getAdhanResourceId(applicationContext, adhanResourceName)
+            
+            Log.d(TAG, "▶️ Playing adhan: $adhanResourceName for $prayerName")
+            
+            // Start vibration if enabled
+            if (AdhanSoundManager.getVibrationEnabled(applicationContext)) {
+                startVibration()
+            }
+            
             mediaPlayer = MediaPlayer().apply {
-                setDataSource(applicationContext, android.net.Uri.parse("android.resource://$packageName/raw/adhan"))
+                setDataSource(applicationContext, android.net.Uri.parse("android.resource://$packageName/$adhanResId"))
                 setAudioAttributes(AudioAttributes.Builder()
                     .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                     .setUsage(AudioAttributes.USAGE_ALARM)
                     .build())
+                
+                // Set volume based on user preference
+                val volumePercent = AdhanSoundManager.getAdhanVolume(applicationContext)
+                val volume = volumePercent / 100f
+                setVolume(volume, volume)
+                
                 setOnCompletionListener { 
                     Log.d(TAG, "✅ Adhan playback completed naturally")
                     Companion.isPlaying = false
@@ -247,11 +270,42 @@ class AdhanForegroundService : Service() {
                 player.release()
             }
             mediaPlayer = null
+            stopVibration()
             isPlaying = false
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping adhan", e)
             mediaPlayer = null
+            stopVibration()
             isPlaying = false
+        }
+    }
+    
+    private fun startVibration() {
+        try {
+            vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            if (vibrator?.hasVibrator() == true) {
+                val patternEnum = AdhanSoundManager.getVibrationPattern(applicationContext)
+                val timings = patternEnum.pattern
+                
+                Log.d(TAG, "📳 Starting vibration: ${patternEnum.displayName}")
+                
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator?.vibrate(VibrationEffect.createWaveform(timings, -1))
+                } else {
+                    vibrator?.vibrate(timings, -1)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start vibration", e)
+        }
+    }
+
+    private fun stopVibration() {
+        try {
+            vibrator?.cancel()
+            vibrator = null
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to stop vibration", e)
         }
     }
     

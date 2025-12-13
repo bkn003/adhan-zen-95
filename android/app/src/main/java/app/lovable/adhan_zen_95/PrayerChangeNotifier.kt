@@ -69,14 +69,95 @@ object PrayerChangeNotifier {
             if (changes.isNotEmpty()) {
                 Log.d(TAG, "📢 Found ${changes.size} prayer time changes!")
                 showChangeNotification(context, changes)
+                
+                // CRITICAL: Pre-schedule tomorrow's alarms with the new times
+                // This ensures alarms work correctly even without opening the app
+                scheduleTomorrowAlarms(context, tomorrowTimes, tomorrow)
             } else {
                 Log.d(TAG, "✅ No prayer time changes for tomorrow")
+            }
+            
+            // Always pre-schedule tomorrow's alarms to ensure they're set
+            // Even if times haven't changed, this ensures reliability
+            if (tomorrowTimes != null) {
+                scheduleTomorrowAlarms(context, tomorrowTimes, tomorrow)
             }
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error checking prayer time changes", e)
         }
     }
+    
+    /**
+     * Pre-schedule tomorrow's alarms with the correct times.
+     * This ensures alarms work correctly without needing to open the app.
+     */
+    private fun scheduleTomorrowAlarms(context: Context, prayers: List<PrayerTime>, tomorrow: Calendar) {
+        Log.d(TAG, "📅 Pre-scheduling tomorrow's alarms...")
+        
+        val year = tomorrow.get(Calendar.YEAR)
+        val month = tomorrow.get(Calendar.MONTH)
+        val day = tomorrow.get(Calendar.DAY_OF_MONTH)
+        val isFriday = tomorrow.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY
+        
+        prayers.forEachIndexed { index, prayer ->
+            try {
+                val adhanMillis = parseTimeStringToMillis(prayer.adhan, year, month, day)
+                val iqamahMillis = parseTimeStringToMillis(prayer.iqamah, year, month, day)
+                
+                // Use Jummah name for Dhuhr on Friday
+                val prayerName = if (index == 1 && isFriday) "Jummah" else prayer.name
+                
+                if (adhanMillis > System.currentTimeMillis()) {
+                    // Schedule Adhan alarm
+                    ReliableAlarmScheduler.scheduleAdhanAlarm(
+                        context, adhanMillis, prayerName, index, 
+                        iqamahMillis, prayer.adhan, prayer.iqamah
+                    )
+                    
+                    // Schedule DND
+                    if (iqamahMillis > System.currentTimeMillis()) {
+                        DndScheduler.scheduleDndForPrayer(context, iqamahMillis, prayerName, index)
+                    }
+                    
+                    Log.d(TAG, "📿 Pre-scheduled $prayerName for tomorrow at ${java.util.Date(adhanMillis)}")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to schedule ${prayer.name}", e)
+            }
+        }
+        
+        Log.d(TAG, "✅ Pre-scheduled ${prayers.size} prayers for tomorrow")
+    }
+    
+    private fun parseTimeStringToMillis(timeStr: String, year: Int, month: Int, day: Int): Long {
+        val cal = Calendar.getInstance()
+        cal.set(year, month, day, 0, 0, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        
+        val t = timeStr.trim()
+        var h: Int
+        var m: Int
+        
+        if (t.contains("AM", true) || t.contains("PM", true)) {
+            val pts = t.split(" ")
+            val hm = pts[0].split(":")
+            h = hm[0].toInt()
+            m = hm[1].toInt()
+            if (pts[1].equals("PM", true) && h != 12) h += 12
+            else if (pts[1].equals("AM", true) && h == 12) h = 0
+        } else {
+            val hm = t.split(":")
+            h = hm[0].toInt()
+            m = hm.getOrElse(1) { "0" }.toInt()
+        }
+        
+        cal.set(Calendar.HOUR_OF_DAY, h)
+        cal.set(Calendar.MINUTE, m)
+        
+        return cal.timeInMillis
+    }
+    
     
     private fun getPrayerTimesForDate(context: Context, locationId: String, date: Calendar): List<PrayerTime>? {
         val day = date.get(Calendar.DAY_OF_MONTH)
@@ -269,8 +350,8 @@ object PrayerChangeNotifier {
     }
     
     /**
-     * Pre-cache prayer data for the next 7 days.
-     * Call this when app is open with internet.
+     * Pre-cache prayer data for the next 30 days.
+     * Call this when app is open with internet for full offline reliability.
      */
     fun preCacheUpcomingData(context: Context) {
         try {
@@ -280,25 +361,66 @@ object PrayerChangeNotifier {
             val today = Calendar.getInstance()
             val monthsToCache = mutableSetOf<String>()
             
-            // Get months for next 7 days
-            for (i in 0..7) {
+            // Get months for next 30 days for full offline reliability
+            for (i in 0..30) {
                 val date = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, i) }
                 monthsToCache.add(getMonthName(date.get(Calendar.MONTH)))
             }
             
+            Log.d(TAG, "📦 Pre-caching prayer data for ${monthsToCache.size} months (30-day coverage)...")
+            
             // Cache each month
+            var cachedCount = 0
             for (month in monthsToCache) {
                 if (getCachedPrayerData(context, locationId, month) == null) {
                     val data = fetchFromSupabase(locationId, month)
                     if (data != null) {
                         cachePrayerData(context, locationId, month, data)
+                        cachedCount++
                     }
                 }
             }
             
-            Log.d(TAG, "📦 Pre-cached prayer data for ${monthsToCache.size} months")
+            Log.d(TAG, "✅ Pre-cached prayer data for $cachedCount new months (${monthsToCache.size} total)")
         } catch (e: Exception) {
             Log.w(TAG, "Failed to pre-cache data", e)
         }
+    }
+    
+    /**
+     * Cache all available months for the current location.
+     * Call this when the app has internet to maximize offline availability.
+     */
+    fun cacheAllAvailableMonths(context: Context) {
+        Thread {
+            try {
+                val prefs = context.getSharedPreferences("prayer_times_native", Context.MODE_PRIVATE)
+                val locationId = prefs.getString("selected_location_id", null) ?: return@Thread
+                
+                val allMonths = listOf(
+                    "January", "February", "March", "April", "May", "June",
+                    "July", "August", "September", "October", "November", "December"
+                )
+                
+                Log.d(TAG, "📦 Caching ALL 12 months for offline use...")
+                
+                var cachedCount = 0
+                for (month in allMonths) {
+                    val data = fetchFromSupabase(locationId, month)
+                    if (data != null && data.length() > 0) {
+                        cachePrayerData(context, locationId, month, data)
+                        cachedCount++
+                    }
+                }
+                
+                // Mark that we've done full cache
+                prefs.edit().putBoolean("full_year_cached", true).apply()
+                prefs.edit().putLong("last_full_cache", System.currentTimeMillis()).apply()
+                
+                Log.d(TAG, "✅ Cached $cachedCount months for full offline support")
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to cache all months", e)
+            }
+        }.start()
     }
 }

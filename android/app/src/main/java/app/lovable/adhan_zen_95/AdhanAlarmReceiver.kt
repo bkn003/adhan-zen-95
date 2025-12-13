@@ -29,8 +29,15 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
             // Get today's date string for daily tracking
             val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
             
-            // IMPORTANT: Clear old daily flags FIRST (from previous days) to prevent stale flags
+            // CRITICAL: Clear old daily flags FIRST before any checks
+            // This prevents stale flags from blocking alarms (especially Fajr)
             clearOldDailyFlags(prefs, today)
+            
+            // For Fajr specifically, log current flag state for debugging
+            if (prayerName.contains("Fajr", ignoreCase = true)) {
+                val allFlags = prefs.all.filterKeys { it.startsWith("triggered_") }
+                Log.d(TAG, "🌅 FAJR ALARM - Current trigger flags: $allFlags")
+            }
             
             val dailyTriggerKey = "triggered_${prayerName}_$today"
             

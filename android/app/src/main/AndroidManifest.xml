@@ -89,12 +89,38 @@
             android:name=".PrayerChangeReceiver"
             android:enabled="true"
             android:exported="false" />
+            
+        <!-- Home Screen Widget Provider -->
+        <receiver
+            android:name=".AdhanWidgetProvider"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="app.lovable.adhan_zen_95.UPDATE_WIDGET" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info" />
+        </receiver>
 
         <!-- Adhan Stop Receiver - stops adhan from notification button/swipe -->
         <receiver
             android:name=".AdhanStopReceiver"
             android:enabled="true"
             android:exported="false" />
+
+        <!-- Screen On Receiver - CRITICAL for notification persistence -->
+        <!-- Restarts countdown service when screen turns on if it was killed -->
+        <receiver
+            android:name=".ScreenOnReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.SCREEN_ON" />
+                <action android:name="android.intent.action.USER_PRESENT" />
+            </intent-filter>
+        </receiver>
 
     </application>
 

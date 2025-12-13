@@ -323,6 +323,22 @@ class PrayerCountdownService : Service() {
         notificationManager.notify(NOTIFICATION_ID, createNotification())
     }
     
+    /**
+     * Normalize prayer name based on current day of week.
+     * If today is NOT Friday, replace "Jummah" with "Dhuhr"/"Zuhr".
+     * This fixes the bug where cached Friday data shows "Jummah" on Saturday.
+     */
+    private fun normalizePrayerName(name: String): String {
+        val isFriday = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY
+        
+        // If today is NOT Friday, replace Jummah with Zuhr
+        return if (!isFriday && name.contains("Jummah", ignoreCase = true)) {
+            name.replace("Jummah", "Zuhr", ignoreCase = true)
+        } else {
+            name
+        }
+    }
+    
     private fun updateNextPrayer() {
         val now = System.currentTimeMillis()
         val todayCalendar = Calendar.getInstance()
@@ -336,14 +352,16 @@ class PrayerCountdownService : Service() {
         
         if (upcomingPrayers.isNotEmpty()) {
             val next = upcomingPrayers.first()
-            nextPrayerName = next.name
+            // CRITICAL FIX: Normalize the prayer name for display
+            nextPrayerName = normalizePrayerName(next.name)
             nextPrayerTimeMillis = next.adhanMillis
             Log.d(TAG, "📿 Next prayer: $nextPrayerName at ${Date(nextPrayerTimeMillis)}")
         } else {
             // All prayers for today have passed, show first regular prayer for tomorrow
             if (regularPrayers.isNotEmpty()) {
                 val first = regularPrayers.first()
-                nextPrayerName = first.name + " (Tomorrow)"
+                // Normalize name and add (Tomorrow) suffix
+                nextPrayerName = normalizePrayerName(first.name) + " (Tomorrow)"
                 // Add 24 hours to the first prayer time
                 nextPrayerTimeMillis = first.adhanMillis + (24 * 60 * 60 * 1000)
                 Log.d(TAG, "📿 Next prayer (tomorrow): $nextPrayerName at ${Date(nextPrayerTimeMillis)}")
@@ -353,6 +371,9 @@ class PrayerCountdownService : Service() {
                 Log.w(TAG, "⚠️ No prayers available")
             }
         }
+        
+        // Update widget whenever we recalculate next prayer
+        AdhanWidgetProvider.updateAllWidgets(applicationContext)
     }
     
     private fun parsePrayers(json: String) {
@@ -396,7 +417,9 @@ class PrayerCountdownService : Service() {
                 
                 if (name.isNotEmpty() && adhanTime.isNotEmpty()) {
                     val millis = parseTimeToMillis(adhanTime, year, month, day)
-                    prayerList.add(PrayerInfo(name, adhanTime, millis))
+                    // CRITICAL: Normalize the prayer name to handle Jummah→Zuhr on non-Friday
+                    val normalizedName = normalizePrayerName(name)
+                    prayerList.add(PrayerInfo(normalizedName, adhanTime, millis))
                 }
             }
             
@@ -441,6 +464,9 @@ class PrayerCountdownService : Service() {
             .putString("prayers_json", json)
             .putLong("last_update", System.currentTimeMillis())
             .apply()
+            
+        // Update widget with new data
+        AdhanWidgetProvider.updateAllWidgets(applicationContext)
     }
     
     private fun loadPrayersFromPrefs() {
@@ -477,14 +503,16 @@ class PrayerCountdownService : Service() {
                     val today = Calendar.getInstance()
                     for (i in 0..4) {
                         val time = prefs.getLong("adhan_$i", 0)
-                        val name = prefs.getString("prayer_name_$i", null)
-                        if (time > 0 && name != null) {
+                        val rawName = prefs.getString("prayer_name_$i", null)
+                        if (time > 0 && rawName != null) {
+                            // CRITICAL: Normalize the prayer name to handle Jummah→Zuhr on non-Friday
+                            val name = normalizePrayerName(rawName)
                             prayerList.add(PrayerInfo(name, "", time))
                         }
                     }
                     if (prayerList.isNotEmpty()) {
                         prayers = prayerList.sortedBy { it.adhanMillis }
-                        Log.d(TAG, "📦 Loaded ${prayers.size} prayers from alarm scheduler prefs")
+                        Log.d(TAG, "📦 Loaded ${prayers.size} prayers from alarm scheduler prefs (normalized names)")
                         updateNextPrayer()
                         return
                     }
@@ -527,11 +555,42 @@ class PrayerCountdownService : Service() {
     /**
      * Called when user swipes away the app from recent apps.
      * We use multiple mechanisms to restart the service reliably.
+     * CRITICAL: Some aggressive OEMs (Xiaomi, Oppo, Vivo, Huawei) kill services aggressively.
      */
     override fun onTaskRemoved(rootIntent: Intent?) {
         Log.d(TAG, "📱 App killed by user (onTaskRemoved) - aggressively restarting countdown service...")
         
-        // Method 1: Use WorkManager (most reliable, survives app kill)
+        val restartIntent = Intent(applicationContext, PrayerCountdownService::class.java).apply {
+            action = ACTION_START
+        }
+        
+        // Method 1: setAlarmClock (MOST RELIABLE - immune to Doze mode)
+        // This is the same mechanism used for adhan alarms and is very reliable
+        try {
+            val pendingIntent = PendingIntent.getService(
+                applicationContext, 9998, restartIntent,
+                PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            )
+            
+            val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                // setAlarmClock shows clock icon in status bar and wakes device from deep doze
+                val alarmInfo = AlarmManager.AlarmClockInfo(
+                    System.currentTimeMillis() + 2000, // 2 seconds delay
+                    pendingIntent
+                )
+                alarmManager.setAlarmClock(alarmInfo, pendingIntent)
+                Log.d(TAG, "✅ setAlarmClock restart scheduled (most reliable)")
+            } else {
+                alarmManager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 2000, pendingIntent)
+                Log.d(TAG, "✅ setExact restart scheduled")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ AlarmClock restart failed", e)
+        }
+        
+        // Method 2: Use WorkManager (survives app kill, but may be delayed by 15 min)
         try {
             ServiceRestartWorker.triggerImmediateRestart(applicationContext)
             Log.d(TAG, "✅ WorkManager restart triggered")
@@ -539,25 +598,27 @@ class PrayerCountdownService : Service() {
             Log.e(TAG, "❌ WorkManager restart failed", e)
         }
         
-        // Method 2: Use AlarmManager as backup
-        val restartIntent = Intent(applicationContext, PrayerCountdownService::class.java).apply {
-            action = ACTION_START
-        }
-        
+        // Method 3: Schedule another alarm as backup (with different request code)
         try {
-            val pendingIntent = PendingIntent.getService(
-                applicationContext, 1, restartIntent, PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            val backupPendingIntent = PendingIntent.getService(
+                applicationContext, 9997, restartIntent,
+                PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
             )
-            
             val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 1000, pendingIntent)
             
-            Log.d(TAG, "✅ AlarmManager restart scheduled as backup")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    System.currentTimeMillis() + 5000, // 5 seconds as backup
+                    backupPendingIntent
+                )
+                Log.d(TAG, "✅ Backup setExactAndAllowWhileIdle scheduled")
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ AlarmManager restart failed", e)
+            Log.e(TAG, "❌ Backup alarm failed", e)
         }
         
-        // Method 3: Direct start (may work on some devices)
+        // Method 4: Direct start (may work on some devices)
         try {
             ContextCompat.startForegroundService(applicationContext, restartIntent)
             Log.d(TAG, "✅ Direct foreground service start attempted")
