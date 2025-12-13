@@ -125,6 +125,8 @@ export const SettingsScreen = () => {
     maghrib: true,
     isha: true,
   });
+  const [dndPermissionGranted, setDndPermissionGranted] = useState(true);
+  const [showDndPermissionPrompt, setShowDndPermissionPrompt] = useState(false);
 
   const { data: locations } = useLocations();
   const {
@@ -173,7 +175,30 @@ export const SettingsScreen = () => {
         setDndPerPrayer(JSON.parse(savedDndPerPrayer));
       } catch (e) { }
     }
-  }, [locations]);
+
+    // Check actual DND permission status from system
+    const checkDndPermissionStatus = async () => {
+      if (isNative) {
+        try {
+          const { checkDndPermission } = await import('@/native/dndService');
+          const hasPermission = await checkDndPermission();
+          setDndPermissionGranted(hasPermission);
+
+          // If user had DND enabled but permission is now revoked, update state
+          if (!hasPermission && savedDndEnabled === 'true') {
+            // Don't auto-disable, just show prompt
+            const skipPrompt = localStorage.getItem('dnd_permission_prompt_skipped');
+            if (!skipPrompt) {
+              setShowDndPermissionPrompt(true);
+            }
+          }
+        } catch (e) {
+          console.error('Failed to check DND permission:', e);
+        }
+      }
+    };
+    checkDndPermissionStatus();
+  }, [locations, isNative]);
 
   const handleLocationChange = (location: Location) => {
     setSelectedLocation(location);
@@ -381,16 +406,79 @@ export const SettingsScreen = () => {
         </div>
       </SettingsCard>
 
+      {/* DND Permission Prompt */}
+      {showDndPermissionPrompt && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-amber-100 rounded-xl">
+              <VolumeX className="w-5 h-5 text-amber-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-bold text-amber-800">DND Permission Required</h3>
+              <p className="text-xs text-amber-700 mt-1">
+                Auto-silence during prayer requires DND permission. Please enable it in settings.
+              </p>
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={async () => {
+                    const { requestDndPermission } = await import('@/native/dndService');
+                    await requestDndPermission();
+                    setShowDndPermissionPrompt(false);
+                  }}
+                  className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-semibold"
+                >
+                  Enable Now
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.setItem('dnd_permission_prompt_skipped', 'true');
+                    setShowDndPermissionPrompt(false);
+                    // Also disable DND in app since no permission
+                    setDndEnabled(false);
+                    localStorage.setItem('dndEnabled', 'false');
+                  }}
+                  className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold"
+                >
+                  Skip
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* DND Settings - Only on Native */}
       {isNative && (
         <SettingsCard title="Do Not Disturb (DND)" icon={VolumeX} gradient="from-violet-50/50 to-white">
           <div className="space-y-3">
+            {/* Permission Warning */}
+            {!dndPermissionGranted && (
+              <div className="p-2 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-xs text-red-600 font-medium">
+                  ⚠️ DND permission not granted. Enable in system settings.
+                </p>
+              </div>
+            )}
+
             <ToggleItem
               icon={VolumeX}
               label="Enable Auto DND"
-              sublabel="Silence phone during prayer"
+              sublabel={dndPermissionGranted ? "Silence phone during prayer" : "Permission required"}
               checked={dndEnabled}
-              onChange={handleDndEnabledToggle}
+              onChange={async (enabled) => {
+                if (enabled && !dndPermissionGranted) {
+                  // Try to request permission first
+                  const { requestDndPermission, checkDndPermission } = await import('@/native/dndService');
+                  await requestDndPermission();
+                  const hasPermission = await checkDndPermission();
+                  setDndPermissionGranted(hasPermission);
+                  if (!hasPermission) {
+                    // Permission still not granted, don't enable
+                    return;
+                  }
+                }
+                handleDndEnabledToggle(enabled);
+              }}
             />
 
             {dndEnabled && (
