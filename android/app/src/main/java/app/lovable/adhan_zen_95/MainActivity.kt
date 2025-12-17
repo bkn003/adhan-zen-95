@@ -15,8 +15,16 @@ class MainActivity : BridgeActivity() {
         // Initialize Adhan system on first launch
         AdhanInitializer.initializeIfNeeded(this)
         
-        // Schedule daily updates
+        // Schedule daily updates (Layer 1+2: setAlarmClock + backup)
         AdhanDailyUpdateReceiver.scheduleDailyUpdate(this)
+        
+        // LAYER 4: Schedule WorkManager periodic health check
+        // This runs every 15 min to verify alarms are scheduled
+        AlarmHealthWorker.schedule(this)
+        
+        // Run immediate health check on app open
+        AlarmHealthWorker.runImmediateCheck(this)
+        android.util.Log.d("MainActivity", "✅ Layer 4 health check scheduled")
         
         // Request exact alarm permission on Android 12+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
@@ -37,6 +45,7 @@ class MainActivity : BridgeActivity() {
         // Start the prayer countdown notification service
         startPrayerCountdownService()
     }
+
     
     private fun startPrayerCountdownService() {
         try {

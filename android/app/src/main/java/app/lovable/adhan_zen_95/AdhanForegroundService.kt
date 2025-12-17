@@ -22,6 +22,7 @@ class AdhanForegroundService : Service() {
     private var volumeReceiver: BroadcastReceiver? = null
     private var screenReceiver: BroadcastReceiver? = null
     private var vibrator: Vibrator? = null
+    private var wakeLock: PowerManager.WakeLock? = null
     private var initialVolume: Int = -1
     private val CHANNEL_ID = "adhan_playback_channel"
     private val NOTIFICATION_ID = 1001
@@ -128,8 +129,8 @@ class AdhanForegroundService : Service() {
                         stopAdhanAndService()
                     }
                     Intent.ACTION_SCREEN_ON -> {
-                        Log.d(TAG, "📱 Screen ON (power button pressed) - stopping adhan")
-                        stopAdhanAndService()
+                        Log.d(TAG, "📱 Screen ON - ignoring (waiting for unlock)")
+                        // Do NOT stop adhan just because screen turned on
                     }
                     Intent.ACTION_USER_PRESENT -> {
                         Log.d(TAG, "📱 User present (device unlocked) - stopping adhan")
@@ -141,7 +142,8 @@ class AdhanForegroundService : Service() {
         
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
-            addAction(Intent.ACTION_SCREEN_ON)
+            // REMOVED: ACTION_SCREEN_ON - this was too aggressive/annoying
+            // Device unlock (USER_PRESENT) is sufficient for stopping
             addAction(Intent.ACTION_USER_PRESENT)
         }
         
@@ -225,6 +227,9 @@ class AdhanForegroundService : Service() {
                 startVibration()
             }
             
+            // Acquire WakeLock to keep CPU running during playback
+            acquireWakeLock()
+            
             mediaPlayer = MediaPlayer().apply {
                 setDataSource(applicationContext, android.net.Uri.parse("android.resource://$packageName/$adhanResId"))
                 setAudioAttributes(AudioAttributes.Builder()
@@ -271,11 +276,13 @@ class AdhanForegroundService : Service() {
             }
             mediaPlayer = null
             stopVibration()
+            releaseWakeLock()
             isPlaying = false
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping adhan", e)
             mediaPlayer = null
             stopVibration()
+            releaseWakeLock()
             isPlaying = false
         }
     }
@@ -337,6 +344,34 @@ class AdhanForegroundService : Service() {
             Log.w(TAG, "Error unregistering screen receiver", e)
         }
         screenReceiver = null
+    }
+    
+    private fun acquireWakeLock() {
+        try {
+            if (wakeLock == null) {
+                val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+                wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AdhanZen:PlaybackWakeLock")
+                wakeLock?.setReferenceCounted(false)
+            }
+            
+            if (wakeLock?.isHeld == false) {
+                wakeLock?.acquire(10 * 60 * 1000L) // 10 minutes max timeout as failsafe
+                Log.d(TAG, "⚡ WakeLock acquired for playback")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to acquire WakeLock", e)
+        }
+    }
+
+    private fun releaseWakeLock() {
+        try {
+            if (wakeLock?.isHeld == true) {
+                wakeLock?.release()
+                Log.d(TAG, "⚡ WakeLock released")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to release WakeLock", e)
+        }
     }
     
     override fun onDestroy() {

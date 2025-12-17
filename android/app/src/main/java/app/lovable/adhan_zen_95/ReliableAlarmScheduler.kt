@@ -16,14 +16,29 @@ object ReliableAlarmScheduler {
     fun scheduleAdhanAlarm(context: Context, adhanTimeMillis: Long, prayerName: String, prayerIndex: Int, iqamahTimeMillis: Long = 0L, adhanTimeStr: String = "", iqamahTimeStr: String = "") {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         
-        Log.d(TAG, "=== SCHEDULING ADHAN ALARM ===")
-        Log.d(TAG, "Prayer: $prayerName (index: $prayerIndex)")
-        Log.d(TAG, "Adhan time: ${java.util.Date(adhanTimeMillis)}")
-        Log.d(TAG, "Current time: ${java.util.Date(System.currentTimeMillis())}")
+        Log.d(TAG, "╔════════════════════════════════════════╗")
+        Log.d(TAG, "║      SCHEDULING ADHAN ALARM            ║")
+        Log.d(TAG, "╠════════════════════════════════════════╣")
+        Log.d(TAG, "║ Prayer: $prayerName (index: $prayerIndex)")
+        Log.d(TAG, "║ Adhan time: ${java.util.Date(adhanTimeMillis)}")
+        Log.d(TAG, "║ Current time: ${java.util.Date(System.currentTimeMillis())}")
         
         val timeDiffMs = adhanTimeMillis - System.currentTimeMillis()
         val timeDiffMinutes = timeDiffMs / (1000 * 60)
-        Log.d(TAG, "Time until alarm: ${timeDiffMinutes} minutes ($timeDiffMs ms)")
+        Log.d(TAG, "║ Time until alarm: ${timeDiffMinutes} minutes ($timeDiffMs ms)")
+        
+        // Check battery optimization status for diagnostic logging
+        try {
+            val powerManager = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+            val isIgnoring = powerManager.isIgnoringBatteryOptimizations(context.packageName)
+            Log.d(TAG, "║ Battery optimization ignored: $isIgnoring")
+        } catch (e: Exception) {
+            Log.w(TAG, "║ Could not check battery optimization")
+        }
+        
+        Log.d(TAG, "║ Manufacturer: ${android.os.Build.MANUFACTURER}")
+        Log.d(TAG, "║ Model: ${android.os.Build.MODEL}")
+        Log.d(TAG, "╚════════════════════════════════════════╝")
         
         // Fajr-specific logging
         if (prayerName.contains("Fajr", ignoreCase = true)) {
@@ -43,14 +58,18 @@ object ReliableAlarmScheduler {
         val pendingIntent = PendingIntent.getBroadcast(context, REQUEST_CODE_BASE + prayerIndex, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         
         try {
-            // Use setAlarmClock for maximum reliability - this wakes device even in Doze mode
+            // PRIMARY: Use setAlarmClock for maximum reliability - this wakes device even in Doze mode
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 alarmManager.setAlarmClock(AlarmManager.AlarmClockInfo(adhanTimeMillis, pendingIntent), pendingIntent)
-                Log.d(TAG, "✅ Scheduled AlarmClock for $prayerName at ${java.util.Date(adhanTimeMillis)}")
+                Log.d(TAG, "✅ PRIMARY: Scheduled AlarmClock for $prayerName at ${java.util.Date(adhanTimeMillis)}")
             } else {
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, adhanTimeMillis, pendingIntent)
                 Log.d(TAG, "✅ Scheduled exact alarm for $prayerName")
             }
+            
+            // SIMPLIFIED: Only using setAlarmClock (like native Clock app)
+            // setAlarmClock is the MOST reliable - wakes from Doze, shows in status bar
+            // No backup alarm needed - this eliminates duplicate trigger issues
             
             // Store for recovery after reboot/app kill AND for new day rescheduling
             // Also store the time strings so we can recalculate for new days

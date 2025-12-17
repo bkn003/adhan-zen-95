@@ -30,9 +30,9 @@ class ServiceRestartWorker(
                     .setRequiresCharging(false)
                     .build()
                 
-                // Run every 15 minutes (minimum allowed by WorkManager)
+                // SIMPLIFIED: Run every 6 hours (battery-friendly)
                 val periodicWork = PeriodicWorkRequestBuilder<ServiceRestartWorker>(
-                    15, TimeUnit.MINUTES
+                    6, TimeUnit.HOURS
                 )
                     .setConstraints(constraints)
                     .setBackoffCriteria(

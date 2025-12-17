@@ -60,16 +60,19 @@ object DndScheduler {
         )
         
         try {
-            // Use setAlarmClock - this is the MOST RELIABLE alarm type
+            // PRIMARY: Use setAlarmClock - this is the MOST RELIABLE alarm type
             // It will wake the device even in deep doze mode and show alarm icon in status bar
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 val alarmInfo = AlarmManager.AlarmClockInfo(dndOnTime, pendingIntent)
                 alarmManager.setAlarmClock(alarmInfo, pendingIntent)
-                Log.d(TAG, "✅ Scheduled ALARM_CLOCK for DND ON at ${java.util.Date(dndOnTime)}")
+                Log.d(TAG, "✅ PRIMARY: Scheduled ALARM_CLOCK for DND ON at ${java.util.Date(dndOnTime)}")
             } else {
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, dndOnTime, pendingIntent)
                 Log.d(TAG, "✅ Scheduled EXACT alarm for DND ON")
             }
+            
+            // SIMPLIFIED: Only using setAlarmClock (like native Clock app)
+            // No backup alarm - this fixes DND activating when disabled in settings
             
             // Store for recovery AND for new day rescheduling
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
@@ -262,8 +265,11 @@ object DndScheduler {
         
         // Check global DND enabled toggle
         val globalEnabled = prefs.getBoolean("dnd_enabled", true)
+        Log.d(TAG, "║ Checking DND scheduling for $prayerName...")
+        Log.d(TAG, "║ Global DND enabled in prefs: $globalEnabled")
+        
         if (!globalEnabled) {
-            Log.d(TAG, "⚠️ DND globally disabled in settings")
+            Log.d(TAG, "⚠️ DND globally disabled in settings - NOT scheduling DND alarm")
             return false
         }
         
@@ -281,12 +287,14 @@ object DndScheduler {
         
         if (prayerType != null) {
             val prayerEnabled = prefs.getBoolean("dnd_$prayerType", true)
+            Log.d(TAG, "║ Prayer-specific DND ($prayerType) enabled in prefs: $prayerEnabled")
             if (!prayerEnabled) {
-                Log.d(TAG, "⚠️ DND disabled for $prayerType in settings")
+                Log.d(TAG, "⚠️ DND disabled for $prayerType in settings - NOT scheduling DND alarm")
                 return false
             }
         }
         
+        Log.d(TAG, "✅ DND enabled for $prayerName - WILL schedule DND alarm")
         return true
     }
 }

@@ -245,7 +245,7 @@ class PrayerCountdownService : Service() {
                     }
                 }
                 
-                handler?.postDelayed(this, 1000)
+                handler?.postDelayed(this, 30000) // SIMPLIFIED: 30 second updates (battery-friendly)
             }
         }
         handler?.post(runnable!!)
@@ -258,18 +258,31 @@ class PrayerCountdownService : Service() {
      * Also reschedules AlarmManager alarms as a backup to AdhanDailyUpdateReceiver.
      */
     private fun reloadPrayersForNewDay() {
-        Log.d(TAG, "🔄 Reloading prayers for new day...")
+        Log.d(TAG, "🔄 Reloading prayers for new day (LAYER 3 RELIABILITY CHECK)...")
+        
+        // LAYER 3 RELIABILITY: Verify daily update alarm is scheduled
+        try {
+            if (!AdhanDailyUpdateReceiver.isDailyUpdateScheduled(applicationContext)) {
+                Log.w(TAG, "⚠️ LAYER 3: Daily update alarm NOT scheduled! Re-scheduling...")
+                AdhanDailyUpdateReceiver.scheduleDailyUpdate(applicationContext)
+            } else {
+                Log.d(TAG, "✅ LAYER 3: Daily update alarm is scheduled")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to check/schedule daily update", e)
+        }
         
         // CRITICAL: Also reschedule AlarmManager alarms for the new day
         // This provides redundancy if AdhanDailyUpdateReceiver fails
         try {
-            Log.d(TAG, "⏰ Rescheduling alarms from countdown service (redundancy)...")
+            Log.d(TAG, "⏰ LAYER 3: Rescheduling alarms from countdown service (redundancy)...")
             ReliableAlarmScheduler.rescheduleForNewDay(applicationContext)
             DndScheduler.rescheduleForNewDay(applicationContext)
-            Log.d(TAG, "✅ Alarms rescheduled from countdown service")
+            Log.d(TAG, "✅ LAYER 3: Alarms rescheduled from countdown service")
         } catch (e: Exception) {
             Log.e(TAG, "❌ Failed to reschedule alarms from countdown service", e)
         }
+
         
         // Re-parse existing prayer times with today's date
         if (prayers.isNotEmpty()) {
@@ -554,76 +567,18 @@ class PrayerCountdownService : Service() {
     
     /**
      * Called when user swipes away the app from recent apps.
-     * We use multiple mechanisms to restart the service reliably.
-     * CRITICAL: Some aggressive OEMs (Xiaomi, Oppo, Vivo, Huawei) kill services aggressively.
+     * SIMPLIFIED: Only use WorkManager for restart (battery-friendly like native Clock app)
      */
     override fun onTaskRemoved(rootIntent: Intent?) {
-        Log.d(TAG, "📱 App killed by user (onTaskRemoved) - aggressively restarting countdown service...")
+        Log.d(TAG, "📱 App killed by user - scheduling WorkManager restart...")
         
-        val restartIntent = Intent(applicationContext, PrayerCountdownService::class.java).apply {
-            action = ACTION_START
-        }
-        
-        // Method 1: setAlarmClock (MOST RELIABLE - immune to Doze mode)
-        // This is the same mechanism used for adhan alarms and is very reliable
-        try {
-            val pendingIntent = PendingIntent.getService(
-                applicationContext, 9998, restartIntent,
-                PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
-            )
-            
-            val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                // setAlarmClock shows clock icon in status bar and wakes device from deep doze
-                val alarmInfo = AlarmManager.AlarmClockInfo(
-                    System.currentTimeMillis() + 2000, // 2 seconds delay
-                    pendingIntent
-                )
-                alarmManager.setAlarmClock(alarmInfo, pendingIntent)
-                Log.d(TAG, "✅ setAlarmClock restart scheduled (most reliable)")
-            } else {
-                alarmManager.setExact(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 2000, pendingIntent)
-                Log.d(TAG, "✅ setExact restart scheduled")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ AlarmClock restart failed", e)
-        }
-        
-        // Method 2: Use WorkManager (survives app kill, but may be delayed by 15 min)
+        // SIMPLIFIED: Only WorkManager restart (battery-friendly)
+        // Alarms scheduled via setAlarmClock don't need a running service
         try {
             ServiceRestartWorker.triggerImmediateRestart(applicationContext)
             Log.d(TAG, "✅ WorkManager restart triggered")
         } catch (e: Exception) {
             Log.e(TAG, "❌ WorkManager restart failed", e)
-        }
-        
-        // Method 3: Schedule another alarm as backup (with different request code)
-        try {
-            val backupPendingIntent = PendingIntent.getService(
-                applicationContext, 9997, restartIntent,
-                PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
-            )
-            val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    System.currentTimeMillis() + 5000, // 5 seconds as backup
-                    backupPendingIntent
-                )
-                Log.d(TAG, "✅ Backup setExactAndAllowWhileIdle scheduled")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Backup alarm failed", e)
-        }
-        
-        // Method 4: Direct start (may work on some devices)
-        try {
-            ContextCompat.startForegroundService(applicationContext, restartIntent)
-            Log.d(TAG, "✅ Direct foreground service start attempted")
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ Direct start failed", e)
         }
         
         super.onTaskRemoved(rootIntent)

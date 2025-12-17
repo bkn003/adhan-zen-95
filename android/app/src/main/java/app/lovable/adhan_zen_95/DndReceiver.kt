@@ -27,6 +27,9 @@ class DndReceiver : BroadcastReceiver() {
     }
     
     override fun onReceive(context: Context, intent: Intent) {
+        // Acquire WakeLock immediately to ensure we can process DND
+        acquireTempWakeLock(context)
+        
         val prayerName = intent.getStringExtra(EXTRA_PRAYER_NAME) ?: "Prayer"
         
         Log.d(TAG, "╔════════════════════════════════════════╗")
@@ -99,8 +102,11 @@ class DndReceiver : BroadcastReceiver() {
         
         // Check global DND enabled toggle
         val globalEnabled = prefs.getBoolean("dnd_enabled", true)
+        Log.d(TAG, "║ Checking DND settings for $prayerName...")
+        Log.d(TAG, "║ Global DND enabled in prefs: $globalEnabled")
+        
         if (!globalEnabled) {
-            Log.d(TAG, "⚠️ DND globally disabled in settings")
+            Log.d(TAG, "⚠️ DND globally disabled in settings - SKIPPING DND")
             return false
         }
         
@@ -118,13 +124,14 @@ class DndReceiver : BroadcastReceiver() {
         
         if (prayerType != null) {
             val prayerEnabled = prefs.getBoolean("dnd_$prayerType", true)
+            Log.d(TAG, "║ Prayer-specific DND ($prayerType) enabled in prefs: $prayerEnabled")
             if (!prayerEnabled) {
-                Log.d(TAG, "⚠️ DND disabled for $prayerType in settings")
+                Log.d(TAG, "⚠️ DND disabled for $prayerType in settings - SKIPPING DND")
                 return false
             }
         }
         
-        Log.d(TAG, "✅ DND enabled for $prayerName in settings")
+        Log.d(TAG, "✅ DND enabled for $prayerName in settings - WILL ACTIVATE")
         return true
     }
     
@@ -246,6 +253,17 @@ class DndReceiver : BroadcastReceiver() {
         } catch (e: Exception) {
             Log.e(TAG, "❌ AudioManager: Failed to set normal", e)
             false
+        }
+    }
+
+    private fun acquireTempWakeLock(context: Context) {
+        try {
+            val pm = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+            val wl = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "AdhanZen:DndReceiver")
+            wl.acquire(5000) // 5 seconds sufficient to toggle DND
+            Log.d(TAG, "⚡ Acquired temp WakeLock for DndReceiver")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to acquire temp WakeLock", e)
         }
     }
 }

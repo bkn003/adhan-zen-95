@@ -51,6 +51,7 @@
             android:foregroundServiceType="dataSync" />
 
         <!-- Boot Receiver for rescheduling after restart -->
+        <!-- Also handles TIME_SET and TIMEZONE_CHANGED to reschedule alarms -->
         <receiver
             android:name=".AthanBootReceiver"
             android:enabled="true"
@@ -58,6 +59,8 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
             </intent-filter>
         </receiver>
 
