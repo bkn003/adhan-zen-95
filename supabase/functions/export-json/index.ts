@@ -148,13 +148,13 @@ Deno.serve(async (req) => {
       }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Export failed:', error);
     
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         details: 'Failed to export prayer times data to JSON format'
       }),
       {

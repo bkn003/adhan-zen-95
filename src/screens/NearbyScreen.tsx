@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { MapPin, Clock, Navigation, Search, Utensils, Users, ChevronDown, Sparkles } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { MapPin, Clock, Navigation, Search, Utensils, Users, ChevronDown, Sparkles, Timer } from 'lucide-react';
 import { useLocations } from '@/hooks/useLocations';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useRamadanContext } from '@/contexts/RamadanContext';
+import { useMosquePrayerStatus } from '@/hooks/useMosquePrayerStatus';
 import { tamilText } from '@/utils/tamilText';
 import { Button } from '@/components/ui/button';
 import type { Location } from '@/types/prayer.types';
@@ -10,21 +11,27 @@ import type { Location } from '@/types/prayer.types';
 interface NearbyScreenProps {
   onLocationSelect?: (locationId: string) => void;
   onNavigateToHome?: () => void;
+  onMosqueDetails?: (locationId: string) => void;
 }
 
 export const NearbyScreen = ({
   onLocationSelect,
-  onNavigateToHome
+  onNavigateToHome,
+  onMosqueDetails
 }: NearbyScreenProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [filterSaharFood, setFilterSaharFood] = useState(false);
   const [filterWomenHall, setFilterWomenHall] = useState(false);
+  const [sortByTime, setSortByTime] = useState(false);
   const [displayCount, setDisplayCount] = useState(10);
 
   const { data: locations, isLoading } = useLocations();
   const { latitude, longitude, calculateDistance, error: locationError } = useGeolocation();
   const { isRamadan } = useRamadanContext();
+
+  const locationIds = useMemo(() => locations?.map(l => l.id) || [], [locations]);
+  const { data: prayerStatusMap } = useMosquePrayerStatus(locationIds);
 
   // Require location access
   if (!latitude || !longitude || locationError) {
@@ -58,13 +65,36 @@ export const NearbyScreen = ({
     return true;
   }) || [];
 
-  const sortedLocations = filteredLocations?.map(location => ({
-    ...location,
-    distance: calculateDistance(latitude, longitude, location.latitude, location.longitude)
-  })).sort((a, b) => a.distance - b.distance);
+  const sortedLocations = filteredLocations.map(location => {
+    const distance = calculateDistance(latitude, longitude, location.latitude, location.longitude);
+    const prayerStatus = prayerStatusMap?.[location.id];
+    return {
+      ...location,
+      distance,
+      nextIqamahTime: prayerStatus?.nextIqamahTime || null,
+      nextPrayerName: prayerStatus?.nextPrayerName || null,
+      prayerStatus: prayerStatus?.status || 'unknown' as const,
+    };
+  }).sort((a, b) => {
+    if (sortByTime) {
+      // Not started first, then completed
+      if (a.prayerStatus !== b.prayerStatus) {
+        if (a.prayerStatus === 'not_started') return -1;
+        if (b.prayerStatus === 'not_started') return 1;
+      }
+      // Within same status, sort by iqamah time ascending
+      if (a.nextIqamahTime && b.nextIqamahTime) {
+        return a.nextIqamahTime.localeCompare(b.nextIqamahTime);
+      }
+      if (a.nextIqamahTime) return -1;
+      if (b.nextIqamahTime) return 1;
+      return a.distance - b.distance;
+    }
+    return a.distance - b.distance;
+  });
 
-  const displayedLocations = sortedLocations?.slice(0, displayCount);
-  const hasMore = sortedLocations && sortedLocations.length > displayCount;
+  const displayedLocations = sortedLocations.slice(0, displayCount);
+  const hasMore = sortedLocations.length > displayCount;
 
   const handleLoadMore = () => setDisplayCount(prev => prev + 10);
 
@@ -76,6 +106,15 @@ export const NearbyScreen = ({
   const handleViewPrayerTimings = (location: Location) => {
     onLocationSelect?.(location.id);
     onNavigateToHome?.();
+  };
+
+  const formatTime = (time: string | null) => {
+    if (!time) return '';
+    const [h, m] = time.split(':');
+    const hour = parseInt(h);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const h12 = hour % 12 || 12;
+    return `${h12}:${m} ${ampm}`;
   };
 
   if (isLoading) {
@@ -113,14 +152,13 @@ export const NearbyScreen = ({
             {tamilText.general.nearbyMosques.tamil}
           </p>
           <p className="text-center text-blue-200 text-xs mt-2">
-            {sortedLocations?.length || 0} mosques found near you
+            {sortedLocations.length} mosques found near you
           </p>
         </div>
       </div>
 
       {/* Search and Filters */}
       <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm space-y-3">
-        {/* Search Input */}
         <div className="relative">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -136,8 +174,17 @@ export const NearbyScreen = ({
           />
         </div>
 
-        {/* Filter Chips */}
         <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => setSortByTime(!sortByTime)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${sortByTime
+                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+          >
+            <Timer className="w-4 h-4" />
+            Sort by Time
+          </button>
           <button
             onClick={() => setFilterSaharFood(!filterSaharFood)}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${filterSaharFood
@@ -169,31 +216,47 @@ export const NearbyScreen = ({
               <div className="h-36 bg-white rounded-3xl border border-gray-100" />
             </div>
           ))
-        ) : displayedLocations && displayedLocations.length > 0 ? (
+        ) : displayedLocations.length > 0 ? (
           displayedLocations.map((location, index) => (
             <div
               key={location.id}
-              className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300"
+              onClick={() => onMosqueDetails?.(location.id)}
+              className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
               style={{ animationDelay: `${index * 50}ms` }}
             >
               {/* Header */}
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                  <h3 className="text-base font-bold text-gray-800 mb-1 leading-snug">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base font-bold text-gray-800 mb-1 leading-snug truncate">
                     {location.mosque_name}
                   </h3>
                   <div className="flex items-center gap-1 text-sm text-gray-500">
-                    <MapPin className="w-3 h-3" />
-                    <span>{location.district}, Tamil Nadu</span>
+                    <MapPin className="w-3 h-3 flex-shrink-0" />
+                    <span className="truncate">{location.district}, Tamil Nadu</span>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right flex-shrink-0 ml-2">
                   <div className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-xl">
                     <span className="text-lg font-bold">{location.distance.toFixed(1)}</span>
                     <span className="text-xs ml-1">km</span>
                   </div>
                 </div>
               </div>
+
+              {/* Next Iqamah Time Badge */}
+              {location.nextIqamahTime && (
+                <div className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl mb-3 ${
+                  location.prayerStatus === 'not_started'
+                    ? 'bg-orange-50 border border-orange-100 text-orange-700'
+                    : 'bg-gray-50 border border-gray-100 text-gray-500'
+                }`}>
+                  <Clock className="w-3 h-3" />
+                  {location.nextPrayerName} Iqamah: {formatTime(location.nextIqamahTime)}
+                  {location.prayerStatus === 'completed' && (
+                    <span className="ml-1 text-gray-400">• Done</span>
+                  )}
+                </div>
+              )}
 
               {/* Badges */}
               <div className="flex flex-wrap gap-2 mb-4">
@@ -217,14 +280,14 @@ export const NearbyScreen = ({
               {/* Action Buttons */}
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => handleViewPrayerTimings(location)}
+                  onClick={(e) => { e.stopPropagation(); handleViewPrayerTimings(location); }}
                   className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-semibold text-sm py-3 hover:shadow-lg hover:shadow-emerald-500/25 transition-all active:scale-98"
                 >
                   <Clock className="w-4 h-4" />
                   Prayer Times
                 </button>
                 <button
-                  onClick={() => handleGetDirections(location)}
+                  onClick={(e) => { e.stopPropagation(); handleGetDirections(location); }}
                   className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-semibold text-sm py-3 hover:shadow-lg hover:shadow-blue-500/25 transition-all active:scale-98"
                 >
                   <Navigation className="w-4 h-4" />
@@ -246,7 +309,6 @@ export const NearbyScreen = ({
           </div>
         )}
 
-        {/* Load More */}
         {hasMore && !isSearching && (
           <div className="pt-4 pb-2">
             <Button

@@ -39,14 +39,14 @@ serve(async (req) => {
         'Access-Control-Allow-Origin': '*',
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching Adhan audio:', error);
     
     return new Response(
       JSON.stringify({ 
         error: 'Failed to fetch Adhan audio',
-        details: error.message 
-      }), 
+        details: error instanceof Error ? error.message : String(error) 
+      }),
       {
         status: 500,
         headers: { 
