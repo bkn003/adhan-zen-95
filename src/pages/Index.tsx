@@ -8,31 +8,28 @@ import { NearbyScreen } from '@/screens/NearbyScreen';
 import { QiblaScreen } from '@/screens/QiblaScreen';
 import { QazaScreen } from '@/screens/QazaScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
+import { MosqueDetailsScreen } from '@/screens/MosqueDetailsScreen';
 import type { Screen } from '@/types/navigation.types';
 import type { Location } from '@/types/prayer.types';
 
 const Index = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [selectedLocationId, setSelectedLocationId] = useState<string | undefined>();
+  const [mosqueDetailsId, setMosqueDetailsId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFirstTime, setIsFirstTime] = useState(false);
 
-  // Check for first-time setup and show splash screen
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-
-      // Check if user has completed onboarding
       const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding');
       const savedLocationId = localStorage.getItem('selectedLocationId');
-
       if (!hasCompletedOnboarding || !savedLocationId) {
         setIsFirstTime(true);
       } else {
         setSelectedLocationId(savedLocationId);
       }
     }, 500);
-
     return () => clearTimeout(timer);
   }, []);
 
@@ -45,17 +42,40 @@ const Index = () => {
   };
 
   const handleOnboardingComplete = (selectedLocation: Location) => {
-    // Save onboarding completion and selected location
     localStorage.setItem('hasCompletedOnboarding', 'true');
     localStorage.setItem('selectedLocationId', selectedLocation.id);
     localStorage.setItem('selectedLocationData', JSON.stringify(selectedLocation));
-
     setSelectedLocationId(selectedLocation.id);
     setIsFirstTime(false);
     setCurrentScreen('home');
   };
 
+  const handleMosqueDetails = (locationId: string) => {
+    setMosqueDetailsId(locationId);
+  };
+
+  const handleMosqueDetailsBack = () => {
+    setMosqueDetailsId(null);
+  };
+
+  const handleSelectForPrayer = (locationId: string) => {
+    handleLocationSelect(locationId);
+    localStorage.setItem('selectedLocationId', locationId);
+    setMosqueDetailsId(null);
+    setCurrentScreen('home');
+  };
+
   const renderScreen = () => {
+    if (mosqueDetailsId && currentScreen === 'nearby') {
+      return (
+        <MosqueDetailsScreen
+          locationId={mosqueDetailsId}
+          onBack={handleMosqueDetailsBack}
+          onSelectForPrayer={handleSelectForPrayer}
+        />
+      );
+    }
+
     switch (currentScreen) {
       case 'home':
         return (
@@ -69,6 +89,7 @@ const Index = () => {
           <NearbyScreen
             onLocationSelect={handleLocationSelect}
             onNavigateToHome={handleNavigateToHome}
+            onMosqueDetails={handleMosqueDetails}
           />
         );
       case 'qibla':
@@ -100,7 +121,10 @@ const Index = () => {
       {renderScreen()}
       <BottomNavigation
         currentScreen={currentScreen}
-        onScreenChange={setCurrentScreen}
+        onScreenChange={(screen) => {
+          setMosqueDetailsId(null);
+          setCurrentScreen(screen);
+        }}
       />
     </div>
   );
