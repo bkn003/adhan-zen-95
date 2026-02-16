@@ -7,6 +7,8 @@ import { RamadanSpecialTimes } from '@/components/RamadanSpecialTimes';
 import { ForbiddenTimes } from '@/components/ForbiddenTimes';
 import { SaharToggle } from '@/components/SaharToggle';
 import { NextPrayerCard } from '@/components/NextPrayerCard';
+import { SpecialPrayers } from '@/components/SpecialPrayers';
+import { PrayerAlarmOverlay } from '@/components/PrayerAlarmOverlay';
 import { useLocations } from '@/hooks/useLocations';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { useHijriDate } from '@/hooks/useHijriDate';
@@ -14,6 +16,8 @@ import { useStaticPrayerTimes, convertToPrayerObject, createForbiddenTimes } fro
 import { getPrayerTimesForDate } from '@/utils/staticPrayerTimes';
 import { usePrayerWorker } from '@/hooks/usePrayerWorker';
 import { usePrayerNotifications } from '@/hooks/usePrayerNotifications';
+import { usePrayerAlarm } from '@/hooks/usePrayerAlarm';
+import { usePrayerChangeNotifier } from '@/hooks/usePrayerChangeNotifier';
 import { tamilText } from '@/utils/tamilText';
 import type { Location, Prayer } from '@/types/prayer.types';
 import { Capacitor } from '@capacitor/core';
@@ -244,6 +248,13 @@ export const HomeScreen = ({
   // Initialize prayer notifications
   usePrayerNotifications(prayerTimes);
 
+  // Prayer alarm overlay (full-screen with sound)
+  const { alarm, dismissAlarm } = usePrayerAlarm(finalPrayerTimes);
+
+  // Prayer time change notifier for My Mohalla
+  const mohallaId = localStorage.getItem('myMohallaId');
+  usePrayerChangeNotifier(finalPrayerTimes, mohallaId);
+
   // Load persisted location or auto-select first location
   useEffect(() => {
     const syncLocationToNative = async (locationId: string) => {
@@ -407,11 +418,29 @@ export const HomeScreen = ({
         </p>
       </div>}
 
+      {/* Special Prayers - before Forbidden Times */}
+      <SpecialPrayers
+        sunriseTime={finalForbiddenTimes.find(f => f.type === 'sunrise')?.time}
+        fajrTime={finalPrayerTimes.find(p => p.type === 'fajr')?.adhan}
+        ishraqTimeOverride={(prayerTimesLoading ? undefined : undefined)}
+        tahajjudStartOverride={undefined}
+        tahajjudEndOverride={undefined}
+      />
+
       {/* Forbidden Times */}
       <ForbiddenTimes forbiddenTimes={finalForbiddenTimes} />
 
       {/* Ramadan Toggle */}
       <RamadanToggle isRamadan={isRamadan} onToggle={toggleRamadan} onResetAuto={resetAutoRamadan} autoOverride={autoRamadanOverride} isRamadanMonth={hijriDate?.monthNumber === 9} />
     </div>
+
+    {/* Full-screen Prayer Alarm Overlay */}
+    {alarm.active && (
+      <PrayerAlarmOverlay
+        prayerName={alarm.prayerName}
+        prayerTime={alarm.prayerTime}
+        onDismiss={dismissAlarm}
+      />
+    )}
   </div>;
 };

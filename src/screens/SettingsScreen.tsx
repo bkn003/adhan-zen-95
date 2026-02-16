@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Calendar, Volume2, Clock, Moon, Bell, ChevronRight, Settings as SettingsIcon, RefreshCw, VolumeX, Sunrise, Sun, Sunset } from 'lucide-react';
+import { MapPin, Calendar, Volume2, Clock, Moon, Bell, ChevronRight, Settings as SettingsIcon, RefreshCw, VolumeX, Sunrise, Sun, Sunset, Home } from 'lucide-react';
 import { tamilText } from '@/utils/tamilText';
 import { LocationSelector } from '@/components/LocationSelector';
 import { HijriAdjustment } from '@/components/HijriAdjustment';
@@ -109,10 +109,12 @@ const PrayerDndToggle = ({
 
 export const SettingsScreen = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [mohallaLocation, setMohallaLocation] = useState<Location | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isRamadanMode, setIsRamadanMode] = useState(false);
   const [isSaharEndEnabled, setIsSaharEndEnabled] = useState(true);
   const [adhanVolume, setAdhanVolume] = useState(50);
+  const [prayerAlarmEnabled, setPrayerAlarmEnabled] = useState(false);
 
   // DND Settings
   const [dndEnabled, setDndEnabled] = useState(true);
@@ -146,6 +148,17 @@ export const SettingsScreen = () => {
       const location = locations.find(loc => loc.id === persistedLocationId);
       if (location) setSelectedLocation(location);
     }
+
+    // Load My Mohalla
+    const mohallaId = localStorage.getItem('myMohallaId');
+    if (mohallaId && locations) {
+      const mohalla = locations.find(loc => loc.id === mohallaId);
+      if (mohalla) setMohallaLocation(mohalla);
+    }
+
+    // Load prayer alarm setting
+    const savedAlarm = localStorage.getItem('prayerAlarmEnabled');
+    if (savedAlarm !== null) setPrayerAlarmEnabled(savedAlarm === 'true');
 
     const savedDate = sessionStorage.getItem('selectedDate');
     if (savedDate) setSelectedDate(new Date(savedDate));
@@ -347,7 +360,27 @@ export const SettingsScreen = () => {
         <LocationSelector selectedLocation={selectedLocation} onLocationChange={handleLocationChange} />
       </SettingsCard>
 
-      {/* Date Selection */}
+      {/* My Mohalla / Mosque */}
+      <SettingsCard title="My Mohalla / என் மஹல்லா" icon={Home} gradient="from-emerald-50/50 to-white">
+        <div className="space-y-2">
+          <p className="text-xs text-gray-500">Set your home mosque to get notified when prayer times change.</p>
+          <LocationSelector
+            selectedLocation={mohallaLocation}
+            onLocationChange={(location: Location) => {
+              setMohallaLocation(location);
+              localStorage.setItem('myMohallaId', location.id);
+            }}
+          />
+          {mohallaLocation && (
+            <div className="p-2 bg-emerald-50 rounded-xl">
+              <p className="text-xs text-emerald-700 font-medium">
+                ✅ You'll be notified if prayer times change at {mohallaLocation.mosque_name}
+              </p>
+            </div>
+          )}
+        </div>
+      </SettingsCard>
+
       <SettingsCard title="Date Selection" icon={Calendar} gradient="from-amber-50/50 to-white">
         <div className="space-y-2">
           <Popover>
@@ -618,7 +651,21 @@ export const SettingsScreen = () => {
             disabled={!supported || permission === 'denied'}
           />
 
-
+          {/* Full-screen Prayer Alarm Toggle */}
+          <ToggleItem
+            icon={Volume2}
+            label="Full-screen Prayer Alarm"
+            sublabel="Show alarm overlay with Adhan sound"
+            checked={prayerAlarmEnabled}
+            onChange={(enabled) => {
+              setPrayerAlarmEnabled(enabled);
+              localStorage.setItem('prayerAlarmEnabled', enabled.toString());
+              if (enabled) {
+                enableNotifications();
+              }
+            }}
+            disabled={!supported}
+          />
 
           {isNative && notificationsEnabled && (
             <div className="p-3 bg-white rounded-xl border border-gray-100">
