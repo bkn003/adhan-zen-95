@@ -16,42 +16,54 @@ export type Database = {
     Tables: {
       locations: {
         Row: {
+          ac_available: boolean | null
           created_at: string | null
           district: string
           id: string
           latitude: number
           longitude: number
+          mosque_capacity: string | null
           mosque_name: string
+          parking_available: boolean | null
           sahar_food_availability: boolean | null
           sahar_food_contact_number: string | null
           sahar_food_time: string | null
           updated_at: string | null
+          wheelchair_accessible: boolean | null
           women_prayer_hall: boolean | null
         }
         Insert: {
+          ac_available?: boolean | null
           created_at?: string | null
           district: string
           id?: string
           latitude: number
           longitude: number
+          mosque_capacity?: string | null
           mosque_name: string
+          parking_available?: boolean | null
           sahar_food_availability?: boolean | null
           sahar_food_contact_number?: string | null
           sahar_food_time?: string | null
           updated_at?: string | null
+          wheelchair_accessible?: boolean | null
           women_prayer_hall?: boolean | null
         }
         Update: {
+          ac_available?: boolean | null
           created_at?: string | null
           district?: string
           id?: string
           latitude?: number
           longitude?: number
+          mosque_capacity?: string | null
           mosque_name?: string
+          parking_available?: boolean | null
           sahar_food_availability?: boolean | null
           sahar_food_contact_number?: string | null
           sahar_food_time?: string | null
           updated_at?: string | null
+          wheelchair_accessible?: boolean | null
           women_prayer_hall?: boolean | null
         }
         Relationships: []
@@ -74,6 +86,7 @@ export type Database = {
           isha_adhan: string
           isha_iqamah: string
           isha_ramadan_iqamah: string | null
+          ishraq_time: string | null
           jummah_adhan: string | null
           jummah_iqamah: string | null
           location_id: string | null
@@ -86,6 +99,8 @@ export type Database = {
           sahar_end: string | null
           sun_rise: string | null
           sun_set: string | null
+          tahajjud_end: string | null
+          tahajjud_start: string | null
           tharaweeh: string | null
         }
         Insert: {
@@ -105,6 +120,7 @@ export type Database = {
           isha_adhan: string
           isha_iqamah: string
           isha_ramadan_iqamah?: string | null
+          ishraq_time?: string | null
           jummah_adhan?: string | null
           jummah_iqamah?: string | null
           location_id?: string | null
@@ -117,6 +133,8 @@ export type Database = {
           sahar_end?: string | null
           sun_rise?: string | null
           sun_set?: string | null
+          tahajjud_end?: string | null
+          tahajjud_start?: string | null
           tharaweeh?: string | null
         }
         Update: {
@@ -136,6 +154,7 @@ export type Database = {
           isha_adhan?: string
           isha_iqamah?: string
           isha_ramadan_iqamah?: string | null
+          ishraq_time?: string | null
           jummah_adhan?: string | null
           jummah_iqamah?: string | null
           location_id?: string | null
@@ -148,6 +167,8 @@ export type Database = {
           sahar_end?: string | null
           sun_rise?: string | null
           sun_set?: string | null
+          tahajjud_end?: string | null
+          tahajjud_start?: string | null
           tharaweeh?: string | null
         }
         Relationships: [
