@@ -13,11 +13,30 @@ import type { Screen } from '@/types/navigation.types';
 import type { Location } from '@/types/prayer.types';
 
 const Index = () => {
-  const [currentScreen, setCurrentScreen] = useState<Screen>('home');
+  const [currentScreen, setCurrentScreen] = useState<Screen>(() => {
+    const saved = localStorage.getItem('currentScreen');
+    return (saved as Screen) || 'home';
+  });
   const [selectedLocationId, setSelectedLocationId] = useState<string | undefined>();
-  const [mosqueDetailsId, setMosqueDetailsId] = useState<string | null>(null);
+  const [mosqueDetailsId, setMosqueDetailsId] = useState<string | null>(() => {
+    return localStorage.getItem('mosqueDetailsId') || null;
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isFirstTime, setIsFirstTime] = useState(false);
+
+  // Persist current screen
+  useEffect(() => {
+    localStorage.setItem('currentScreen', currentScreen);
+  }, [currentScreen]);
+
+  // Persist mosque details id
+  useEffect(() => {
+    if (mosqueDetailsId) {
+      localStorage.setItem('mosqueDetailsId', mosqueDetailsId);
+    } else {
+      localStorage.removeItem('mosqueDetailsId');
+    }
+  }, [mosqueDetailsId]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
