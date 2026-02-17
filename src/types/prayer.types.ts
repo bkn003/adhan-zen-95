@@ -9,6 +9,10 @@ export interface Location {
   sahar_food_contact_number?: string;
   sahar_food_time?: string;
   women_prayer_hall?: boolean;
+  parking_available?: boolean;
+  ac_available?: boolean;
+  wheelchair_accessible?: boolean;
+  mosque_capacity?: string;
   created_at?: string;
   updated_at?: string;
 }

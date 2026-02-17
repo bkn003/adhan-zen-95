@@ -227,19 +227,19 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
                 Sahar Food Available
               </div>
             )}
-            {(location as any).parking_available && (
+            {location.parking_available && (
               <div className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-100 text-blue-700 text-xs font-medium px-3 py-1.5 rounded-xl">
                 <Car className="w-3 h-3" />
                 Parking
               </div>
             )}
-            {(location as any).ac_available && (
+            {location.ac_available && (
               <div className="inline-flex items-center gap-1.5 bg-cyan-50 border border-cyan-100 text-cyan-700 text-xs font-medium px-3 py-1.5 rounded-xl">
                 <Wind className="w-3 h-3" />
                 AC
               </div>
             )}
-            {(location as any).wheelchair_accessible && (
+            {location.wheelchair_accessible && (
               <div className="inline-flex items-center gap-1.5 bg-orange-50 border border-orange-100 text-orange-700 text-xs font-medium px-3 py-1.5 rounded-xl">
                 <Accessibility className="w-3 h-3" />
                 Wheelchair Access
@@ -247,8 +247,8 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
             )}
           </div>
 
-          {(location as any).mosque_capacity && (
-            <p className="text-xs text-gray-500 mb-3">🏛️ Capacity: {(location as any).mosque_capacity}</p>
+          {location.mosque_capacity && (
+            <p className="text-xs text-gray-500 mb-3">🏛️ Capacity: {location.mosque_capacity}</p>
           )}
 
           {/* Contact Info */}
