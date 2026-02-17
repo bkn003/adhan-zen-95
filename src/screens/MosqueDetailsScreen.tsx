@@ -37,6 +37,22 @@ const parseDateRangeStart = (dateRange: string): number => {
   return match ? parseInt(match[1]) : 999;
 };
 
+// Get the last day of a month (0-indexed month)
+const getMonthEndDay = (monthIndex: number): number => {
+  const year = new Date().getFullYear();
+  return new Date(year, monthIndex + 1, 0).getDate();
+};
+
+// Format date range to show proper month end
+const formatDateRange = (dateRange: string, monthIndex: number): string => {
+  const endDay = getMonthEndDay(monthIndex);
+  // If range starts at 24 and goes to end, show actual month end
+  if (dateRange.startsWith('24-') || dateRange.startsWith('24 ')) {
+    return `24-${endDay}`;
+  }
+  return dateRange;
+};
+
 export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: MosqueDetailsScreenProps) => {
   const { data: locations } = useLocations();
   const { latitude, longitude, calculateDistance } = useGeolocation();
@@ -253,65 +269,23 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
 
           {/* Action Buttons */}
           <div className="grid grid-cols-3 gap-2">
-            <Button onClick={() => onSelectForPrayer(location.id)} className="bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-semibold text-sm py-3 h-auto">
-              <Clock className="w-4 h-4 mr-1" />
-              Use Times
+            <Button onClick={() => onSelectForPrayer(location.id)} className="bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-semibold text-xs py-2.5 px-2 h-auto flex flex-col items-center gap-1">
+              <Clock className="w-4 h-4" />
+              <span>Use Times</span>
             </Button>
-            <Button onClick={handleGetDirections} className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-semibold text-sm py-3 h-auto">
-              <Navigation className="w-4 h-4 mr-1" />
-              Directions
+            <Button onClick={handleGetDirections} className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-semibold text-xs py-2.5 px-2 h-auto flex flex-col items-center gap-1">
+              <Navigation className="w-4 h-4" />
+              <span>Directions</span>
             </Button>
-            <Button onClick={handleShare} className="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold text-sm py-3 h-auto">
-              <Share2 className="w-4 h-4 mr-1" />
-              Share
+            <Button onClick={handleShare} className="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold text-xs py-2.5 px-2 h-auto flex flex-col items-center gap-1">
+              <Share2 className="w-4 h-4" />
+              <span>Share</span>
             </Button>
           </div>
         </div>
 
-        {/* Special Prayers Card */}
-        {isCurrentMonth && currentPrayerTime && (
-          <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
-            <h2 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
-              ✨ Special Prayers / சிறப்பு தொழுகைகள்
-            </h2>
-            <div className="space-y-2">
-              {/* Ishraq */}
-              <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-100">
-                <div>
-                  <p className="font-semibold text-sm text-amber-800">Ishraq / இஷ்ராக்</p>
-                  <p className="text-[10px] text-amber-500">+20 min after sunrise</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-amber-700">
-                    {formatTime(
-                      (currentPrayerTime as any).ishraq_time || getIshraqTime(currentPrayerTime.sun_rise)
-                    )}
-                  </p>
-                </div>
-              </div>
+        {/* Today's Prayer Times - Combined with special prayers */}
 
-              {/* Tahajjud */}
-              {(() => {
-                const tahajjud = getTahajjudTimes(currentPrayerTime);
-                return (
-                  <div className="flex items-center justify-between py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100">
-                    <div>
-                      <p className="font-semibold text-sm text-indigo-800">Tahajjud / தஹஜ்ஜுத்</p>
-                      <p className="text-[10px] text-indigo-500">Late night prayer</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-indigo-700">
-                        {formatTime(tahajjud.start)} - {formatTime(tahajjud.end)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-        )}
-
-        {/* Today's Prayer Times */}
         {isCurrentMonth && (
           <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
             <h2 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -328,44 +302,70 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
             ) : currentPrayerTime ? (
               <div className="space-y-2">
                 {[
-                  { name: 'Fajr', adhan: currentPrayerTime.fajr_adhan, iqamah: currentPrayerTime.fajr_iqamah },
-                  { name: 'Zuhr', adhan: currentPrayerTime.dhuhr_adhan, iqamah: currentPrayerTime.dhuhr_iqamah },
-                  { name: 'Asr', adhan: currentPrayerTime.asr_adhan, iqamah: currentPrayerTime.asr_iqamah },
-                  { name: 'Maghrib', adhan: currentPrayerTime.maghrib_adhan, iqamah: currentPrayerTime.maghrib_iqamah },
-                  { name: 'Isha', adhan: currentPrayerTime.isha_adhan, iqamah: currentPrayerTime.isha_iqamah },
+                  { name: 'Fajr', adhan: currentPrayerTime.fajr_adhan, iqamah: currentPrayerTime.fajr_iqamah, color: 'from-blue-50 to-indigo-50', border: 'border-blue-100', text: 'text-blue-800', sub: 'text-blue-500' },
+                  { name: 'Zuhr', adhan: currentPrayerTime.dhuhr_adhan, iqamah: currentPrayerTime.dhuhr_iqamah, color: 'from-amber-50 to-yellow-50', border: 'border-amber-100', text: 'text-amber-800', sub: 'text-amber-500' },
+                  { name: 'Asr', adhan: currentPrayerTime.asr_adhan, iqamah: currentPrayerTime.asr_iqamah, color: 'from-orange-50 to-amber-50', border: 'border-orange-100', text: 'text-orange-800', sub: 'text-orange-500' },
+                  { name: 'Maghrib', adhan: currentPrayerTime.maghrib_adhan, iqamah: currentPrayerTime.maghrib_iqamah, color: 'from-rose-50 to-pink-50', border: 'border-rose-100', text: 'text-rose-800', sub: 'text-rose-500' },
+                  { name: 'Isha', adhan: currentPrayerTime.isha_adhan, iqamah: currentPrayerTime.isha_iqamah, color: 'from-violet-50 to-purple-50', border: 'border-violet-100', text: 'text-violet-800', sub: 'text-violet-500' },
                 ].map(prayer => (
-                  <div key={prayer.name} className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-gray-50">
-                    <span className="font-semibold text-sm text-gray-700 w-20">{prayer.name}</span>
+                  <div key={prayer.name} className={`flex items-center justify-between py-3 px-4 rounded-xl bg-gradient-to-r ${prayer.color} border ${prayer.border}`}>
+                    <span className={`font-bold text-sm ${prayer.text} w-20`}>{prayer.name}</span>
                     <div className="flex gap-6 text-sm">
                       <div className="text-center">
-                        <p className="text-[10px] text-gray-400 uppercase">Azaan</p>
-                        <p className="font-medium text-gray-700">{formatTime(prayer.adhan)}</p>
+                        <p className={`text-[10px] ${prayer.sub} uppercase font-medium`}>Azaan</p>
+                        <p className={`font-bold ${prayer.text}`}>{formatTime(prayer.adhan)}</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-[10px] text-gray-400 uppercase">Iqamah</p>
-                        <p className="font-medium text-gray-700">{formatTime(prayer.iqamah)}</p>
+                        <p className={`text-[10px] ${prayer.sub} uppercase font-medium`}>Iqamah</p>
+                        <p className={`font-bold ${prayer.text}`}>{formatTime(prayer.iqamah)}</p>
                       </div>
                     </div>
                   </div>
                 ))}
 
                 {currentPrayerTime.jummah_adhan && (
-                  <div className="flex items-center justify-between py-2.5 px-3 rounded-xl bg-amber-50 border border-amber-100">
-                    <span className="font-semibold text-sm text-amber-700 w-20">Jummah</span>
+                  <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-gradient-to-r from-amber-100 to-yellow-100 border border-amber-200">
+                    <span className="font-bold text-sm text-amber-800 w-20">Jummah</span>
                     <div className="flex gap-6 text-sm">
                       <div className="text-center">
-                        <p className="text-[10px] text-amber-500 uppercase">Azaan</p>
-                        <p className="font-medium text-amber-700">{formatTime(currentPrayerTime.jummah_adhan)}</p>
+                        <p className="text-[10px] text-amber-600 uppercase font-medium">Azaan</p>
+                        <p className="font-bold text-amber-800">{formatTime(currentPrayerTime.jummah_adhan)}</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-[10px] text-amber-500 uppercase">Khutbah</p>
-                        <p className="font-medium text-amber-700">{formatTime(currentPrayerTime.jummah_iqamah)}</p>
+                        <p className="text-[10px] text-amber-600 uppercase font-medium">Khutbah</p>
+                        <p className="font-bold text-amber-800">{formatTime(currentPrayerTime.jummah_iqamah)}</p>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Special Times */}
+                {/* Special prayers displayed like other prayers */}
+                {(() => {
+                  const ishraq = (currentPrayerTime as any).ishraq_time || getIshraqTime(currentPrayerTime.sun_rise);
+                  const tahajjud = getTahajjudTimes(currentPrayerTime);
+                  return (
+                    <>
+                      {ishraq && (
+                        <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100">
+                          <span className="font-bold text-sm text-amber-800 w-20">Ishraq</span>
+                          <div className="text-sm text-center">
+                            <p className="text-[10px] text-amber-500 uppercase font-medium">+20m sunrise</p>
+                            <p className="font-bold text-amber-700">{formatTime(ishraq)}</p>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-100">
+                        <span className="font-bold text-sm text-indigo-800 w-20">Tahajjud</span>
+                        <div className="text-sm text-center">
+                          <p className="text-[10px] text-indigo-500 uppercase font-medium">Late night</p>
+                          <p className="font-bold text-indigo-700">{formatTime(tahajjud.start)} - {formatTime(tahajjud.end)}</p>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+
+                {/* Sunrise/MidNoon/Sunset */}
                 <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
                   {currentPrayerTime.sun_rise && (
                     <div className="flex justify-between text-xs text-gray-500 px-3">
@@ -435,7 +435,7 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
                     }`}
                   >
                     <p className={`font-bold text-sm mb-2 ${isCurrentRange ? 'text-white' : ''}`}>
-                      {pt.date_range} {selectedMonth}
+                      {formatDateRange(pt.date_range, selectedMonthIndex)} {selectedMonth}
                       {isCurrentRange && <span className="ml-2 text-xs opacity-80">• Today</span>}
                     </p>
                     <div className="grid grid-cols-5 gap-1 text-center">
