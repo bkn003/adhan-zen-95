@@ -30,11 +30,9 @@ export const SpecialPrayers = ({
   tahajjudStartOverride,
   tahajjudEndOverride,
 }: SpecialPrayersProps) => {
-  // Calculate Ishraq: override or sunrise + 20 min
   const ishraqTime = ishraqTimeOverride
     || (sunriseTime ? addMinutesToTime(sunriseTime, 20) : null);
 
-  // Calculate Tahajjud: override or default 01:30 - (fajr - 20 min)
   const tahajjudStart = tahajjudStartOverride || '01:30';
   const tahajjudEnd = tahajjudEndOverride
     || (fajrTime ? subtractMinutesFromTime(fajrTime, 20) : '04:30');
@@ -43,7 +41,7 @@ export const SpecialPrayers = ({
 
   return (
     <div className="rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-50 p-3">
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-2 mb-3">
         <Sparkles className="w-5 h-5 text-indigo-600" />
         <div>
           <h3 className="text-sm font-semibold text-indigo-700">
@@ -52,38 +50,32 @@ export const SpecialPrayers = ({
         </div>
       </div>
 
-      <div className="space-y-2">
-        {/* Ishraq */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* Tahajjud - Left */}
+        <div className="rounded-xl border border-violet-100 bg-white/80 p-3 text-center">
+          <div className="flex items-center justify-center gap-1 text-violet-600 mb-1">
+            <Moon className="w-4 h-4" />
+            <span className="text-[11px] font-medium">Tahajjud</span>
+          </div>
+          <div className="text-[11px] text-violet-500">தஹஜ்ஜுத்</div>
+          <div className="mt-1.5 text-sm font-bold text-violet-700">
+            {formatTo12Hour(tahajjudStart)} - {formatTo12Hour(tahajjudEnd)}
+          </div>
+        </div>
+
+        {/* Ishraq - Right */}
         {ishraqTime && (
-          <div className="flex items-center justify-between p-3 bg-white/80 rounded-xl border border-amber-100">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-amber-50 rounded-lg">
-                <Sunrise className="w-4 h-4 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-800">Ishraq / இஷ்ராக்</p>
-                <p className="text-[10px] text-gray-500">+20 min after sunrise</p>
-              </div>
+          <div className="rounded-xl border border-amber-100 bg-white/80 p-3 text-center">
+            <div className="flex items-center justify-center gap-1 text-amber-600 mb-1">
+              <Sunrise className="w-4 h-4" />
+              <span className="text-[11px] font-medium">Ishraq</span>
             </div>
-            <span className="text-sm font-bold text-amber-700">{formatTo12Hour(ishraqTime)}</span>
+            <div className="text-[11px] text-amber-500">இஷ்ராக்</div>
+            <div className="mt-1.5 text-sm font-bold text-amber-700">
+              {formatTo12Hour(ishraqTime)}
+            </div>
           </div>
         )}
-
-        {/* Tahajjud */}
-        <div className="flex items-center justify-between p-3 bg-white/80 rounded-xl border border-violet-100">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-violet-50 rounded-lg">
-              <Moon className="w-4 h-4 text-violet-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-800">Tahajjud / தஹஜ்ஜுத்</p>
-              <p className="text-[10px] text-gray-500">Late night prayer</p>
-            </div>
-          </div>
-          <span className="text-sm font-bold text-violet-700">
-            {formatTo12Hour(tahajjudStart)} - {formatTo12Hour(tahajjudEnd)}
-          </span>
-        </div>
       </div>
     </div>
   );
