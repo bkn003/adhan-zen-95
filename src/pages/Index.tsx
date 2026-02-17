@@ -9,6 +9,7 @@ import { QiblaScreen } from '@/screens/QiblaScreen';
 import { QazaScreen } from '@/screens/QazaScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 import { MosqueDetailsScreen } from '@/screens/MosqueDetailsScreen';
+import { MosqueAdminPanel } from '@/screens/MosqueAdminPanel';
 import type { Screen } from '@/types/navigation.types';
 import type { Location } from '@/types/prayer.types';
 
@@ -23,6 +24,14 @@ const Index = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isFirstTime, setIsFirstTime] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+
+  // Listen for admin panel navigation event
+  useEffect(() => {
+    const handler = () => setShowAdminPanel(true);
+    window.addEventListener('navigate-admin', handler);
+    return () => window.removeEventListener('navigate-admin', handler);
+  }, []);
 
   // Persist current screen
   useEffect(() => {
@@ -85,6 +94,12 @@ const Index = () => {
   };
 
   const renderScreen = () => {
+    if (showAdminPanel) {
+      return (
+        <MosqueAdminPanel onBack={() => setShowAdminPanel(false)} />
+      );
+    }
+
     if (mosqueDetailsId && currentScreen === 'nearby') {
       return (
         <MosqueDetailsScreen

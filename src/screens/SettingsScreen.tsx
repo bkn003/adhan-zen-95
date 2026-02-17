@@ -696,6 +696,23 @@ export const SettingsScreen = () => {
         </div>
       </SettingsCard>
 
+      {/* Mosque Admin */}
+      <SettingsCard title="Mosque Admin" icon={SettingsIcon} gradient="from-gray-50/50 to-white">
+        <div className="space-y-2">
+          <p className="text-xs text-gray-500">Login to manage your mosque's prayer times and info.</p>
+          <button
+            onClick={() => {
+              // Navigate to admin panel via custom event
+              window.dispatchEvent(new CustomEvent('navigate-admin'));
+            }}
+            className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+          >
+            <SettingsIcon className="w-4 h-4" />
+            Open Admin Panel
+          </button>
+        </div>
+      </SettingsCard>
+
       {/* App Version */}
       <div className="text-center py-3">
         <p className="text-xs text-gray-400">Adhan Zen v2.1</p>
