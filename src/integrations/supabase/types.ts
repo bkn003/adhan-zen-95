@@ -17,6 +17,8 @@ export type Database = {
       locations: {
         Row: {
           ac_available: boolean | null
+          admin_password_hash: string | null
+          admin_username: string | null
           created_at: string | null
           district: string
           id: string
@@ -34,6 +36,8 @@ export type Database = {
         }
         Insert: {
           ac_available?: boolean | null
+          admin_password_hash?: string | null
+          admin_username?: string | null
           created_at?: string | null
           district: string
           id?: string
@@ -51,6 +55,8 @@ export type Database = {
         }
         Update: {
           ac_available?: boolean | null
+          admin_password_hash?: string | null
+          admin_username?: string | null
           created_at?: string | null
           district?: string
           id?: string
@@ -186,7 +192,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      set_mosque_admin_credentials: {
+        Args: { p_location_id: string; p_password: string; p_username: string }
+        Returns: boolean
+      }
+      verify_mosque_admin: {
+        Args: { p_password: string; p_username: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
