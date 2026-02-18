@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ArrowLeft, MapPin, Clock, Navigation, Users, Utensils, Phone, Share2, ChevronLeft, ChevronRight, Car, Wind, Accessibility } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Navigation, Users, Utensils, Phone, Share2, ChevronLeft, ChevronRight, Car, Wind, Accessibility, Camera } from 'lucide-react';
 import { useLocations } from '@/hooks/useLocations';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { supabase } from '@/integrations/supabase/client';
@@ -60,10 +60,27 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
   const now = new Date();
   const currentMonthIndex = now.getMonth();
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(currentMonthIndex);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
   const location = useMemo(() => locations?.find(l => l.id === locationId), [locations, locationId]);
 
   const selectedMonth = monthNames[selectedMonthIndex];
+
+  // Fetch photos
+  const { data: photos } = useQuery({
+    queryKey: ['mosque-photos', locationId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('mosque_photos')
+        .select('*')
+        .eq('location_id', locationId)
+        .order('display_order');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!locationId,
+  });
+
 
   const { data: prayerTimes, isLoading: timesLoading } = useQuery({
     queryKey: ['mosque-prayer-times', locationId, selectedMonth],
@@ -284,6 +301,36 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
           </div>
         </div>
 
+        {/* Photo Gallery */}
+        {photos && photos.length > 0 && (
+          <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
+            <h2 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
+              <Camera className="w-4 h-4 text-blue-500" />
+              Photos ({photos.length})
+            </h2>
+            <div className="grid grid-cols-3 gap-2">
+              {photos.map((photo: any) => (
+                <button
+                  key={photo.id}
+                  onClick={() => setSelectedPhoto(photo.photo_url)}
+                  className="aspect-square rounded-xl overflow-hidden border border-gray-100"
+                >
+                  <img src={photo.photo_url} alt={photo.caption || 'Mosque'} className="w-full h-full object-cover" loading="lazy" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Photo Lightbox */}
+        {selectedPhoto && (
+          <div
+            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedPhoto(null)}
+          >
+            <img src={selectedPhoto} alt="Mosque" className="max-w-full max-h-[80vh] rounded-2xl object-contain" />
+          </div>
+        )}
         {/* Today's Prayer Times - Combined with special prayers */}
 
         {isCurrentMonth && (

@@ -192,6 +192,60 @@ serve(async (req) => {
       );
     }
 
+    if (action === "super_set_credentials") {
+      if (!location_id || !data?.username || !data?.password) {
+        // Accept username/password from top-level or data
+        const u = username || data?.username;
+        const p = password || data?.password;
+        if (!location_id || !u || !p) {
+          return new Response(
+            JSON.stringify({ error: "Missing fields" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      const u = username || data?.username;
+      const p = password || data?.password;
+
+      const { data: result } = await supabase.rpc("set_mosque_admin_credentials", {
+        p_location_id: location_id,
+        p_username: u,
+        p_password: p,
+      });
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "super_delete_credentials") {
+      if (!location_id) {
+        return new Response(
+          JSON.stringify({ error: "Missing location_id" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { error } = await supabase
+        .from("locations")
+        .update({ admin_username: null, admin_password_hash: null })
+        .eq("id", location_id);
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: "Unknown action" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

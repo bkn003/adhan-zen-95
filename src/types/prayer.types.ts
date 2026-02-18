@@ -13,6 +13,7 @@ export interface Location {
   ac_available?: boolean;
   wheelchair_accessible?: boolean;
   mosque_capacity?: string;
+  admin_username?: string;
   created_at?: string;
   updated_at?: string;
 }

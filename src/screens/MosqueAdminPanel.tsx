@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, LogIn, LogOut, Save, Edit2, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, LogIn, LogOut, Save, Edit2, ChevronDown, ChevronUp, Camera, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useLocations } from '@/hooks/useLocations';
@@ -276,6 +276,15 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
           ))}
         </div>
       </CollapsibleSection>
+
+      {/* Photos Section */}
+      <CollapsibleSection
+        title="Photos"
+        expanded={expandedSection === 'photos'}
+        onToggle={() => setExpandedSection(expandedSection === 'photos' ? null : 'photos')}
+      >
+        <PhotoManager locationId={locationId!} username={username} password={password} />
+      </CollapsibleSection>
     </div>
   );
 };
@@ -402,6 +411,166 @@ const PrayerTimeEditor = ({ prayerTime, onSave, onCancel }: {
         </Button>
         <Button variant="outline" onClick={onCancel} className="rounded-xl text-xs h-9">Cancel</Button>
       </div>
+    </div>
+  );
+};
+
+const SUPABASE_URL_PHOTOS = "https://lhufqnokmdqkvzcxqwkl.supabase.co";
+
+const PhotoManager = ({ locationId, username, password }: { locationId: string; username: string; password: string }) => {
+  const [uploading, setUploading] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: photos, refetch } = useQuery({
+    queryKey: ['admin-mosque-photos', locationId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('mosque_photos')
+        .select('*')
+        .eq('location_id', locationId)
+        .order('display_order');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const compressImage = (file: File, maxSizeKB: number = 30): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        img.onload = () => {
+          // Scale down
+          let { width, height } = img;
+          const maxDim = 800;
+          if (width > maxDim || height > maxDim) {
+            const ratio = Math.min(maxDim / width, maxDim / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d')!;
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Compress iteratively
+          let quality = 0.7;
+          const tryCompress = () => {
+            canvas.toBlob((blob) => {
+              if (!blob) return reject(new Error('Compression failed'));
+              if (blob.size <= maxSizeKB * 1024 || quality <= 0.1) {
+                resolve(blob);
+              } else {
+                quality -= 0.1;
+                tryCompress();
+              }
+            }, 'image/jpeg', quality);
+          };
+          tryCompress();
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const currentCount = photos?.length || 0;
+    if (currentCount + files.length > 10) {
+      toast.error(`Maximum 10 photos. You can add ${10 - currentCount} more.`);
+      return;
+    }
+
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const compressed = await compressImage(file);
+        const formData = new FormData();
+        formData.append('action', 'upload');
+        formData.append('username', username);
+        formData.append('password', password);
+        formData.append('location_id', locationId);
+        formData.append('photo', compressed, 'photo.jpg');
+
+        const res = await fetch(`${SUPABASE_URL_PHOTOS}/functions/v1/mosque-photos`, {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+      }
+      toast.success('Photos uploaded!');
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDelete = async (photoId: string) => {
+    try {
+      const formData = new FormData();
+      formData.append('action', 'delete');
+      formData.append('username', username);
+      formData.append('password', password);
+      formData.append('location_id', locationId);
+      formData.append('photo_id', photoId);
+
+      const res = await fetch(`${SUPABASE_URL_PHOTOS}/functions/v1/mosque-photos`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success('Photo deleted');
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-500">{photos?.length || 0}/10 photos</p>
+        <label className={`flex items-center gap-1 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold cursor-pointer ${uploading ? 'opacity-50' : ''}`}>
+          <Upload className="w-3 h-3" />
+          {uploading ? 'Uploading...' : 'Add Photo'}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleUpload}
+            disabled={uploading || (photos?.length || 0) >= 10}
+            className="hidden"
+          />
+        </label>
+      </div>
+
+      {photos && photos.length > 0 && (
+        <div className="grid grid-cols-3 gap-2">
+          {photos.map((photo: any) => (
+            <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200">
+              <img src={photo.photo_url} alt="" className="w-full h-full object-cover" />
+              <button
+                onClick={() => handleDelete(photo.id)}
+                className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p className="text-[10px] text-gray-400">Images auto-compressed to ~30KB each</p>
     </div>
   );
 };

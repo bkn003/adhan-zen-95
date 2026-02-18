@@ -1,1 +1,7 @@
 project_id = "lhufqnokmdqkvzcxqwkl"
+
+[functions.mosque-admin]
+verify_jwt = false
+
+[functions.mosque-photos]
+verify_jwt = false
