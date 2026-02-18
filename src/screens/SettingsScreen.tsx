@@ -702,13 +702,20 @@ export const SettingsScreen = () => {
           <p className="text-xs text-gray-500">Login to manage your mosque's prayer times and info.</p>
           <button
             onClick={() => {
-              // Navigate to admin panel via custom event
               window.dispatchEvent(new CustomEvent('navigate-admin'));
             }}
             className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
           >
             <SettingsIcon className="w-4 h-4" />
             Open Admin Panel
+          </button>
+          <button
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('navigate-super-admin'));
+            }}
+            className="w-full py-2 px-3 bg-gray-100 text-gray-600 rounded-xl text-xs font-medium flex items-center justify-center gap-2"
+          >
+            Super Admin
           </button>
         </div>
       </SettingsCard>

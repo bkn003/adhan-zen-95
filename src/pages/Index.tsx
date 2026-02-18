@@ -10,6 +10,7 @@ import { QazaScreen } from '@/screens/QazaScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 import { MosqueDetailsScreen } from '@/screens/MosqueDetailsScreen';
 import { MosqueAdminPanel } from '@/screens/MosqueAdminPanel';
+import { SuperAdminPanel } from '@/screens/SuperAdminPanel';
 import type { Screen } from '@/types/navigation.types';
 import type { Location } from '@/types/prayer.types';
 
@@ -25,12 +26,18 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isFirstTime, setIsFirstTime] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showSuperAdmin, setShowSuperAdmin] = useState(false);
 
   // Listen for admin panel navigation event
   useEffect(() => {
     const handler = () => setShowAdminPanel(true);
+    const superHandler = () => setShowSuperAdmin(true);
     window.addEventListener('navigate-admin', handler);
-    return () => window.removeEventListener('navigate-admin', handler);
+    window.addEventListener('navigate-super-admin', superHandler);
+    return () => {
+      window.removeEventListener('navigate-admin', handler);
+      window.removeEventListener('navigate-super-admin', superHandler);
+    };
   }, []);
 
   // Persist current screen
@@ -94,6 +101,10 @@ const Index = () => {
   };
 
   const renderScreen = () => {
+    if (showSuperAdmin) {
+      return <SuperAdminPanel onBack={() => setShowSuperAdmin(false)} />;
+    }
+
     if (showAdminPanel) {
       return (
         <MosqueAdminPanel onBack={() => setShowAdminPanel(false)} />

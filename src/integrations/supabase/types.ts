@@ -74,6 +74,41 @@ export type Database = {
         }
         Relationships: []
       }
+      mosque_photos: {
+        Row: {
+          caption: string | null
+          created_at: string | null
+          display_order: number | null
+          id: string
+          location_id: string
+          photo_url: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          location_id: string
+          photo_url: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          location_id?: string
+          photo_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mosque_photos_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prayer_times: {
         Row: {
           asr_adhan: string
