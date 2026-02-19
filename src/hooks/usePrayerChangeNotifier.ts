@@ -1,23 +1,62 @@
 import { useEffect, useRef } from 'react';
-import type { Prayer } from '@/types/prayer.types';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { formatTo12Hour } from '@/utils/timeFormat';
 
 const STORED_KEY = 'myMohalla_lastPrayerTimes';
 
-export const usePrayerChangeNotifier = (prayers: Prayer[], mohallaId: string | null) => {
+export const usePrayerChangeNotifier = (prayers: any[], mohallaId: string | null) => {
   const notifiedRef = useRef(false);
 
-  useEffect(() => {
-    if (!mohallaId || !prayers.length || notifiedRef.current) return;
+  // Fetch prayer times for mohalla mosque independently
+  const { data: mohallaPrayerData } = useQuery({
+    queryKey: ['mohalla-prayer-times', mohallaId],
+    queryFn: async () => {
+      if (!mohallaId) return null;
+      const now = new Date();
+      const currentMonth = now.toLocaleString('en-US', { month: 'long' });
+      const currentDay = now.getDate();
 
-    const currentLocationId = localStorage.getItem('selectedLocationId');
-    // Only notify for the user's mohalla mosque
-    if (currentLocationId !== mohallaId) return;
+      const { data, error } = await supabase
+        .from('prayer_times')
+        .select('*')
+        .eq('location_id', mohallaId)
+        .eq('month', currentMonth);
+
+      if (error || !data) return null;
+
+      // Find matching date range
+      return data.find(record => {
+        const rangeMatch = record.date_range.match(/(\d+)-(\d+)/);
+        if (rangeMatch) {
+          const startDay = parseInt(rangeMatch[1]);
+          const endDay = parseInt(rangeMatch[2]);
+          return currentDay >= startDay && currentDay <= endDay;
+        }
+        return false;
+      }) || null;
+    },
+    enabled: !!mohallaId,
+    staleTime: 1000 * 60 * 5, // 5 min
+    refetchInterval: 1000 * 60 * 5, // Check every 5 min
+  });
+
+  useEffect(() => {
+    if (!mohallaId || !mohallaPrayerData || notifiedRef.current) return;
+
+    // Build current prayer times from mohalla data
+    const currentPrayers = [
+      { name: 'Fajr', adhan: mohallaPrayerData.fajr_adhan, iqamah: mohallaPrayerData.fajr_iqamah },
+      { name: 'Zuhr', adhan: mohallaPrayerData.dhuhr_adhan, iqamah: mohallaPrayerData.dhuhr_iqamah },
+      { name: 'Asr', adhan: mohallaPrayerData.asr_adhan, iqamah: mohallaPrayerData.asr_iqamah },
+      { name: 'Maghrib', adhan: mohallaPrayerData.maghrib_adhan, iqamah: mohallaPrayerData.maghrib_iqamah },
+      { name: 'Isha', adhan: mohallaPrayerData.isha_adhan, iqamah: mohallaPrayerData.isha_iqamah },
+    ];
 
     const stored = localStorage.getItem(STORED_KEY);
     if (!stored) {
       // First time - just save
-      localStorage.setItem(STORED_KEY, JSON.stringify(prayers.map(p => ({ name: p.name, adhan: p.adhan, iqamah: p.iqamah }))));
+      localStorage.setItem(STORED_KEY, JSON.stringify(currentPrayers));
       return;
     }
 
@@ -25,7 +64,7 @@ export const usePrayerChangeNotifier = (prayers: Prayer[], mohallaId: string | n
       const oldPrayers = JSON.parse(stored) as { name: string; adhan: string; iqamah: string }[];
       const changes: string[] = [];
 
-      for (const prayer of prayers) {
+      for (const prayer of currentPrayers) {
         const old = oldPrayers.find(p => p.name === prayer.name);
         if (old) {
           if (old.adhan !== prayer.adhan || old.iqamah !== prayer.iqamah) {
@@ -61,8 +100,8 @@ export const usePrayerChangeNotifier = (prayers: Prayer[], mohallaId: string | n
         }
 
         // Save updated times
-        localStorage.setItem(STORED_KEY, JSON.stringify(prayers.map(p => ({ name: p.name, adhan: p.adhan, iqamah: p.iqamah }))));
+        localStorage.setItem(STORED_KEY, JSON.stringify(currentPrayers));
       }
     } catch {}
-  }, [prayers, mohallaId]);
+  }, [mohallaPrayerData, mohallaId]);
 };

@@ -246,13 +246,45 @@ serve(async (req) => {
       );
     }
 
+    if (action === "super_add_mosque") {
+      const mosqueData = data;
+      if (!mosqueData?.mosque_name || !mosqueData?.district || !mosqueData?.latitude || !mosqueData?.longitude) {
+        return new Response(
+          JSON.stringify({ error: "Missing required fields" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { error } = await supabase
+        .from("locations")
+        .insert({
+          mosque_name: mosqueData.mosque_name,
+          district: mosqueData.district,
+          latitude: mosqueData.latitude,
+          longitude: mosqueData.longitude,
+        });
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: "Unknown action" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (err) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

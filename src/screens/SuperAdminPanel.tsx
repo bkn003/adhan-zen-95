@@ -118,6 +118,44 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
     toast.success(updated[locationId] ? 'Mosque hidden from users' : 'Mosque visible to users');
   };
 
+  // Add new mosque
+  const [showAddMosque, setShowAddMosque] = useState(false);
+  const [newMosque, setNewMosque] = useState({ mosque_name: '', district: '', latitude: '', longitude: '' });
+  const [addingMosque, setAddingMosque] = useState(false);
+
+  const handleAddMosque = async () => {
+    if (!newMosque.mosque_name || !newMosque.district || !newMosque.latitude || !newMosque.longitude) {
+      toast.error('All fields are required');
+      return;
+    }
+    setAddingMosque(true);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'super_add_mosque',
+          data: {
+            mosque_name: newMosque.mosque_name,
+            district: newMosque.district,
+            latitude: parseFloat(newMosque.latitude),
+            longitude: parseFloat(newMosque.longitude),
+          }
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success('Mosque added!');
+      setShowAddMosque(false);
+      setNewMosque({ mosque_name: '', district: '', latitude: '', longitude: '' });
+      refetchLocations();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setAddingMosque(false);
+    }
+  };
+
   const filtered = locations?.filter(l =>
     l.mosque_name.toLowerCase().includes(search.toLowerCase()) ||
     l.district.toLowerCase().includes(search.toLowerCase())
@@ -196,6 +234,32 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
           <p className="text-[9px] text-gray-500">Hidden</p>
         </div>
       </div>
+
+      {/* Add Mosque Button */}
+      <button
+        onClick={() => setShowAddMosque(!showAddMosque)}
+        className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+      >
+        <Plus className="w-4 h-4" /> Add New Mosque
+      </button>
+
+      {showAddMosque && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+          <h3 className="text-sm font-bold text-gray-800">Add New Mosque</h3>
+          <input type="text" placeholder="Mosque Name" value={newMosque.mosque_name} onChange={e => setNewMosque(p => ({ ...p, mosque_name: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm" />
+          <input type="text" placeholder="District" value={newMosque.district} onChange={e => setNewMosque(p => ({ ...p, district: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm" />
+          <div className="grid grid-cols-2 gap-2">
+            <input type="number" step="any" placeholder="Latitude" value={newMosque.latitude} onChange={e => setNewMosque(p => ({ ...p, latitude: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm" />
+            <input type="number" step="any" placeholder="Longitude" value={newMosque.longitude} onChange={e => setNewMosque(p => ({ ...p, longitude: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm" />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={handleAddMosque} disabled={addingMosque} className="flex-1 bg-emerald-500 text-white rounded-xl text-xs h-9">
+              {addingMosque ? 'Adding...' : 'Add Mosque'}
+            </Button>
+            <Button variant="outline" onClick={() => setShowAddMosque(false)} className="rounded-xl text-xs h-9">Cancel</Button>
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative">

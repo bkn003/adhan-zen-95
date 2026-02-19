@@ -18,7 +18,7 @@ import { usePrayerWorker } from '@/hooks/usePrayerWorker';
 import { usePrayerNotifications } from '@/hooks/usePrayerNotifications';
 import { usePrayerAlarm } from '@/hooks/usePrayerAlarm';
 import { usePrayerChangeNotifier } from '@/hooks/usePrayerChangeNotifier';
-import { tamilText } from '@/utils/tamilText';
+import { getLocalizedText } from '@/utils/tamilText';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import type { Location, Prayer } from '@/types/prayer.types';
 import { Capacitor } from '@capacitor/core';
@@ -28,6 +28,7 @@ import { initializeOfflineAdhanService } from '@/native/offlineAdhanService';
 import { scheduleAdhanWithMedian, savePrayerTimesForBoot, registerMedianPrayerTimesSaver, isMedianApp } from '@/native/medianBridge';
 import { useRamadanContext } from '@/contexts/RamadanContext';
 import { useAdhanInitializer } from '@/hooks/useAdhanInitializer';
+import { useLanguage } from '@/i18n/LanguageContext';
 interface HomeScreenProps {
   selectedLocationId?: string;
   onLocationSelect?: (locationId: string) => void;
@@ -335,6 +336,8 @@ export const HomeScreen = ({
   const isLoading = locationsLoading || (isStaticLoading || (staticError && prayerTimesLoading));
   // Allow all prayers to show in next prayer banner, including Ramadan-specific ones
   const filteredNextPrayer = nextPrayer;
+  const { language } = useLanguage();
+  const localizedText = getLocalizedText(language);
   return <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-white">
     <div className="p-4 space-y-4 px-[4px] py-[2px]">
       {/* Offline indicator */}
@@ -377,20 +380,22 @@ export const HomeScreen = ({
           <div className="bg-white rounded-xl border border-green-100 shadow-sm">
             <div className="grid grid-cols-3 text-center py-3 border-b border-green-100">
               <div>
-                <p className="text-sm font-semibold text-gray-700">{tamilText.general.prayer.english}</p>
-                <p className="text-xs text-gray-500">{tamilText.general.prayer.tamil}</p>
+                <p className="text-sm font-semibold text-gray-700">{localizedText.general.prayer.english}</p>
+                {localizedText.general.prayer.local && <p className="text-xs text-gray-500">{localizedText.general.prayer.local}</p>}
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-700">{tamilText.times.adhan.english}</p>
-                <p className="text-xs text-gray-500">{tamilText.times.adhan.tamil}</p>
+                <p className="text-sm font-semibold text-gray-700">{localizedText.times.adhan.english}</p>
+                {localizedText.times.adhan.local && <p className="text-xs text-gray-500">{localizedText.times.adhan.local}</p>}
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-700">
-                  {isJummahTime ? tamilText.times.khutbah.english : tamilText.times.iqamah.english}
+                  {isJummahTime ? localizedText.times.khutbah.english : localizedText.times.iqamah.english}
                 </p>
-                <p className="text-xs text-gray-500">
-                  {isJummahTime ? tamilText.times.khutbah.tamil : tamilText.times.iqamah.tamil}
-                </p>
+                {(isJummahTime ? localizedText.times.khutbah.local : localizedText.times.iqamah.local) && (
+                  <p className="text-xs text-gray-500">
+                    {isJummahTime ? localizedText.times.khutbah.local : localizedText.times.iqamah.local}
+                  </p>
+                )}
               </div>
             </div>
           </div>
