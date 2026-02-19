@@ -171,18 +171,33 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       if (!res.ok) throw new Error(data.error);
       toast.success('Prayer time updated!');
 
-      // Clear all prayer caches so fresh Supabase data loads on all pages
+      // Clear ALL prayer caches so fresh Supabase data loads on all pages
       if (locationId) {
         clearCacheForLocation(locationId);
       }
       clearAllPrayerCache();
 
-      // Invalidate ALL prayer-time related queries so changes reflect everywhere
+      // Also clear static prayer times localStorage entries (pt:* keys)
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('pt:')) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        console.log('🧹 Cleared', keysToRemove.length, 'static prayer cache entries');
+      } catch (e) {
+        console.warn('Error clearing static prayer cache:', e);
+      }
+
+      // Force immediate refetch on ALL prayer-time related queries
       refetchPT();
-      queryClient.invalidateQueries({ queryKey: ['prayer-times'] });
-      queryClient.invalidateQueries({ queryKey: ['static-prayer-times'] });
-      queryClient.invalidateQueries({ queryKey: ['locations'] });
-      queryClient.invalidateQueries({ queryKey: ['mosque-prayer-status'] });
+      queryClient.invalidateQueries({ queryKey: ['prayer-times'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['static-prayer-times'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['locations'], refetchType: 'all' });
+      queryClient.invalidateQueries({ queryKey: ['mosque-prayer-status'], refetchType: 'all' });
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -457,7 +472,6 @@ const ToggleField = ({ label, value, onSave }: { label: string; value: boolean; 
 const PrayerTimeEditor = ({ prayerTime, onSave, onCancel }: {
   prayerTime: any; onSave: (fields: Record<string, any>) => void; onCancel: () => void;
 }) => {
-<<<<<<< HEAD
   const prayerGroups = [
     {
       title: '🌅 Fajr', fields: [

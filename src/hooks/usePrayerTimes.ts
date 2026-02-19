@@ -99,25 +99,6 @@ export const usePrayerTimes = (locationId?: string, selectedDate?: Date, hijriMo
     // Import cache functions dynamically to avoid circular deps
     const { getPrayerDataFromCache, setPrayerDataInCache } = await import('@/utils/prayerCache');
 
-    // Try cache first (reduces Supabase API calls significantly)
-    const cachedData = getPrayerDataFromCache(locationId, currentMonth);
-    if (cachedData && cachedData.length > 0) {
-      console.log('🚀 Using CACHED prayer times - no API call needed!');
-      const matchingRecord = cachedData.find(record => {
-        const dateRange = record.date_range;
-        const rangeMatch = dateRange.match(/(\d+)-(\d+)/);
-        if (rangeMatch) {
-          const startDay = parseInt(rangeMatch[1]);
-          const endDay = parseInt(rangeMatch[2]);
-          return currentDay >= startDay && currentDay <= endDay;
-        }
-        return false;
-      });
-      if (matchingRecord) {
-        return matchingRecord;
-      }
-    }
-
     // Cache miss - fetch from Supabase
     console.log('📡 Cache miss - fetching from Supabase...');
     try {
@@ -185,10 +166,10 @@ export const usePrayerTimes = (locationId?: string, selectedDate?: Date, hijriMo
     queryKey: ['prayer-times', locationId, formattedDate, selectedDate?.toISOString()],
     queryFn: fetchPrayerTimes,
     enabled: !!locationId,
-    staleTime: 1000 * 60 * 5, // 5 minutes - refresh quickly after admin updates
+    staleTime: 0, // Always refetch from Supabase to pick up admin changes immediately
     gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days
     retry: 2,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true, // Refetch when user navigates back to app
   });
 
   // Auto-refetch when location changes
