@@ -388,6 +388,59 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
                       </div>
                     </div>
                   )}
+                  {/* Ramadan special times */}
+                  {((pt as any).sahar_end || (pt as any).ifthar_time || (pt as any).tharaweeh || (pt as any).fajr_ramadan_iqamah || (pt as any).isha_ramadan_iqamah) && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-sm">🌙</span>
+                        <span className="text-[10px] font-bold text-purple-700">Ramadan</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-[10px]">
+                        {(pt as any).sahar_end && (
+                          <div className="text-center">
+                            <p className="text-purple-400 font-medium">Sahar End</p>
+                            <p className="font-bold text-purple-700">{formatTime12h((pt as any).sahar_end)}</p>
+                          </div>
+                        )}
+                        {(pt as any).ifthar_time && (
+                          <div className="text-center">
+                            <p className="text-purple-400 font-medium">Iftar</p>
+                            <p className="font-bold text-purple-700">{formatTime12h((pt as any).ifthar_time)}</p>
+                          </div>
+                        )}
+                        {(pt as any).tharaweeh && (
+                          <div className="text-center">
+                            <p className="text-purple-400 font-medium">Tharaweeh</p>
+                            <p className="font-bold text-purple-700">{formatTime12h((pt as any).tharaweeh)}</p>
+                          </div>
+                        )}
+                        {(pt as any).fajr_ramadan_iqamah && (
+                          <div className="text-center">
+                            <p className="text-purple-400 font-medium">Fajr R.Iqamah</p>
+                            <p className="font-bold text-purple-700">{formatTime12h((pt as any).fajr_ramadan_iqamah)}</p>
+                          </div>
+                        )}
+                        {(pt as any).maghrib_ramadan_adhan && (
+                          <div className="text-center">
+                            <p className="text-purple-400 font-medium">Magh R.Adhan</p>
+                            <p className="font-bold text-purple-700">{formatTime12h((pt as any).maghrib_ramadan_adhan)}</p>
+                          </div>
+                        )}
+                        {(pt as any).maghrib_ramadan_iqamah && (
+                          <div className="text-center">
+                            <p className="text-purple-400 font-medium">Magh R.Iqamah</p>
+                            <p className="font-bold text-purple-700">{formatTime12h((pt as any).maghrib_ramadan_iqamah)}</p>
+                          </div>
+                        )}
+                        {(pt as any).isha_ramadan_iqamah && (
+                          <div className="text-center">
+                            <p className="text-purple-400 font-medium">Isha R.Iqamah</p>
+                            <p className="font-bold text-purple-700">{formatTime12h((pt as any).isha_ramadan_iqamah)}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -510,6 +563,17 @@ const PrayerTimeEditor = ({ prayerTime, onSave, onCancel }: {
       ]
     },
     {
+      title: '🌙 Ramadan Special', fields: [
+        { key: 'fajr_ramadan_iqamah', label: 'Fajr Ramadan Iqamah' },
+        { key: 'maghrib_ramadan_adhan', label: 'Maghrib Ramadan Adhan' },
+        { key: 'maghrib_ramadan_iqamah', label: 'Maghrib Ramadan Iqamah' },
+        { key: 'isha_ramadan_iqamah', label: 'Isha Ramadan Iqamah' },
+        { key: 'sahar_end', label: 'Sahar End' },
+        { key: 'ifthar_time', label: 'Iftar Time' },
+        { key: 'tharaweeh', label: 'Tharaweeh' },
+      ]
+    },
+    {
       title: '🌞 Sun Times', fields: [
         { key: 'sun_rise', label: 'Sunrise' },
         { key: 'mid_noon', label: 'Mid Noon' },
@@ -536,8 +600,8 @@ const PrayerTimeEditor = ({ prayerTime, onSave, onCancel }: {
   return (
     <div className="space-y-3">
       {prayerGroups.map(group => (
-        <div key={group.title} className="bg-gray-50 rounded-xl p-2.5 border border-gray-100">
-          <p className="text-xs font-bold text-gray-600 mb-2">{group.title}</p>
+        <div key={group.title} className={`rounded-xl p-2.5 border ${group.title.includes('Ramadan') ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-100'}`}>
+          <p className={`text-xs font-bold mb-2 ${group.title.includes('Ramadan') ? 'text-purple-700' : 'text-gray-600'}`}>{group.title}</p>
           <div className="grid grid-cols-2 gap-2">
             {group.fields.map(f => (
               <TimePicker12h
