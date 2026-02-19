@@ -44,6 +44,7 @@ android {
     }
     
     compileOptions {
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
@@ -120,6 +121,9 @@ dependencies {
     implementation "io.coil-kt:coil-compose:2.5.0"
     
     // NOTE: Capacitor removed - using pure native Compose now
+    
+    // Core Library Desugaring (for java.time.* on older devices)
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
     
     // Testing
     testImplementation "junit:junit:$junitVersion"
