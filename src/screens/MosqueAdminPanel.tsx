@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, LogIn, LogOut, Save, Edit2, ChevronDown, ChevronUp, Camera, Trash2, Upload } from 'lucide-react';
+import { ArrowLeft, LogIn, LogOut, Save, Edit2, ChevronDown, ChevronUp, Camera, Trash2, Upload, Clock, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useLocations } from '@/hooks/useLocations';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { TimePicker12h, formatTime12h } from '@/components/TimePicker12h';
+import { clearCacheForLocation, clearAllPrayerCache } from '@/utils/prayerCache';
 
 /**
  * Returns the last day of a given month name (1-indexed).
@@ -83,7 +84,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
   const { data: prayerTimes, refetch: refetchPT } = useQuery({
     queryKey: ['admin-prayer-times', locationId, selectedMonth],
     queryFn: async () => {
-    const { data, error } = await supabase
+      const { data, error } = await supabase
         .from('prayer_times')
         .select('*')
         .eq('location_id', locationId!)
@@ -169,6 +170,13 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success('Prayer time updated!');
+
+      // Clear all prayer caches so fresh Supabase data loads on all pages
+      if (locationId) {
+        clearCacheForLocation(locationId);
+      }
+      clearAllPrayerCache();
+
       // Invalidate ALL prayer-time related queries so changes reflect everywhere
       refetchPT();
       queryClient.invalidateQueries({ queryKey: ['prayer-times'] });
@@ -306,32 +314,65 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
                   onCancel={() => setEditingPT(null)}
                 />
               ) : (
-                <div className="space-y-1">
-                  {/* Compact grid showing Adhan + Iqamah for all 5 prayers */}
-                  <div className="grid grid-cols-5 gap-1 text-center text-[10px]">
-                    {['Fajr', 'Zuhr', 'Asr', 'Magh', 'Isha'].map(name => (
-                      <p key={name} className="text-gray-400 font-medium">{name}</p>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-5 gap-1 text-center text-[10px]">
-                    {['fajr_adhan', 'dhuhr_adhan', 'asr_adhan', 'maghrib_adhan', 'isha_adhan'].map(key => (
-                      <p key={key} className="text-blue-600 font-medium">
-                        {formatTime12h((pt as any)[key])}
-                      </p>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-5 gap-1 text-center text-[10px]">
-                    {['fajr_iqamah', 'dhuhr_iqamah', 'asr_iqamah', 'maghrib_iqamah', 'isha_iqamah'].map(key => (
-                      <p key={key} className="text-emerald-700 font-bold">
-                        {formatTime12h((pt as any)[key])}
-                      </p>
-                    ))}
-                  </div>
-                  {/* Labels */}
-                  <div className="flex justify-center gap-4 mt-1">
-                    <span className="text-[9px] text-blue-500">● Adhan</span>
-                    <span className="text-[9px] text-emerald-600">● Iqamah</span>
-                  </div>
+                <div className="space-y-2">
+                  {/* Prayer cards - grouped by prayer name */}
+                  {[
+                    { name: 'Fajr', icon: '🌅', adhan: 'fajr_adhan', iqamah: 'fajr_iqamah', bg: 'bg-indigo-50', border: 'border-indigo-100' },
+                    { name: 'Zuhr', icon: '☀️', adhan: 'dhuhr_adhan', iqamah: 'dhuhr_iqamah', bg: 'bg-amber-50', border: 'border-amber-100' },
+                    { name: 'Asr', icon: '🌤️', adhan: 'asr_adhan', iqamah: 'asr_iqamah', bg: 'bg-orange-50', border: 'border-orange-100' },
+                    { name: 'Maghrib', icon: '🌇', adhan: 'maghrib_adhan', iqamah: 'maghrib_iqamah', bg: 'bg-rose-50', border: 'border-rose-100' },
+                    { name: 'Isha', icon: '🌙', adhan: 'isha_adhan', iqamah: 'isha_iqamah', bg: 'bg-purple-50', border: 'border-purple-100' },
+                  ].map(prayer => (
+                    <div key={prayer.name} className={`flex items-center justify-between ${prayer.bg} ${prayer.border} border rounded-lg px-3 py-2`}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">{prayer.icon}</span>
+                        <span className="text-xs font-bold text-gray-700 w-16">{prayer.name}</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-center">
+                          <p className="text-[9px] text-blue-400 font-medium">Adhan</p>
+                          <p className="text-xs font-bold text-blue-600">{formatTime12h((pt as any)[prayer.adhan])}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[9px] text-emerald-400 font-medium">Iqamah</p>
+                          <p className="text-xs font-bold text-emerald-600">{formatTime12h((pt as any)[prayer.iqamah])}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {/* Jummah row */}
+                  {(pt as any).jummah_adhan && (
+                    <div className="flex items-center justify-between bg-teal-50 border border-teal-100 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">🕌</span>
+                        <span className="text-xs font-bold text-gray-700 w-16">Jummah</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-center">
+                          <p className="text-[9px] text-blue-400 font-medium">Adhan</p>
+                          <p className="text-xs font-bold text-blue-600">{formatTime12h((pt as any).jummah_adhan)}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[9px] text-emerald-400 font-medium">Khutbah</p>
+                          <p className="text-xs font-bold text-emerald-600">{formatTime12h((pt as any).jummah_iqamah)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {/* Sun times row */}
+                  {((pt as any).sun_rise || (pt as any).sun_set) && (
+                    <div className="flex items-center justify-between bg-yellow-50 border border-yellow-100 rounded-lg px-3 py-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">🌞</span>
+                        <span className="text-[10px] font-medium text-gray-500">Sun</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-[10px]">
+                        {(pt as any).sun_rise && <span className="text-orange-600">↑ {formatTime12h((pt as any).sun_rise)}</span>}
+                        {(pt as any).mid_noon && <span className="text-yellow-600">◆ {formatTime12h((pt as any).mid_noon)}</span>}
+                        {(pt as any).sun_set && <span className="text-red-600">↓ {formatTime12h((pt as any).sun_set)}</span>}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -416,59 +457,86 @@ const ToggleField = ({ label, value, onSave }: { label: string; value: boolean; 
 const PrayerTimeEditor = ({ prayerTime, onSave, onCancel }: {
   prayerTime: any; onSave: (fields: Record<string, any>) => void; onCancel: () => void;
 }) => {
-  const fields = [
-    { key: 'fajr_adhan', label: 'Fajr Azaan' },
-    { key: 'fajr_iqamah', label: 'Fajr Iqamah' },
-    { key: 'fajr_ramadan_iqamah', label: 'Fajr Ramadan Iqamah', ramadan: true },
-    { key: 'dhuhr_adhan', label: 'Zuhr Azaan' },
-    { key: 'dhuhr_iqamah', label: 'Zuhr Iqamah' },
-    { key: 'asr_adhan', label: 'Asr Azaan' },
-    { key: 'asr_iqamah', label: 'Asr Iqamah' },
-    { key: 'maghrib_adhan', label: 'Maghrib Azaan' },
-    { key: 'maghrib_iqamah', label: 'Maghrib Iqamah' },
-    { key: 'maghrib_ramadan_adhan', label: 'Maghrib Ramadan Azaan', ramadan: true },
-    { key: 'maghrib_ramadan_iqamah', label: 'Maghrib Ramadan Iqamah', ramadan: true },
-    { key: 'isha_adhan', label: 'Isha Azaan' },
-    { key: 'isha_iqamah', label: 'Isha Iqamah' },
-    { key: 'isha_ramadan_iqamah', label: 'Isha Ramadan Iqamah', ramadan: true },
-    { key: 'jummah_adhan', label: 'Jummah Azaan' },
-    { key: 'jummah_iqamah', label: 'Jummah Khutbah' },
-    { key: 'sahar_end', label: 'Sahar End', ramadan: true },
-    { key: 'ifthar_time', label: 'Iftar Time', ramadan: true },
-    { key: 'tharaweeh', label: 'Tharaweeh', ramadan: true },
-    { key: 'sun_rise', label: 'Sunrise' },
-    { key: 'sun_set', label: 'Sunset' },
-    { key: 'mid_noon', label: 'Mid Noon' },
-    { key: 'ishraq_time', label: 'Ishraq' },
-    { key: 'tahajjud_start', label: 'Tahajjud Start' },
-    { key: 'tahajjud_end', label: 'Tahajjud End' },
+<<<<<<< HEAD
+  const prayerGroups = [
+    {
+      title: '🌅 Fajr', fields: [
+        { key: 'fajr_adhan', label: 'Adhan' },
+        { key: 'fajr_iqamah', label: 'Iqamah' },
+      ]
+    },
+    {
+      title: '☀️ Zuhr', fields: [
+        { key: 'dhuhr_adhan', label: 'Adhan' },
+        { key: 'dhuhr_iqamah', label: 'Iqamah' },
+      ]
+    },
+    {
+      title: '🌤️ Asr', fields: [
+        { key: 'asr_adhan', label: 'Adhan' },
+        { key: 'asr_iqamah', label: 'Iqamah' },
+      ]
+    },
+    {
+      title: '🌇 Maghrib', fields: [
+        { key: 'maghrib_adhan', label: 'Adhan' },
+        { key: 'maghrib_iqamah', label: 'Iqamah' },
+      ]
+    },
+    {
+      title: '🌙 Isha', fields: [
+        { key: 'isha_adhan', label: 'Adhan' },
+        { key: 'isha_iqamah', label: 'Iqamah' },
+      ]
+    },
+    {
+      title: '🕌 Jummah', fields: [
+        { key: 'jummah_adhan', label: 'Adhan' },
+        { key: 'jummah_iqamah', label: 'Khutbah' },
+      ]
+    },
+    {
+      title: '🌞 Sun Times', fields: [
+        { key: 'sun_rise', label: 'Sunrise' },
+        { key: 'mid_noon', label: 'Mid Noon' },
+        { key: 'sun_set', label: 'Sunset' },
+      ]
+    },
+    {
+      title: '🕐 Other', fields: [
+        { key: 'ishraq_time', label: 'Ishraq' },
+        { key: 'tahajjud_start', label: 'Tahajjud Start' },
+        { key: 'tahajjud_end', label: 'Tahajjud End' },
+      ]
+    },
   ];
 
-  // Only show Ramadan fields that have data in the database
-  const visibleFields = fields.filter(f => {
-    if (!f.ramadan) return true;
-    return prayerTime[f.key] !== null && prayerTime[f.key] !== undefined && prayerTime[f.key] !== '';
-  });
+  const allFields = prayerGroups.flatMap(g => g.fields);
 
   const [values, setValues] = useState<Record<string, string>>(() => {
     const v: Record<string, string> = {};
-    fields.forEach(f => { v[f.key] = prayerTime[f.key] || ''; });
+    allFields.forEach(f => { v[f.key] = prayerTime[f.key] || ''; });
     return v;
   });
 
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-2 gap-2">
-        {visibleFields.map(f => (
-          <TimePicker12h
-            key={f.key}
-            label={f.label}
-            value={values[f.key]}
-            onChange={(v) => setValues(prev => ({ ...prev, [f.key]: v }))}
-          />
-        ))}
-      </div>
-      <div className="flex gap-2 pt-2">
+    <div className="space-y-3">
+      {prayerGroups.map(group => (
+        <div key={group.title} className="bg-gray-50 rounded-xl p-2.5 border border-gray-100">
+          <p className="text-xs font-bold text-gray-600 mb-2">{group.title}</p>
+          <div className="grid grid-cols-2 gap-2">
+            {group.fields.map(f => (
+              <TimePicker12h
+                key={f.key}
+                label={f.label}
+                value={values[f.key]}
+                onChange={(v) => setValues(prev => ({ ...prev, [f.key]: v }))}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+      <div className="flex gap-2 pt-1">
         <Button onClick={() => {
           const changed: Record<string, any> = {};
           Object.entries(values).forEach(([k, v]) => {
@@ -478,10 +546,10 @@ const PrayerTimeEditor = ({ prayerTime, onSave, onCancel }: {
           });
           if (Object.keys(changed).length > 0) onSave(changed);
           else onCancel();
-        }} className="flex-1 bg-emerald-500 text-white rounded-xl text-xs h-9">
-          <Save className="w-3 h-3 mr-1" /> Save Changes
+        }} className="flex-1 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs h-10 font-semibold">
+          <Save className="w-3.5 h-3.5 mr-1.5" /> Save Changes
         </Button>
-        <Button variant="outline" onClick={onCancel} className="rounded-xl text-xs h-9">Cancel</Button>
+        <Button variant="outline" onClick={onCancel} className="rounded-xl text-xs h-10 px-4">Cancel</Button>
       </div>
     </div>
   );

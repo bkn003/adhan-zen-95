@@ -185,7 +185,7 @@ export const usePrayerTimes = (locationId?: string, selectedDate?: Date, hijriMo
     queryKey: ['prayer-times', locationId, formattedDate, selectedDate?.toISOString()],
     queryFn: fetchPrayerTimes,
     enabled: !!locationId,
-    staleTime: 1000 * 60 * 60 * 24, // 24 hours - longer cache for prayer times
+    staleTime: 1000 * 60 * 5, // 5 minutes - refresh quickly after admin updates
     gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days
     retry: 2,
     refetchOnWindowFocus: false,

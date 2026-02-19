@@ -149,6 +149,58 @@ export function getAllCachedData(): Map<string, any[]> {
 }
 
 /**
+ * Clear all prayer cache for a specific location (busts stale data after admin update)
+ */
+export function clearCacheForLocation(locationId: string): void {
+    const keysToRemove: string[] = [];
+
+    // Clear memory cache
+    for (const key of memoryCache.keys()) {
+        if (key.includes(locationId)) {
+            keysToRemove.push(key);
+        }
+    }
+    keysToRemove.forEach(key => memoryCache.delete(key));
+
+    // Clear localStorage cache
+    try {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (key && (key.startsWith(CACHE_PREFIX) && key.includes(locationId)) || (key && key.startsWith('pt:') && key.includes(locationId))) {
+                localStorage.removeItem(key);
+            }
+        }
+    } catch (e) {
+        console.warn('Cache clear error:', e);
+    }
+
+    console.log('🧹 Cleared prayer cache for location:', locationId);
+}
+
+/**
+ * Clear ALL prayer caches (memory + localStorage)
+ */
+export function clearAllPrayerCache(): void {
+    // Clear memory cache
+    memoryCache.clear();
+
+    // Clear localStorage cache
+    try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.startsWith(CACHE_PREFIX) || key.startsWith('pt:'))) {
+                keysToRemove.push(key);
+            }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        console.log('🧹 Cleared ALL prayer caches:', keysToRemove.length, 'entries');
+    } catch (e) {
+        console.warn('Cache clear all error:', e);
+    }
+}
+
+/**
  * Clean old cache entries to free up space
  */
 export function cleanOldCache(): void {

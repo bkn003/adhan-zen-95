@@ -159,13 +159,14 @@ export const HomeScreen = ({
   }, [selectedLocation?.id, selectedDate, processedPrayerTimes, prayerTimes]);
 
   // Use processed data if available, otherwise use hook data
+  // PRIORITY: Supabase (prayerTimes) > Static JSON (processedPrayerTimes) > Offline fallback
   const finalPrayerTimes =
-    processedPrayerTimes.length > 0
-      ? processedPrayerTimes
-      : prayerTimes.length > 0
-        ? prayerTimes
+    prayerTimes.length > 0
+      ? prayerTimes
+      : processedPrayerTimes.length > 0
+        ? processedPrayerTimes
         : offlineFallbackTimes;
-  const finalForbiddenTimes = processedForbiddenTimes.length > 0 ? processedForbiddenTimes : forbiddenTimes;
+  const finalForbiddenTimes = forbiddenTimes.length > 0 ? forbiddenTimes : processedForbiddenTimes.length > 0 ? processedForbiddenTimes : [];
 
   // Enhanced Median.co Adhan scheduling integration
   useEffect(() => {
