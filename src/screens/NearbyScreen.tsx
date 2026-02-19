@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
-import { MapPin, Clock, Navigation, Search, Utensils, Users, ChevronDown, Sparkles, Timer } from 'lucide-react';
+import { MapPin, Clock, Navigation, Search, Utensils, Users, ChevronDown, Sparkles, Timer, Car, Wind } from 'lucide-react';
 import { useLocations } from '@/hooks/useLocations';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useRamadanContext } from '@/contexts/RamadanContext';
 import { useMosquePrayerStatus } from '@/hooks/useMosquePrayerStatus';
-import { tamilText } from '@/utils/tamilText';
+import { useLanguage } from '@/i18n/LanguageContext';
 import { Button } from '@/components/ui/button';
 import type { Location } from '@/types/prayer.types';
 
@@ -23,12 +23,15 @@ export const NearbyScreen = ({
   const [isSearching, setIsSearching] = useState(false);
   const [filterSaharFood, setFilterSaharFood] = useState(false);
   const [filterWomenHall, setFilterWomenHall] = useState(false);
+  const [filterParking, setFilterParking] = useState(false);
+  const [filterAC, setFilterAC] = useState(false);
   const [sortByTime, setSortByTime] = useState(false);
   const [displayCount, setDisplayCount] = useState(10);
 
   const { data: locations, isLoading } = useLocations();
   const { latitude, longitude, calculateDistance, error: locationError } = useGeolocation();
   const { isRamadan } = useRamadanContext();
+  const { t } = useLanguage();
 
   const locationIds = useMemo(() => locations?.map(l => l.id) || [], [locations]);
   const { data: prayerStatusMap } = useMosquePrayerStatus(locationIds);
@@ -62,6 +65,8 @@ export const NearbyScreen = ({
     }
     if (filterSaharFood && !location.sahar_food_availability) return false;
     if (filterWomenHall && !location.women_prayer_hall) return false;
+    if (filterParking && !location.parking_available) return false;
+    if (filterAC && !location.ac_available) return false;
     return true;
   }) || [];
 
@@ -145,14 +150,11 @@ export const NearbyScreen = ({
               <MapPin className="w-5 h-5 text-white" />
             </div>
             <h2 className="text-xl font-bold text-white">
-              {tamilText.general.nearbyMosques.english}
+              {t('nearbyMosques')}
             </h2>
           </div>
-          <p className="text-center text-white/70 text-sm">
-            {tamilText.general.nearbyMosques.tamil}
-          </p>
           <p className="text-center text-blue-200 text-xs mt-2">
-            {sortedLocations.length} mosques found near you
+            {sortedLocations.length} {t('mosquesFound')}
           </p>
         </div>
       </div>
@@ -163,7 +165,7 @@ export const NearbyScreen = ({
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search mosques by name or district..."
+            placeholder={t('searchMosques')}
             value={searchQuery}
             onChange={e => {
               setSearchQuery(e.target.value);
@@ -174,36 +176,56 @@ export const NearbyScreen = ({
           />
         </div>
 
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
           <button
             onClick={() => setSortByTime(!sortByTime)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${sortByTime
-                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 ${sortByTime
+              ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
             <Timer className="w-4 h-4" />
-            Sort by Time
+            {t('sortByTime')}
           </button>
           <button
             onClick={() => setFilterSaharFood(!filterSaharFood)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${filterSaharFood
-                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 ${filterSaharFood
+              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
             <Utensils className="w-4 h-4" />
-            Sahar Food
+            {t('saharFood')}
           </button>
           <button
             onClick={() => setFilterWomenHall(!filterWomenHall)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${filterWomenHall
-                ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/25'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 ${filterWomenHall
+              ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/25'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
           >
             <Users className="w-4 h-4" />
-            Women Hall
+            {t('womenHall')}
+          </button>
+          <button
+            onClick={() => setFilterParking(!filterParking)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 ${filterParking
+              ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/25'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+          >
+            <Car className="w-4 h-4" />
+            {t('parking')}
+          </button>
+          <button
+            onClick={() => setFilterAC(!filterAC)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 ${filterAC
+              ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/25'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+          >
+            <Wind className="w-4 h-4" />
+            {t('ac')}
           </button>
         </div>
       </div>
@@ -245,11 +267,10 @@ export const NearbyScreen = ({
 
               {/* Next Iqamah Time Badge */}
               {location.nextIqamahTime && (
-                <div className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl mb-3 ${
-                  location.prayerStatus === 'not_started'
-                    ? 'bg-orange-50 border border-orange-100 text-orange-700'
-                    : 'bg-gray-50 border border-gray-100 text-gray-500'
-                }`}>
+                <div className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl mb-3 ${location.prayerStatus === 'not_started'
+                  ? 'bg-orange-50 border border-orange-100 text-orange-700'
+                  : 'bg-gray-50 border border-gray-100 text-gray-500'
+                  }`}>
                   <Clock className="w-3 h-3" />
                   {location.nextPrayerName} Iqamah: {formatTime(location.nextIqamahTime)}
                   {location.prayerStatus === 'completed' && (
@@ -284,14 +305,14 @@ export const NearbyScreen = ({
                   className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-semibold text-sm py-3 hover:shadow-lg hover:shadow-emerald-500/25 transition-all active:scale-98"
                 >
                   <Clock className="w-4 h-4" />
-                  Prayer Times
+                  {t('prayerTimes')}
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleGetDirections(location); }}
                   className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-semibold text-sm py-3 hover:shadow-lg hover:shadow-blue-500/25 transition-all active:scale-98"
                 >
                   <Navigation className="w-4 h-4" />
-                  Directions
+                  {t('directions')}
                 </button>
               </div>
             </div>
@@ -303,8 +324,8 @@ export const NearbyScreen = ({
             </div>
             <p className="text-gray-500 font-medium">
               {searchQuery || filterSaharFood || filterWomenHall
-                ? 'No mosques match your filters'
-                : 'No mosques found nearby'}
+                ? t('noMosquesMatch')
+                : t('noMosquesFound')}
             </p>
           </div>
         )}

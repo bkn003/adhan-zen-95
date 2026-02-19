@@ -14,4 +14,21 @@ ext {
     androidxJunitVersion = '1.2.1'
     androidxEspressoCoreVersion = '3.6.1'
     cordovaAndroidVersion = '10.1.1'
+    
+    // Jetpack Compose
+    composeVersion = '1.5.4'
+    composeMaterial3Version = '1.2.0'
+    composeCompilerVersion = '1.5.8'
+    navigationComposeVersion = '2.7.6'
+    lifecycleVersion = '2.7.0'
+    
+    // Supabase
+    supabaseVersion = '2.0.4'
+    ktorVersion = '2.3.7'
+    
+    // Room
+    roomVersion = '2.6.1'
+    
+    // Hilt
+    hiltVersion = '2.48.1'
 }

@@ -19,6 +19,7 @@ import { usePrayerNotifications } from '@/hooks/usePrayerNotifications';
 import { usePrayerAlarm } from '@/hooks/usePrayerAlarm';
 import { usePrayerChangeNotifier } from '@/hooks/usePrayerChangeNotifier';
 import { tamilText } from '@/utils/tamilText';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import type { Location, Prayer } from '@/types/prayer.types';
 import { Capacitor } from '@capacitor/core';
 import { scheduleTodayAdhanNotifications } from '@/native/useNativeAdhanScheduler';
@@ -336,6 +337,8 @@ export const HomeScreen = ({
   const filteredNextPrayer = nextPrayer;
   return <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-white">
     <div className="p-4 space-y-4 px-[4px] py-[2px]">
+      {/* Offline indicator */}
+      <OfflineBanner />
       {/* Next Prayer Card */}
       {filteredNextPrayer && (
         <NextPrayerCard

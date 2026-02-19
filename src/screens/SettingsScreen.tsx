@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Calendar, Volume2, Clock, Moon, Bell, ChevronRight, Settings as SettingsIcon, RefreshCw, VolumeX, Sunrise, Sun, Sunset, Home } from 'lucide-react';
-import { tamilText } from '@/utils/tamilText';
+import { MapPin, Calendar, Volume2, Clock, Moon, Bell, ChevronRight, Settings as SettingsIcon, RefreshCw, VolumeX, Sunrise, Sun, Sunset, Home, Globe } from 'lucide-react';
+import { useLanguage } from '@/i18n/LanguageContext';
+import { LANGUAGE_LABELS } from '@/i18n/translations';
+import type { Language } from '@/i18n/translations';
 import { LocationSelector } from '@/components/LocationSelector';
 import { HijriAdjustment } from '@/components/HijriAdjustment';
 import { useLocations } from '@/hooks/useLocations';
@@ -140,6 +142,7 @@ export const SettingsScreen = () => {
   } = useNotifications();
 
   const isNative = Capacitor.isNativePlatform();
+  const { t, language, setLanguage } = useLanguage();
 
   // Load persisted settings
   useEffect(() => {
@@ -347,13 +350,28 @@ export const SettingsScreen = () => {
             <SettingsIcon className="w-6 h-6 text-white" />
           </div>
           <h2 className="text-xl font-bold text-white">
-            {tamilText.general.settings.english}
+            {t('settings')}
           </h2>
-          <p className="text-white/70 text-xs">
-            {tamilText.general.settings.tamil}
-          </p>
         </div>
       </div>
+
+      {/* Language Selector */}
+      <SettingsCard title={t('language')} icon={Globe} gradient="from-violet-50/50 to-white">
+        <div className="grid grid-cols-2 gap-2">
+          {(Object.entries(LANGUAGE_LABELS) as [Language, string][]).map(([code, label]) => (
+            <button
+              key={code}
+              onClick={() => setLanguage(code)}
+              className={`py-2.5 px-3 rounded-xl text-sm font-medium transition-all ${language === code
+                ? 'bg-violet-500 text-white shadow-md shadow-violet-500/25'
+                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </SettingsCard>
 
       {/* Location Settings */}
       <SettingsCard title="Location" icon={MapPin} gradient="from-blue-50/50 to-white">

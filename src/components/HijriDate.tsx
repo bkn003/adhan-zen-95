@@ -9,12 +9,30 @@ interface HijriDateProps {
   selectedDate?: Date;
 }
 
-// Hijri month names for better display
-const HIJRI_MONTHS = [
-  'Muharram', 'Safar', 'Rabīʿ al-Awwal', 'Rabīʿ al-Thānī',
-  'Jumādá al-Ūlá', 'Jumādá al-Ākhirah', 'Rajab', 'Shaʿbān',
-  'Ramaḍān', 'Shawwāl', 'Dhū al-Qaʿdah', 'Dhū al-Ḥijjah'
-];
+// Hijri month names: English transliteration + Arabic script
+const HIJRI_MONTHS: Record<string, string> = {
+  'Muharram': 'مُحَرَّم',
+  'Safar': 'صَفَر',
+  'Rabi al-Awwal': 'رَبيع الأوَّل',
+  'Rabīʿ al-Awwal': 'رَبيع الأوَّل',
+  'Rabi al-Thani': 'رَبيع الثَّاني',
+  'Rabīʿ al-Thānī': 'رَبيع الثَّاني',
+  'Jumada al-Ula': 'جُمَادَىٰ الأُولَىٰ',
+  'Jumādá al-Ūlá': 'جُمَادَىٰ الأُولَىٰ',
+  'Jumada al-Thani': 'جُمَادَىٰ الآخِرَة',
+  'Jumādá al-Ākhirah': 'جُمَادَىٰ الآخِرَة',
+  'Rajab': 'رَجَب',
+  'Shaban': 'شَعْبَان',
+  'Shaʿbān': 'شَعْبَان',
+  'Ramadan': 'رَمَضَان',
+  'Ramaḍān': 'رَمَضَان',
+  'Shawwal': 'شَوَّال',
+  'Shawwāl': 'شَوَّال',
+  'Dhul Qadah': 'ذُو القَعْدَة',
+  'Dhū al-Qaʿdah': 'ذُو القَعْدَة',
+  'Dhul Hijjah': 'ذُو الحِجَّة',
+  'Dhū al-Ḥijjah': 'ذُو الحِجَّة',
+};
 
 export const HijriDate = ({
   selectedDate
@@ -109,6 +127,11 @@ export const HijriDate = ({
                   <span className="text-lg font-bold text-emerald-700">{hijriParts.year}</span>
                   <span className="text-xs text-emerald-500">AH</span>
                 </div>
+                {HIJRI_MONTHS[hijriParts.month] && (
+                  <p className="text-sm text-emerald-600/80 mt-0.5" style={{ fontFamily: '"Noto Sans Arabic", "Amiri", sans-serif', direction: 'rtl' }}>
+                    {HIJRI_MONTHS[hijriParts.month]}
+                  </p>
+                )}
               </>
             ) : (
               <span className="text-base font-bold text-emerald-700">{hijriDate.adjustedDate}</span>

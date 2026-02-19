@@ -5,6 +5,40 @@ import { supabase } from '@/integrations/supabase/client';
 import { useLocations } from '@/hooks/useLocations';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { TimePicker12h, formatTime12h } from '@/components/TimePicker12h';
+
+/**
+ * Returns the last day of a given month name (1-indexed).
+ * Uses the current year.
+ */
+function getMonthEndDay(monthName: string): number {
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const monthIndex = monthNames.indexOf(monthName);
+  if (monthIndex === -1) return 31;
+  // Day 0 of next month = last day of this month
+  return new Date(new Date().getFullYear(), monthIndex + 1, 0).getDate();
+}
+
+/**
+ * Formats a date range like "24-31" to use dynamic month end, e.g. "24-28" for Feb.
+ */
+function formatDateRangeDisplay(dateRange: string, monthName: string): string {
+  if (!dateRange) return dateRange;
+  const parts = dateRange.split('-');
+  if (parts.length === 2) {
+    const start = parseInt(parts[0]);
+    const end = parseInt(parts[1]);
+    const monthEnd = getMonthEndDay(monthName);
+    // If range end >= 28 (i.e. near month end), cap to actual month end
+    if (end >= 28) {
+      return `${start}-${monthEnd}`;
+    }
+  }
+  return dateRange;
+}
 
 const SUPABASE_URL = "https://lhufqnokmdqkvzcxqwkl.supabase.co";
 
@@ -40,7 +74,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         setPassword(session.password);
         setLocationId(session.locationId);
         setIsLoggedIn(true);
-      } catch {}
+      } catch { }
     }
   }, []);
 
@@ -130,7 +164,12 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success('Prayer time updated!');
+      // Invalidate ALL prayer-time related queries so changes reflect everywhere
       refetchPT();
+      queryClient.invalidateQueries({ queryKey: ['prayer-times'] });
+      queryClient.invalidateQueries({ queryKey: ['static-prayer-times'] });
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+      queryClient.invalidateQueries({ queryKey: ['mosque-prayer-status'] });
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -241,7 +280,9 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
           {prayerTimes?.map(pt => (
             <div key={pt.id} className="bg-white rounded-xl border border-gray-200 p-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-bold text-gray-700">{pt.date_range} {selectedMonth}</span>
+                <span className="text-sm font-bold text-gray-700">
+                  {formatDateRangeDisplay(pt.date_range, selectedMonth)} {selectedMonth}
+                </span>
                 <button
                   onClick={() => setEditingPT(editingPT === pt.id ? null : pt.id)}
                   className="p-1.5 bg-emerald-50 rounded-lg"
@@ -260,16 +301,32 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
                   onCancel={() => setEditingPT(null)}
                 />
               ) : (
-                <div className="grid grid-cols-5 gap-1 text-center text-xs">
-                  {['Fajr', 'Zuhr', 'Asr', 'Magh', 'Isha'].map((name, i) => {
-                    const keys = ['fajr_iqamah', 'dhuhr_iqamah', 'asr_iqamah', 'maghrib_iqamah', 'isha_iqamah'];
-                    return (
-                      <div key={name}>
-                        <p className="text-gray-400">{name}</p>
-                        <p className="font-bold text-gray-700">{(pt as any)[keys[i]] || '-'}</p>
-                      </div>
-                    );
-                  })}
+                <div className="space-y-1">
+                  {/* Compact grid showing Adhan + Iqamah for all 5 prayers */}
+                  <div className="grid grid-cols-5 gap-1 text-center text-[10px]">
+                    {['Fajr', 'Zuhr', 'Asr', 'Magh', 'Isha'].map(name => (
+                      <p key={name} className="text-gray-400 font-medium">{name}</p>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-5 gap-1 text-center text-[10px]">
+                    {['fajr_adhan', 'dhuhr_adhan', 'asr_adhan', 'maghrib_adhan', 'isha_adhan'].map(key => (
+                      <p key={key} className="text-blue-600 font-medium">
+                        {formatTime12h((pt as any)[key])}
+                      </p>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-5 gap-1 text-center text-[10px]">
+                    {['fajr_iqamah', 'dhuhr_iqamah', 'asr_iqamah', 'maghrib_iqamah', 'isha_iqamah'].map(key => (
+                      <p key={key} className="text-emerald-700 font-bold">
+                        {formatTime12h((pt as any)[key])}
+                      </p>
+                    ))}
+                  </div>
+                  {/* Labels */}
+                  <div className="flex justify-center gap-4 mt-1">
+                    <span className="text-[9px] text-blue-500">● Adhan</span>
+                    <span className="text-[9px] text-emerald-600">● Iqamah</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -385,15 +442,12 @@ const PrayerTimeEditor = ({ prayerTime, onSave, onCancel }: {
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-2">
         {fields.map(f => (
-          <div key={f.key}>
-            <label className="text-[10px] text-gray-500 uppercase">{f.label}</label>
-            <input
-              type="time"
-              value={values[f.key]}
-              onChange={e => setValues(prev => ({ ...prev, [f.key]: e.target.value }))}
-              className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
-            />
-          </div>
+          <TimePicker12h
+            key={f.key}
+            label={f.label}
+            value={values[f.key]}
+            onChange={(v) => setValues(prev => ({ ...prev, [f.key]: v }))}
+          />
         ))}
       </div>
       <div className="flex gap-2 pt-2">

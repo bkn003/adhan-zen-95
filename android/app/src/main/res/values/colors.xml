@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary brand colors (Emerald theme) -->
+    <color name="colorPrimary">#059669</color>
+    <color name="colorPrimaryDark">#047857</color>
+    <color name="colorAccent">#10B981</color>
+    
+    <!-- Surface colors -->
+    <color name="colorSurface">#FFFFFF</color>
+    <color name="colorBackground">#F8FAFC</color>
+    
+    <!-- Text colors -->
+    <color name="colorOnPrimary">#FFFFFF</color>
+    <color name="colorOnBackground">#0F172A</color>
+    
+    <!-- Status bar color -->
+    <color name="colorStatusBar">#047857</color>
+</resources>

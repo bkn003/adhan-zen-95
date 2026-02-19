@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Clock, Sun, Moon, Sunrise, Sunset, Star } from 'lucide-react';
-import { tamilText } from '@/utils/tamilText';
+import { useLanguage } from '@/i18n/LanguageContext';
 import { formatTo12Hour } from '@/utils/timeFormat';
 import type { Prayer } from '@/types/prayer.types';
 
@@ -18,6 +18,7 @@ export const NextPrayerCard = ({
 }: NextPrayerCardProps) => {
   const [timeRemaining, setTimeRemaining] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [isUrgent, setIsUrgent] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const calculateTimeRemaining = () => {
@@ -76,9 +77,7 @@ export const NextPrayerCard = ({
     }
   };
 
-  const getTamilName = () => {
-    return tamilText.prayers[nextPrayer.type as keyof typeof tamilText.prayers]?.tamil || '';
-  };
+  // Prayer names are kept untranslated per requirement
 
   const TimeBlock = ({ value, label }: { value: number; label: string }) => (
     <div className="flex flex-col items-center">
@@ -105,11 +104,10 @@ export const NextPrayerCard = ({
               {getPrayerIcon()}
             </div>
             <div>
-              <div className="text-white/70 text-xs font-medium">{tamilText.general.nextPrayer.english}</div>
+              <div className="text-white/70 text-xs font-medium">{t('nextPrayer')}</div>
               <div className="text-white text-lg font-bold tracking-tight">
                 {nextPrayer.name}
               </div>
-              <div className="text-white/60 text-xs">{getTamilName()}</div>
             </div>
           </div>
 
