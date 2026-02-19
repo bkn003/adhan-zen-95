@@ -51,9 +51,9 @@ serve(async (req) => {
         .select("*", { count: "exact", head: true })
         .eq("location_id", locationId);
 
-      if ((count || 0) >= 10) {
+      if ((count || 0) >= 6) {
         return new Response(
-          JSON.stringify({ error: "Maximum 10 photos allowed per mosque" }),
+          JSON.stringify({ error: "Maximum 6 photos allowed per mosque" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -135,9 +135,10 @@ serve(async (req) => {
       JSON.stringify({ error: "Unknown action" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (err) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

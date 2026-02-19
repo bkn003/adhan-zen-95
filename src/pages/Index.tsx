@@ -40,6 +40,29 @@ const Index = () => {
     };
   }, []);
 
+  // Handle hardware back button / browser back
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      e.preventDefault();
+      if (showSuperAdmin) {
+        setShowSuperAdmin(false);
+      } else if (showAdminPanel) {
+        setShowAdminPanel(false);
+      } else if (mosqueDetailsId) {
+        setMosqueDetailsId(null);
+      } else if (currentScreen !== 'home') {
+        setCurrentScreen('home');
+      }
+      // Push state again so back button keeps working
+      window.history.pushState(null, '', window.location.href);
+    };
+
+    // Push initial state
+    window.history.pushState(null, '', window.location.href);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
+
   // Persist current screen
   useEffect(() => {
     localStorage.setItem('currentScreen', currentScreen);

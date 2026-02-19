@@ -83,14 +83,19 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
   const { data: prayerTimes, refetch: refetchPT } = useQuery({
     queryKey: ['admin-prayer-times', locationId, selectedMonth],
     queryFn: async () => {
-      const { data, error } = await supabase
+    const { data, error } = await supabase
         .from('prayer_times')
         .select('*')
         .eq('location_id', locationId!)
-        .eq('month', selectedMonth)
-        .order('date_range');
+        .eq('month', selectedMonth);
       if (error) throw error;
-      return data || [];
+      // Sort by date range start number
+      const sorted = (data || []).sort((a, b) => {
+        const aStart = parseInt(a.date_range.match(/^(\d+)/)?.[1] || '999');
+        const bStart = parseInt(b.date_range.match(/^(\d+)/)?.[1] || '999');
+        return aStart - bStart;
+      });
+      return sorted;
     },
     enabled: !!locationId && isLoggedIn,
   });
@@ -414,16 +419,23 @@ const PrayerTimeEditor = ({ prayerTime, onSave, onCancel }: {
   const fields = [
     { key: 'fajr_adhan', label: 'Fajr Azaan' },
     { key: 'fajr_iqamah', label: 'Fajr Iqamah' },
+    { key: 'fajr_ramadan_iqamah', label: 'Fajr Ramadan Iqamah', ramadan: true },
     { key: 'dhuhr_adhan', label: 'Zuhr Azaan' },
     { key: 'dhuhr_iqamah', label: 'Zuhr Iqamah' },
     { key: 'asr_adhan', label: 'Asr Azaan' },
     { key: 'asr_iqamah', label: 'Asr Iqamah' },
     { key: 'maghrib_adhan', label: 'Maghrib Azaan' },
     { key: 'maghrib_iqamah', label: 'Maghrib Iqamah' },
+    { key: 'maghrib_ramadan_adhan', label: 'Maghrib Ramadan Azaan', ramadan: true },
+    { key: 'maghrib_ramadan_iqamah', label: 'Maghrib Ramadan Iqamah', ramadan: true },
     { key: 'isha_adhan', label: 'Isha Azaan' },
     { key: 'isha_iqamah', label: 'Isha Iqamah' },
+    { key: 'isha_ramadan_iqamah', label: 'Isha Ramadan Iqamah', ramadan: true },
     { key: 'jummah_adhan', label: 'Jummah Azaan' },
     { key: 'jummah_iqamah', label: 'Jummah Khutbah' },
+    { key: 'sahar_end', label: 'Sahar End', ramadan: true },
+    { key: 'ifthar_time', label: 'Iftar Time', ramadan: true },
+    { key: 'tharaweeh', label: 'Tharaweeh', ramadan: true },
     { key: 'sun_rise', label: 'Sunrise' },
     { key: 'sun_set', label: 'Sunset' },
     { key: 'mid_noon', label: 'Mid Noon' },
@@ -431,6 +443,12 @@ const PrayerTimeEditor = ({ prayerTime, onSave, onCancel }: {
     { key: 'tahajjud_start', label: 'Tahajjud Start' },
     { key: 'tahajjud_end', label: 'Tahajjud End' },
   ];
+
+  // Only show Ramadan fields that have data in the database
+  const visibleFields = fields.filter(f => {
+    if (!f.ramadan) return true;
+    return prayerTime[f.key] !== null && prayerTime[f.key] !== undefined && prayerTime[f.key] !== '';
+  });
 
   const [values, setValues] = useState<Record<string, string>>(() => {
     const v: Record<string, string> = {};
@@ -441,7 +459,7 @@ const PrayerTimeEditor = ({ prayerTime, onSave, onCancel }: {
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-2">
-        {fields.map(f => (
+        {visibleFields.map(f => (
           <TimePicker12h
             key={f.key}
             label={f.label}
@@ -488,7 +506,7 @@ const PhotoManager = ({ locationId, username, password }: { locationId: string; 
     },
   });
 
-  const compressImage = (file: File, maxSizeKB: number = 30): Promise<Blob> => {
+  const compressImage = (file: File, maxSizeKB: number = 100): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
       const canvas = document.createElement('canvas');
@@ -535,8 +553,8 @@ const PhotoManager = ({ locationId, username, password }: { locationId: string; 
     if (!files || files.length === 0) return;
 
     const currentCount = photos?.length || 0;
-    if (currentCount + files.length > 10) {
-      toast.error(`Maximum 10 photos. You can add ${10 - currentCount} more.`);
+    if (currentCount + files.length > 6) {
+      toast.error(`Maximum 6 photos. You can add ${6 - currentCount} more.`);
       return;
     }
 
@@ -593,7 +611,7 @@ const PhotoManager = ({ locationId, username, password }: { locationId: string; 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500">{photos?.length || 0}/10 photos</p>
+        <p className="text-xs text-gray-500">{photos?.length || 0}/6 photos</p>
         <label className={`flex items-center gap-1 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-semibold cursor-pointer ${uploading ? 'opacity-50' : ''}`}>
           <Upload className="w-3 h-3" />
           {uploading ? 'Uploading...' : 'Add Photo'}
@@ -602,7 +620,7 @@ const PhotoManager = ({ locationId, username, password }: { locationId: string; 
             accept="image/*"
             multiple
             onChange={handleUpload}
-            disabled={uploading || (photos?.length || 0) >= 10}
+            disabled={uploading || (photos?.length || 0) >= 6}
             className="hidden"
           />
         </label>
@@ -624,7 +642,7 @@ const PhotoManager = ({ locationId, username, password }: { locationId: string; 
         </div>
       )}
 
-      <p className="text-[10px] text-gray-400">Images auto-compressed to ~30KB each</p>
+      <p className="text-[10px] text-gray-400">Images auto-compressed to ~100KB each</p>
     </div>
   );
 };

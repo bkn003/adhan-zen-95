@@ -18,10 +18,12 @@ export type Database = {
         Row: {
           ac_available: boolean | null
           admin_password_hash: string | null
+          admin_paused: boolean | null
           admin_username: string | null
           created_at: string | null
           district: string
           id: string
+          is_visible: boolean | null
           latitude: number
           longitude: number
           mosque_capacity: string | null
@@ -37,10 +39,12 @@ export type Database = {
         Insert: {
           ac_available?: boolean | null
           admin_password_hash?: string | null
+          admin_paused?: boolean | null
           admin_username?: string | null
           created_at?: string | null
           district: string
           id?: string
+          is_visible?: boolean | null
           latitude: number
           longitude: number
           mosque_capacity?: string | null
@@ -56,10 +60,12 @@ export type Database = {
         Update: {
           ac_available?: boolean | null
           admin_password_hash?: string | null
+          admin_paused?: boolean | null
           admin_username?: string | null
           created_at?: string | null
           district?: string
           id?: string
+          is_visible?: boolean | null
           latitude?: number
           longitude?: number
           mosque_capacity?: string | null

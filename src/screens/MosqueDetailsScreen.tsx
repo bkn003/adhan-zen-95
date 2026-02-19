@@ -5,6 +5,7 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
+import { useRamadanContext } from '@/contexts/RamadanContext';
 
 interface MosqueDetailsScreenProps {
   locationId: string;
@@ -56,6 +57,7 @@ const formatDateRange = (dateRange: string, monthIndex: number): string => {
 export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: MosqueDetailsScreenProps) => {
   const { data: locations } = useLocations();
   const { latitude, longitude, calculateDistance } = useGeolocation();
+  const { isRamadan } = useRamadanContext();
 
   const now = new Date();
   const currentMonthIndex = now.getMonth();
@@ -348,12 +350,22 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
               </div>
             ) : currentPrayerTime ? (
               <div className="space-y-2">
+                {/* Ramadan special times */}
+                {isRamadan && currentPrayerTime.sahar_end && (
+                  <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-gradient-to-r from-purple-100 to-violet-100 border border-purple-200">
+                    <span className="font-bold text-sm text-purple-800 w-20">Sahar End</span>
+                    <div className="text-sm text-center">
+                      <p className="font-bold text-purple-700">{formatTime(currentPrayerTime.sahar_end)}</p>
+                    </div>
+                  </div>
+                )}
+
                 {[
-                  { name: 'Fajr', adhan: currentPrayerTime.fajr_adhan, iqamah: currentPrayerTime.fajr_iqamah, color: 'from-blue-50 to-indigo-50', border: 'border-blue-100', text: 'text-blue-800', sub: 'text-blue-500' },
+                  { name: 'Fajr', adhan: isRamadan && currentPrayerTime.fajr_ramadan_iqamah ? currentPrayerTime.fajr_adhan : currentPrayerTime.fajr_adhan, iqamah: isRamadan && currentPrayerTime.fajr_ramadan_iqamah ? currentPrayerTime.fajr_ramadan_iqamah : currentPrayerTime.fajr_iqamah, color: 'from-blue-50 to-indigo-50', border: 'border-blue-100', text: 'text-blue-800', sub: 'text-blue-500' },
                   { name: 'Zuhr', adhan: currentPrayerTime.dhuhr_adhan, iqamah: currentPrayerTime.dhuhr_iqamah, color: 'from-amber-50 to-yellow-50', border: 'border-amber-100', text: 'text-amber-800', sub: 'text-amber-500' },
                   { name: 'Asr', adhan: currentPrayerTime.asr_adhan, iqamah: currentPrayerTime.asr_iqamah, color: 'from-orange-50 to-amber-50', border: 'border-orange-100', text: 'text-orange-800', sub: 'text-orange-500' },
-                  { name: 'Maghrib', adhan: currentPrayerTime.maghrib_adhan, iqamah: currentPrayerTime.maghrib_iqamah, color: 'from-rose-50 to-pink-50', border: 'border-rose-100', text: 'text-rose-800', sub: 'text-rose-500' },
-                  { name: 'Isha', adhan: currentPrayerTime.isha_adhan, iqamah: currentPrayerTime.isha_iqamah, color: 'from-violet-50 to-purple-50', border: 'border-violet-100', text: 'text-violet-800', sub: 'text-violet-500' },
+                  { name: 'Maghrib', adhan: isRamadan && currentPrayerTime.maghrib_ramadan_adhan ? currentPrayerTime.maghrib_ramadan_adhan : currentPrayerTime.maghrib_adhan, iqamah: isRamadan && currentPrayerTime.maghrib_ramadan_iqamah ? currentPrayerTime.maghrib_ramadan_iqamah : currentPrayerTime.maghrib_iqamah, color: 'from-rose-50 to-pink-50', border: 'border-rose-100', text: 'text-rose-800', sub: 'text-rose-500' },
+                  { name: 'Isha', adhan: currentPrayerTime.isha_adhan, iqamah: isRamadan && currentPrayerTime.isha_ramadan_iqamah ? currentPrayerTime.isha_ramadan_iqamah : currentPrayerTime.isha_iqamah, color: 'from-violet-50 to-purple-50', border: 'border-violet-100', text: 'text-violet-800', sub: 'text-violet-500' },
                 ].map(prayer => (
                   <div key={prayer.name} className={`flex items-center justify-between py-3 px-4 rounded-xl bg-gradient-to-r ${prayer.color} border ${prayer.border}`}>
                     <span className={`font-bold text-sm ${prayer.text} w-20`}>{prayer.name}</span>
@@ -370,6 +382,16 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
                   </div>
                 ))}
 
+                {/* Iftar time */}
+                {isRamadan && (currentPrayerTime as any).ifthar_time && (
+                  <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-gradient-to-r from-yellow-100 to-amber-100 border border-yellow-200">
+                    <span className="font-bold text-sm text-yellow-800 w-20">Iftar</span>
+                    <div className="text-sm text-center">
+                      <p className="font-bold text-yellow-700">{formatTime((currentPrayerTime as any).ifthar_time)}</p>
+                    </div>
+                  </div>
+                )}
+
                 {currentPrayerTime.jummah_adhan && (
                   <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-gradient-to-r from-amber-100 to-yellow-100 border border-amber-200">
                     <span className="font-bold text-sm text-amber-800 w-20">Jummah</span>
@@ -382,6 +404,16 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
                         <p className="text-[10px] text-amber-600 uppercase font-medium">Khutbah</p>
                         <p className="font-bold text-amber-800">{formatTime(currentPrayerTime.jummah_iqamah)}</p>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tharaweeh */}
+                {isRamadan && currentPrayerTime.tharaweeh && (
+                  <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-gradient-to-r from-purple-100 to-violet-100 border border-purple-200">
+                    <span className="font-bold text-sm text-purple-800 w-20">Tharaweeh</span>
+                    <div className="text-sm text-center">
+                      <p className="font-bold text-purple-700">{formatTime(currentPrayerTime.tharaweeh)}</p>
                     </div>
                   </div>
                 )}
