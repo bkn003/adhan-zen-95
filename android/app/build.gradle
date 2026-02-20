@@ -1,139 +1,48 @@
 apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'
-apply plugin: 'com.google.devtools.ksp'
-apply plugin: 'dagger.hilt.android.plugin'
-apply plugin: 'kotlinx-serialization'
 
 android {
     namespace "app.lovable.adhan_zen_95"
     compileSdk rootProject.ext.compileSdkVersion
-    
     defaultConfig {
         applicationId "app.lovable.adhan_zen_95"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
-        versionName "2.0.0-native"
+        versionCode 1
+        versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        
-        // Room schema export - with incremental processing to avoid Windows lock issues
-        javaCompileOptions {
-            annotationProcessorOptions {
-                arguments += [
-                    "room.schemaLocation": "$projectDir/schemas".toString(),
-                    "room.incremental": "true"
-                ]
-            }
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    
     buildTypes {
         release {
-            minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-    
-    // Enable Jetpack Compose
-    buildFeatures {
-        compose true
-    }
-    
-    composeOptions {
-        kotlinCompilerExtensionVersion rootProject.ext.composeCompilerVersion
-    }
-    
-    compileOptions {
-        coreLibraryDesugaringEnabled true
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-    
-    kotlinOptions {
-        jvmTarget = '17'
-    }
-}
-
-// JVM Toolchain for consistent compilation
-kotlin {
-    jvmToolchain(17)
 }
 
 repositories {
-    flatDir {
+    flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
     }
 }
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    
-    // AndroidX Core
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
-    implementation "androidx.core:core-ktx:$androidxCoreVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
-    implementation "androidx.work:work-runtime-ktx:$androidxWorkManagerVersion"
-    
-    // Jetpack Compose
-    implementation platform('androidx.compose:compose-bom:2024.01.00')
-    implementation 'androidx.compose.ui:ui'
-    implementation 'androidx.compose.ui:ui-graphics'
-    implementation 'androidx.compose.ui:ui-tooling-preview'
-    implementation 'androidx.compose.material3:material3'
-    implementation 'androidx.compose.material:material-icons-extended'
-    implementation "androidx.activity:activity-compose:$androidxActivityVersion"
-    implementation "androidx.lifecycle:lifecycle-runtime-compose:$lifecycleVersion"
-    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycleVersion"
-    implementation "androidx.navigation:navigation-compose:$navigationComposeVersion"
-    debugImplementation 'androidx.compose.ui:ui-tooling'
-    debugImplementation 'androidx.compose.ui:ui-test-manifest'
-    
-    // Supabase Kotlin SDK
-    implementation "io.github.jan-tennert.supabase:postgrest-kt:$supabaseVersion"
-    implementation "io.github.jan-tennert.supabase:realtime-kt:$supabaseVersion"
-    implementation "io.github.jan-tennert.supabase:gotrue-kt:$supabaseVersion"
-    implementation "io.ktor:ktor-client-android:$ktorVersion"
-    implementation "io.ktor:ktor-client-content-negotiation:$ktorVersion"
-    implementation "io.ktor:ktor-serialization-kotlinx-json:$ktorVersion"
-    
-    // Room Database (using KSP instead of KAPT for Windows compatibility)
-    implementation "androidx.room:room-runtime:$roomVersion"
-    implementation "androidx.room:room-ktx:$roomVersion"
-    ksp "androidx.room:room-compiler:$roomVersion"
-    
-    // Hilt Dependency Injection (using KSP is not yet supported, keeping kapt for Hilt only)
-    implementation "com.google.dagger:hilt-android:$hiltVersion"
-    ksp "com.google.dagger:hilt-compiler:$hiltVersion"
-    implementation 'androidx.hilt:hilt-navigation-compose:1.1.0'
-    
-    // DataStore for preferences
-    implementation "androidx.datastore:datastore-preferences:1.0.0"
-    
-    // Kotlinx Serialization
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0"
-    implementation "org.jetbrains.kotlinx:kotlinx-datetime:0.5.0"
-    
-    // Accompanist (for system UI controller, permissions)
-    implementation "com.google.accompanist:accompanist-systemuicontroller:0.32.0"
-    implementation "com.google.accompanist:accompanist-permissions:0.32.0"
-    
-    // Coil for image loading
-    implementation "io.coil-kt:coil-compose:2.5.0"
-    
-    // NOTE: Capacitor removed - using pure native Compose now
-    
-    // Core Library Desugaring (for java.time.* on older devices)
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
-    
-    // Testing
+    implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
-    androidTestImplementation platform('androidx.compose:compose-bom:2024.01.00')
-    androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
+    implementation project(':capacitor-cordova-android-plugins')
 }
 
-// NOTE: capacitor.build.gradle removed - using pure native Compose now
+apply from: 'capacitor.build.gradle'
 
 try {
     def servicesJSON = file('google-services.json')

@@ -1,69 +1,34 @@
-<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportHeight="108"
     android:viewportWidth="108">
-
-    <!-- Mosque Dome (large center) -->
     <path
-        android:fillColor="#2E7D32"
-        android:pathData="M54,32 C54,32 40,42 40,52 L40,72 L68,72 L68,52 C68,42 54,32 54,32Z" />
-
-    <!-- Dome finial (crescent holder) -->
+        android:fillType="evenOdd"
+        android:pathData="M32,64C32,64 38.39,52.99 44.13,50.95C51.37,48.37 70.14,49.57 70.14,49.57L108.26,87.69L108,109.01L75.97,107.97L32,64Z"
+        android:strokeColor="#00000000"
+        android:strokeWidth="1">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:endX="78.5885"
+                android:endY="90.9159"
+                android:startX="48.7653"
+                android:startY="61.0927"
+                android:type="linear">
+                <item
+                    android:color="#44000000"
+                    android:offset="0.0" />
+                <item
+                    android:color="#00000000"
+                    android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
     <path
-        android:fillColor="#2E7D32"
-        android:pathData="M52,28 L56,28 L55,32 L53,32Z" />
-
-    <!-- Crescent on dome -->
-    <path
-        android:fillColor="#FFC107"
-        android:pathData="M54,22 A5,5 0 1,1 54,28 A3.5,3.5 0 1,0 54,22Z" />
-
-    <!-- Left minaret -->
-    <path
-        android:fillColor="#388E3C"
-        android:pathData="M30,38 L34,38 L34,72 L30,72Z" />
-    <!-- Left minaret top -->
-    <path
-        android:fillColor="#388E3C"
-        android:pathData="M29,38 L35,38 L32,32Z" />
-    <!-- Left minaret crescent -->
-    <path
-        android:fillColor="#FFC107"
-        android:pathData="M32,28 A2,2 0 1,1 32,32 A1.5,1.5 0 1,0 32,28Z" />
-
-    <!-- Right minaret -->
-    <path
-        android:fillColor="#388E3C"
-        android:pathData="M74,38 L78,38 L78,72 L74,72Z" />
-    <!-- Right minaret top -->
-    <path
-        android:fillColor="#388E3C"
-        android:pathData="M73,38 L79,38 L76,32Z" />
-    <!-- Right minaret crescent -->
-    <path
-        android:fillColor="#FFC107"
-        android:pathData="M76,28 A2,2 0 1,1 76,32 A1.5,1.5 0 1,0 76,28Z" />
-
-    <!-- Base/foundation -->
-    <path
-        android:fillColor="#1B5E20"
-        android:pathData="M26,72 L82,72 L82,78 L26,78Z" />
-
-    <!-- Door arch -->
-    <path
-        android:fillColor="#1B5E20"
-        android:pathData="M49,72 L49,60 A5,5 0 0,1 59,60 L59,72Z" />
-
-    <!-- Windows (left) -->
-    <path
-        android:fillColor="#E8F5E9"
-        android:pathData="M43,55 A2,3 0 0,1 47,55 L47,62 L43,62Z" />
-
-    <!-- Windows (right) -->
-    <path
-        android:fillColor="#E8F5E9"
-        android:pathData="M61,55 A2,3 0 0,1 65,55 L65,62 L61,62Z" />
-
+        android:fillColor="#FFFFFF"
+        android:fillType="nonZero"
+        android:pathData="M66.94,46.02L66.94,46.02C72.44,50.07 76,56.61 76,64L32,64C32,56.61 35.56,50.11 40.98,46.06L36.18,41.19C35.45,40.45 35.45,39.3 36.18,38.56C36.91,37.81 38.05,37.81 38.78,38.56L44.25,44.05C47.18,42.57 50.48,41.71 54,41.71C57.48,41.71 60.78,42.57 63.68,44.05L69.11,38.56C69.84,37.81 70.98,37.81 71.71,38.56C72.44,39.3 72.44,40.45 71.71,41.19L66.94,46.02ZM62.94,56.92C64.08,56.92 65,56.01 65,54.88C65,53.76 64.08,52.85 62.94,52.85C61.8,52.85 60.88,53.76 60.88,54.88C60.88,56.01 61.8,56.92 62.94,56.92ZM45.06,56.92C46.2,56.92 47.13,56.01 47.13,54.88C47.13,53.76 46.2,52.85 45.06,52.85C43.92,52.85 43,53.76 43,54.88C43,56.01 43.92,56.92 45.06,56.92Z"
+        android:strokeColor="#00000000"
+        android:strokeWidth="1" />
 </vector>
