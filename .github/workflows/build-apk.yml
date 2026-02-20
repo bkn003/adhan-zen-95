@@ -38,6 +38,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies, build web, and sync Capacitor
+        run: |
+          npm install
+          npm run build
+          npx cap sync android
+
       - name: Build Debug APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
