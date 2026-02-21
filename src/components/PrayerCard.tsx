@@ -1,6 +1,8 @@
 import { Clock, Moon, Sun, Sunrise, Sunset, Star } from 'lucide-react';
 import type { Prayer } from '@/types/prayer.types';
 import { formatTo12Hour } from '@/utils/timeFormat';
+import { useLanguage } from '@/i18n/LanguageContext';
+import { getLocalizedText } from '@/utils/tamilText';
 
 interface PrayerCardProps {
   prayer: Prayer;
@@ -13,6 +15,9 @@ export const PrayerCard = ({
   isNext,
   timeUntilNext
 }: PrayerCardProps) => {
+  const { language } = useLanguage();
+  const localizedText = getLocalizedText(language);
+
   const getIcon = () => {
     const iconClass = `w-5 h-5 ${isNext ? 'text-white' : ''}`;
     switch (prayer.type) {
@@ -34,17 +39,11 @@ export const PrayerCard = ({
     }
   };
 
-  const getTamilName = () => {
-    const prayerMap = {
-      fajr: 'ஃபஜ்ர்',
-      dhuhr: 'லுஹர்',
-      jummah: 'ஜும்ஆ',
-      asr: 'அஸர்',
-      maghrib: 'மஃரிப்',
-      isha: 'இஷா',
-      tarawih: 'தராவீஹ்'
-    };
-    return prayerMap[prayer.type as keyof typeof prayerMap] || '';
+  const getLocalName = () => {
+    if (language === 'en') return '';
+    const prayerKey = prayer.type === 'tarawih' ? 'tharaweeh' : prayer.type === 'dhuhr' ? 'dhuhr' : prayer.type;
+    const entry = localizedText.prayers[prayerKey];
+    return entry?.local || '';
   };
 
   // Special handling for Tharaweeh
@@ -65,9 +64,11 @@ export const PrayerCard = ({
             <h3 className={`font-bold text-base ${isNext ? 'text-white' : 'text-purple-800'}`}>
               {prayer.name}
             </h3>
-            <p className={`text-xs ${isNext ? 'text-white/70' : 'text-purple-600'}`}>
-              {getTamilName()}
-            </p>
+            {getLocalName() && (
+              <p className={`text-xs ${isNext ? 'text-white/70' : 'text-purple-600'}`}>
+                {getLocalName()}
+              </p>
+            )}
           </div>
           <div className={`font-mono font-bold text-xl ${isNext ? 'text-white' : 'text-purple-800'}`}>
             {formatTo12Hour(prayer.adhan)}
@@ -79,6 +80,8 @@ export const PrayerCard = ({
 
   // Special handling for Iftar and Sahar End
   if (prayer.name === 'Iftar' || prayer.name === 'Sahar End') {
+    const localKey = prayer.name === 'Sahar End' ? 'saharEnd' : 'iftar';
+    const localName = localizedText.general[localKey]?.local || '';
     return (
       <div className={`
         flex items-center justify-between p-4 rounded-2xl transition-all duration-300
@@ -93,11 +96,13 @@ export const PrayerCard = ({
           </div>
           <div>
             <h3 className={`font-bold text-sm ${isNext ? 'text-white' : 'text-orange-800'}`}>
-              {prayer.name === 'Sahar End' ? 'Sahar End' : 'Iftar'}
+              {prayer.name}
             </h3>
-            <p className={`text-xs ${isNext ? 'text-white/70' : 'text-orange-600'}`}>
-              {prayer.name === 'Sahar End' ? 'ஸஹர் முடிவு' : 'இஃப்தார்'}
-            </p>
+            {localName && (
+              <p className={`text-xs ${isNext ? 'text-white/70' : 'text-orange-600'}`}>
+                {localName}
+              </p>
+            )}
           </div>
         </div>
         <div className={`font-mono font-bold text-xl ${isNext ? 'text-white' : 'text-orange-800'}`}>
@@ -126,9 +131,11 @@ export const PrayerCard = ({
             <span className={`text-sm font-bold truncate ${isNext ? 'text-white' : 'text-gray-800'}`}>
               {prayer.name}
             </span>
-            <span className={`text-xs truncate ${isNext ? 'text-white/70' : 'text-gray-500'}`}>
-              {getTamilName()}
-            </span>
+            {getLocalName() && (
+              <span className={`text-xs truncate ${isNext ? 'text-white/70' : 'text-gray-500'}`}>
+                {getLocalName()}
+              </span>
+            )}
           </div>
         </div>
 

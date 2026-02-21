@@ -45,7 +45,7 @@ export const BottomNavigation = ({
                 className={`w-5 h-5 ${isActive ? 'text-white' : ''}`}
                 strokeWidth={isActive ? 2.5 : 2}
               />
-              <span className={`text-[10px] font-semibold mt-0.5 leading-tight truncate w-full text-center ${isActive ? 'text-white' : 'text-gray-600'
+              <span className={`text-[9px] font-semibold mt-0.5 leading-tight truncate w-full text-center ${isActive ? 'text-white' : 'text-gray-600'
                 }`}>
                 {item.label}
               </span>

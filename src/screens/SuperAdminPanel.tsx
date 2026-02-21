@@ -13,6 +13,7 @@ interface SuperAdminPanelProps {
 
 export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
   const [superPassword, setSuperPassword] = useState('');
+  const [showSuperPass, setShowSuperPass] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -183,14 +184,19 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
               <p className="text-xs text-gray-500 mt-1">Manage mosque admin credentials & controls</p>
             </div>
             <div className="space-y-3">
-              <input
-                type="password"
-                placeholder="Super Admin Password"
-                value={superPassword}
-                onChange={e => setSuperPassword(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSuperLogin()}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-300"
-              />
+              <div className="relative">
+                <input
+                  type={showSuperPass ? 'text' : 'password'}
+                  placeholder="Super Admin Password"
+                  value={superPassword}
+                  onChange={e => setSuperPassword(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSuperLogin()}
+                  className="w-full px-4 py-3 pr-10 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-300"
+                />
+                <button type="button" onClick={() => setShowSuperPass(!showSuperPass)} className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {showSuperPass ? <EyeOff className="w-4 h-4 text-gray-400" /> : <Eye className="w-4 h-4 text-gray-400" />}
+                </button>
+              </div>
               <Button
                 onClick={handleSuperLogin}
                 disabled={!superPassword}
