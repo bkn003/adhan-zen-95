@@ -520,7 +520,7 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
                     <div className="grid grid-cols-5 gap-1 text-center">
                       <div>
                         <p className={isCurrentRange ? 'text-white/70' : 'text-gray-400'}>Fajr</p>
-                        <p className="font-bold">{formatTime(pt.fajr_iqamah)}</p>
+                        <p className="font-bold">{formatTime(isRamadan && pt.fajr_ramadan_iqamah ? pt.fajr_ramadan_iqamah : pt.fajr_iqamah)}</p>
                       </div>
                       <div>
                         <p className={isCurrentRange ? 'text-white/70' : 'text-gray-400'}>Zuhr</p>
@@ -532,13 +532,36 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
                       </div>
                       <div>
                         <p className={isCurrentRange ? 'text-white/70' : 'text-gray-400'}>Magh</p>
-                        <p className="font-bold">{formatTime(pt.maghrib_iqamah)}</p>
+                        <p className="font-bold">{formatTime(isRamadan && pt.maghrib_ramadan_iqamah ? pt.maghrib_ramadan_iqamah : pt.maghrib_iqamah)}</p>
                       </div>
                       <div>
                         <p className={isCurrentRange ? 'text-white/70' : 'text-gray-400'}>Isha</p>
-                        <p className="font-bold">{formatTime(pt.isha_iqamah)}</p>
+                        <p className="font-bold">{formatTime(isRamadan && pt.isha_ramadan_iqamah ? pt.isha_ramadan_iqamah : pt.isha_iqamah)}</p>
                       </div>
                     </div>
+                    {/* Ramadan extra times in monthly schedule */}
+                    {isRamadan && (pt.sahar_end || (pt as any).ifthar_time || pt.tharaweeh) && (
+                      <div className="grid grid-cols-3 gap-1 text-center mt-2 pt-2 border-t border-dashed" style={{ borderColor: isCurrentRange ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)' }}>
+                        {pt.sahar_end && (
+                          <div>
+                            <p className={isCurrentRange ? 'text-white/70' : 'text-gray-400'} style={{ fontSize: '9px' }}>Sahar</p>
+                            <p className="font-bold" style={{ fontSize: '11px' }}>{formatTime(pt.sahar_end)}</p>
+                          </div>
+                        )}
+                        {(pt as any).ifthar_time && (
+                          <div>
+                            <p className={isCurrentRange ? 'text-white/70' : 'text-gray-400'} style={{ fontSize: '9px' }}>Iftar</p>
+                            <p className="font-bold" style={{ fontSize: '11px' }}>{formatTime((pt as any).ifthar_time)}</p>
+                          </div>
+                        )}
+                        {pt.tharaweeh && (
+                          <div>
+                            <p className={isCurrentRange ? 'text-white/70' : 'text-gray-400'} style={{ fontSize: '9px' }}>Taraweeh</p>
+                            <p className="font-bold" style={{ fontSize: '11px' }}>{formatTime(pt.tharaweeh)}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}

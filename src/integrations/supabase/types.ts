@@ -14,6 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
+      custom_filters: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          display_order: number | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      location_custom_filters: {
+        Row: {
+          created_at: string | null
+          filter_id: string
+          id: string
+          location_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          filter_id: string
+          id?: string
+          location_id: string
+        }
+        Update: {
+          created_at?: string | null
+          filter_id?: string
+          id?: string
+          location_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_custom_filters_filter_id_fkey"
+            columns: ["filter_id"]
+            isOneToOne: false
+            referencedRelation: "custom_filters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_custom_filters_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           ac_available: boolean | null

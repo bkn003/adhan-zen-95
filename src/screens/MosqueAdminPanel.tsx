@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, LogIn, LogOut, Save, Edit2, ChevronDown, ChevronUp, Camera, Trash2, Upload, Clock, Sun, Moon } from 'lucide-react';
+import { ArrowLeft, LogIn, LogOut, Save, Edit2, ChevronDown, ChevronUp, Camera, Trash2, Upload, Clock, Sun, Moon, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useLocations } from '@/hooks/useLocations';
@@ -58,6 +58,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [editingPT, setEditingPT] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(monthNames[new Date().getMonth()]);
   const [expandedSection, setExpandedSection] = useState<string | null>('mosque');
@@ -227,14 +228,19 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
                 onChange={e => setUsername(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-300"
               />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-300"
-                onKeyDown={e => e.key === 'Enter' && handleLogin()}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 pr-10 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-300"
+                  onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {showPassword ? <EyeOff className="w-4 h-4 text-gray-400" /> : <Eye className="w-4 h-4 text-gray-400" />}
+                </button>
+              </div>
               <Button
                 onClick={handleLogin}
                 disabled={loading || !username || !password}
