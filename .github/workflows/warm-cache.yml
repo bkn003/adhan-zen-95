@@ -2,17 +2,47 @@ name: Warm Prayer Times Cache
 
 on:
   schedule:
-    # Run daily at 00:05 UTC
-    - cron: '5 0 * * *'
-  workflow_dispatch: # Allow manual triggering
+    # Run daily at 02:25 IST (20:55 UTC previous day)
+    - cron: '55 20 * * *'
+  workflow_dispatch:
 
 jobs:
   warm-cache:
     runs-on: ubuntu-latest
-    
+
     steps:
+      - name: Validate secrets
+        run: |
+          missing=""
+          if [ -z "${{ secrets.SUPABASE_URL }}" ]; then missing="$missing SUPABASE_URL"; fi
+          if [ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]; then missing="$missing SUPABASE_SERVICE_ROLE_KEY"; fi
+          if [ -z "${{ secrets.WARM_CACHE_KEY }}" ]; then missing="$missing WARM_CACHE_KEY"; fi
+          if [ -n "$missing" ]; then
+            echo "❌ Missing GitHub Secrets:$missing"
+            echo ""
+            echo "Go to: Settings → Secrets and variables → Actions → New repository secret"
+            echo "Add the following secrets:"
+            echo "  SUPABASE_URL         → Your Supabase project URL (e.g. https://xxxxx.supabase.co)"
+            echo "  SUPABASE_SERVICE_ROLE_KEY → From Supabase Dashboard → Settings → API → service_role key"
+            echo "  WARM_CACHE_KEY       → Any random string (also set in Supabase Edge Function secrets)"
+            exit 1
+          fi
+          echo "✅ All secrets present"
+
       - name: Warm Cache
         run: |
-          curl -X GET "${{ secrets.SUPABASE_URL }}/functions/v1/warm-cache?key=${{ secrets.WARM_CACHE_KEY }}" \
+          echo "🔄 Calling warm-cache edge function..."
+          HTTP_CODE=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
+            -X GET "${{ secrets.SUPABASE_URL }}/functions/v1/warm-cache?key=${{ secrets.WARM_CACHE_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
-            -H "Content-Type: application/json"
+            -H "Content-Type: application/json")
+          
+          echo "HTTP Status: $HTTP_CODE"
+          cat /tmp/response.txt
+          echo ""
+          
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            echo "❌ Warm cache failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+          echo "✅ Cache warming completed successfully"

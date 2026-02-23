@@ -5,7 +5,7 @@ on:
     - cron: "0 0 * * *" # every day at midnight UTC
   repository_dispatch:
     types: [regenerate-json]
-  workflow_dispatch: # manual trigger
+  workflow_dispatch:
 
 env:
   SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -16,20 +16,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Validate secrets
+        run: |
+          missing=""
+          if [ -z "${{ secrets.SUPABASE_URL }}" ]; then missing="$missing SUPABASE_URL"; fi
+          if [ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]; then missing="$missing SUPABASE_SERVICE_ROLE_KEY"; fi
+          if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then missing="$missing CLOUDFLARE_API_TOKEN"; fi
+          if [ -z "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then missing="$missing CLOUDFLARE_ACCOUNT_ID"; fi
+          if [ -z "${{ secrets.CLOUDFLARE_PROJECT_NAME }}" ]; then missing="$missing CLOUDFLARE_PROJECT_NAME"; fi
+          if [ -n "$missing" ]; then
+            echo "❌ Missing GitHub Secrets:$missing"
+            echo ""
+            echo "Go to: Settings → Secrets and variables → Actions → New repository secret"
+            echo "Required secrets:"
+            echo "  SUPABASE_URL              → Your Supabase project URL"
+            echo "  SUPABASE_SERVICE_ROLE_KEY  → From Supabase Dashboard → Settings → API"
+            echo "  CLOUDFLARE_API_TOKEN       → From Cloudflare Dashboard → API Tokens"
+            echo "  CLOUDFLARE_ACCOUNT_ID      → From Cloudflare Dashboard → Account ID"
+            echo "  CLOUDFLARE_PROJECT_NAME    → Your Cloudflare Pages project name"
+            exit 1
+          fi
+          echo "✅ All secrets present"
+
       - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Install dependencies
         run: npm install @supabase/supabase-js
 
       - name: Generate JSON files
         run: |
-          node -e "
+          node --input-type=module -e "
           import { createClient } from '@supabase/supabase-js';
           import fs from 'fs';
           import path from 'path';
@@ -40,20 +62,20 @@ jobs:
           );
 
           const outDir = path.join(process.cwd(), 'public/prayer_times');
-          fs.mkdirSync(outDir, { recursive: true });
 
-          // Remove existing files to start fresh
+          // Clean and recreate output dir
           if (fs.existsSync(outDir)) {
             fs.rmSync(outDir, { recursive: true, force: true });
-            fs.mkdirSync(outDir, { recursive: true });
           }
+          fs.mkdirSync(outDir, { recursive: true });
 
           (async () => {
             console.log('🔄 Fetching locations...');
             const { data: locations, error: locError } = await supabase
               .from('locations')
-              .select('id, mosque_name, district');
-            
+              .select('id, mosque_name, district')
+              .neq('is_paused', true);
+
             if (locError) {
               console.error('❌ Error fetching locations:', locError);
               process.exit(1);
@@ -62,9 +84,8 @@ jobs:
             console.log('🔄 Fetching prayer times...');
             const { data: times, error: timesError } = await supabase
               .from('prayer_times')
-              .select('*')
-              .order('date_from');
-            
+              .select('*');
+
             if (timesError) {
               console.error('❌ Error fetching prayer times:', timesError);
               process.exit(1);
@@ -87,46 +108,44 @@ jobs:
               const locDir = path.join(outDir, locationSlug);
               fs.mkdirSync(locDir, { recursive: true });
 
-              // Group by month (YYYY-MM format)
+              // Group by month column
               const grouped = {};
               for (const t of times.filter(x => x.location_id === loc.id)) {
-                if (t.date_from) {
-                  const month = t.date_from.slice(0, 7); // YYYY-MM
-                  if (!grouped[month]) grouped[month] = [];
-                  
-                  // Transform to static format for CDN
-                  const staticEntry = {
-                    date_from: t.date_from,
-                    date_to: t.date_to,
-                    fajr: t.fajr_adhan,
-                    dhuhr: t.dhuhr_adhan,
-                    asr: t.asr_adhan,
-                    maghrib: t.maghrib_adhan,
-                    isha: t.isha_adhan,
-                    location: loc.mosque_name,
-                    fajr_iqamah: t.fajr_iqamah,
-                    dhuhr_iqamah: t.dhuhr_iqamah,
-                    asr_iqamah: t.asr_iqamah,
-                    maghrib_iqamah: t.maghrib_iqamah,
-                    isha_iqamah: t.isha_iqamah,
-                    jummah_adhan: t.jummah_adhan,
-                    jummah_iqamah: t.jummah_iqamah,
-                    sun_rise: t.sun_rise,
-                    sun_set: t.sun_set,
-                    mid_noon: t.mid_noon,
-                    sahar_end: t.sahar_end,
-                    tharaweeh: t.tharaweeh,
-                    isha_ramadan_iqamah: t.isha_ramadan_iqamah,
-                    fajr_ramadan_iqamah: t.fajr_ramadan_iqamah,
-                    maghrib_ramadan_adhan: t.maghrib_ramadan_adhan,
-                    ifthar_time: t.ifthar_time || t.iftar_time
-                  };
-                  grouped[month].push(staticEntry);
-                }
+                const month = t.month || 'unknown';
+                if (!grouped[month]) grouped[month] = [];
+
+                const staticEntry = {
+                  date_range: t.date_range,
+                  month: t.month,
+                  fajr_adhan: t.fajr_adhan,
+                  fajr_iqamah: t.fajr_iqamah,
+                  dhuhr_adhan: t.dhuhr_adhan,
+                  dhuhr_iqamah: t.dhuhr_iqamah,
+                  asr_adhan: t.asr_adhan,
+                  asr_iqamah: t.asr_iqamah,
+                  maghrib_adhan: t.maghrib_adhan,
+                  maghrib_iqamah: t.maghrib_iqamah,
+                  isha_adhan: t.isha_adhan,
+                  isha_iqamah: t.isha_iqamah,
+                  jummah_adhan: t.jummah_adhan,
+                  jummah_iqamah: t.jummah_iqamah,
+                  sun_rise: t.sun_rise,
+                  sun_set: t.sun_set,
+                  mid_noon: t.mid_noon,
+                  sahar_end: t.sahar_end,
+                  tharaweeh: t.tharaweeh,
+                  isha_ramadan_iqamah: t.isha_ramadan_iqamah,
+                  fajr_ramadan_iqamah: t.fajr_ramadan_iqamah,
+                  maghrib_ramadan_adhan: t.maghrib_ramadan_adhan,
+                  maghrib_ramadan_iqamah: t.maghrib_ramadan_iqamah,
+                  ifthar_time: t.ifthar_time || t.iftar_time,
+                  location: loc.mosque_name,
+                };
+                grouped[month].push(staticEntry);
               }
 
               for (const [month, arr] of Object.entries(grouped)) {
-                const filePath = path.join(locDir, \`\${month}.json\`);
+                const filePath = path.join(locDir, \`\${month.toLowerCase()}.json\`);
                 fs.writeFileSync(filePath, JSON.stringify(arr, null, 2));
                 console.log(\`✅ Written \${filePath} with \${arr.length} entries\`);
               }
