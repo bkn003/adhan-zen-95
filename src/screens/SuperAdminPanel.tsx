@@ -554,6 +554,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
                         </Button>
                       </div>
                     </div>
+                  ) : (
                     <div className="flex gap-1.5 mt-2 flex-wrap">
                       <button
                         onClick={() => {
@@ -590,7 +591,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
                           <Shield className="w-3 h-3" />
                         </button>
                       )}
-                      
+
                       {/* Permanently Delete Mosque */}
                       <button
                         onClick={() => handleDeleteMosque(loc)}
