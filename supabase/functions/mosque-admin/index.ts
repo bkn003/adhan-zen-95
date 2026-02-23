@@ -35,7 +35,7 @@ serve(async (req) => {
 
       // Generate a simple session token
       const token = crypto.randomUUID();
-      
+
       return new Response(
         JSON.stringify({ location_id: result, token }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -269,6 +269,326 @@ serve(async (req) => {
           JSON.stringify({ error: error.message }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "super_pause_mosque") {
+      if (!location_id) {
+        return new Response(
+          JSON.stringify({ error: "Missing location_id" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (typeof data?.is_paused !== "boolean") {
+        return new Response(
+          JSON.stringify({ error: "is_paused boolean required in data" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { error } = await supabase
+        .from("locations")
+        .update({ is_paused: data.is_paused })
+        .eq("id", location_id);
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "super_delete_mosque") {
+      if (!location_id) {
+        return new Response(
+          JSON.stringify({ error: "Missing location_id" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // First, delete all prayer times for this mosque to maintain referential integrity if not cascading
+      await supabase
+        .from("prayer_times")
+        .delete()
+        .eq("location_id", location_id);
+
+      // Delete location filters
+      await supabase
+        .from("location_custom_filters")
+        .delete()
+        .eq("location_id", location_id);
+
+      // Finally, delete the location itself
+      const { error } = await supabase
+        .from("locations")
+        .delete()
+        .eq("id", location_id);
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ============================================================
+    // CUSTOM FILTERS ACTIONS
+    // ============================================================
+
+    if (action === "list_filters") {
+      // Public: fetch all active custom filters
+      const { data: filters, error } = await supabase
+        .from("custom_filters")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ filters }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "list_all_filters") {
+      // Super admin: fetch ALL filters including inactive
+      const { data: filters, error } = await supabase
+        .from("custom_filters")
+        .select("*")
+        .order("display_order");
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ filters }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "super_manage_filter") {
+      // Super admin: create/update/delete custom filters
+      const { sub_action, filter_id, filter_data } = data || {};
+
+      if (sub_action === "create") {
+        if (!filter_data?.name) {
+          return new Response(
+            JSON.stringify({ error: "Filter name is required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data: newFilter, error } = await supabase
+          .from("custom_filters")
+          .insert({
+            name: filter_data.name,
+            icon: filter_data.icon || '🏷️',
+            color: filter_data.color || 'gray',
+            display_order: filter_data.display_order || 0,
+            is_active: true,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, filter: newFilter }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (sub_action === "update") {
+        if (!filter_id) {
+          return new Response(
+            JSON.stringify({ error: "filter_id is required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { error } = await supabase
+          .from("custom_filters")
+          .update(filter_data)
+          .eq("id", filter_id);
+
+        if (error) {
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (sub_action === "delete") {
+        if (!filter_id) {
+          return new Response(
+            JSON.stringify({ error: "filter_id is required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { error } = await supabase
+          .from("custom_filters")
+          .delete()
+          .eq("id", filter_id);
+
+        if (error) {
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ error: "Invalid sub_action. Use create/update/delete" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "get_location_filters") {
+      // Public: get all filter IDs for a location
+      if (!location_id) {
+        return new Response(
+          JSON.stringify({ error: "location_id is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: locationFilters, error } = await supabase
+        .from("location_custom_filters")
+        .select("filter_id")
+        .eq("location_id", location_id);
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ filter_ids: locationFilters?.map(lf => lf.filter_id) || [] }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "get_all_location_filters") {
+      // Public: get all location-filter mappings (for NearbyScreen bulk use)
+      const { data: allMappings, error } = await supabase
+        .from("location_custom_filters")
+        .select("location_id, filter_id");
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ mappings: allMappings || [] }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "set_location_filters") {
+      // Admin: set filters for their mosque
+      if (!username || !password || !location_id) {
+        return new Response(
+          JSON.stringify({ error: "Authentication required" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: verifiedId } = await supabase.rpc("verify_mosque_admin", {
+        p_username: username,
+        p_password: password,
+      });
+
+      if (!verifiedId || verifiedId !== location_id) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // data.filter_ids is the full list of selected filter IDs
+      const filterIds: string[] = data?.filter_ids || [];
+
+      // Delete all existing filters for this location
+      const { error: deleteError } = await supabase
+        .from("location_custom_filters")
+        .delete()
+        .eq("location_id", location_id);
+
+      if (deleteError) {
+        return new Response(
+          JSON.stringify({ error: deleteError.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Insert new filters
+      if (filterIds.length > 0) {
+        const inserts = filterIds.map(fid => ({
+          location_id,
+          filter_id: fid,
+        }));
+
+        const { error: insertError } = await supabase
+          .from("location_custom_filters")
+          .insert(inserts);
+
+        if (insertError) {
+          return new Response(
+            JSON.stringify({ error: insertError.message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
 
       return new Response(

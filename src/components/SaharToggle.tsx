@@ -1,5 +1,6 @@
 import { Moon, Clock } from 'lucide-react';
 import { formatTo12Hour } from '@/utils/timeFormat';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 interface SaharToggleProps {
   showSahar: boolean;
@@ -8,14 +9,16 @@ interface SaharToggleProps {
 }
 
 export const SaharToggle = ({ showSahar, onToggle, saharTime }: SaharToggleProps) => {
+  const { t } = useLanguage();
+
   return (
     <div className="bg-white border border-gray-100 rounded-xl p-4">
       <button
         onClick={onToggle}
         className={`
           flex items-center gap-3 p-3 rounded-lg border transition-all duration-300 w-full
-          ${showSahar 
-            ? 'bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200 text-orange-800' 
+          ${showSahar
+            ? 'bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200 text-orange-800'
             : 'bg-card border-border text-muted-foreground hover:border-orange-200'
           }
         `}
@@ -25,10 +28,10 @@ export const SaharToggle = ({ showSahar, onToggle, saharTime }: SaharToggleProps
         </div>
         <div className="text-left flex-1">
           <p className="font-medium">
-            {showSahar ? 'Sahar Time Enabled' : 'Show Sahar Time'}
+            {showSahar ? t('saharTimeEnabled') : t('showSaharTime')}
           </p>
           <p className="text-sm opacity-75">
-            {showSahar ? 'Sahar end time is visible' : 'Tap to show Sahar end time'}
+            {showSahar ? t('saharTimeVisible') : t('tapShowSahar')}
           </p>
         </div>
         <div className={`
@@ -41,14 +44,13 @@ export const SaharToggle = ({ showSahar, onToggle, saharTime }: SaharToggleProps
           `} />
         </div>
       </button>
-      
+
       {showSahar && saharTime && (
         <div className="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-100">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-orange-600" />
             <div>
-              <p className="text-sm font-medium text-orange-800">Sahar End Time</p>
-              <p className="text-sm text-orange-600">ஸஹர் முடிவு</p>
+              <p className="text-sm font-medium text-orange-800">{t('saharEndTime')}</p>
             </div>
             <div className="ml-auto">
               <p className="text-lg font-mono font-bold text-orange-800">

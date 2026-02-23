@@ -11,6 +11,7 @@ import { SettingsScreen } from '@/screens/SettingsScreen';
 import { MosqueDetailsScreen } from '@/screens/MosqueDetailsScreen';
 import { MosqueAdminPanel } from '@/screens/MosqueAdminPanel';
 import { SuperAdminPanel } from '@/screens/SuperAdminPanel';
+import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import type { Screen } from '@/types/navigation.types';
 import type { Location } from '@/types/prayer.types';
 
@@ -27,6 +28,9 @@ const Index = () => {
   const [isFirstTime, setIsFirstTime] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showSuperAdmin, setShowSuperAdmin] = useState(false);
+
+  // Enable realtime sync for locations & prayer_times
+  useRealtimeSync();
 
   // Listen for admin panel navigation event
   useEffect(() => {

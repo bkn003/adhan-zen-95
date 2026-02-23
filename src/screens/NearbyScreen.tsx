@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
-import { MapPin, Clock, Navigation, Search, Utensils, Users, ChevronDown, Sparkles, Timer, Car, Wind } from 'lucide-react';
+import { MapPin, Clock, Navigation, Search, ChevronDown, Sparkles, Timer } from 'lucide-react';
 import { useLocations } from '@/hooks/useLocations';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useRamadanContext } from '@/contexts/RamadanContext';
 import { useMosquePrayerStatus } from '@/hooks/useMosquePrayerStatus';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { useCustomFilters, useAllLocationFilters } from '@/hooks/useCustomFilters';
+import { matchesSearch } from '@/utils/searchUtils';
 import { Button } from '@/components/ui/button';
 import type { Location } from '@/types/prayer.types';
 
@@ -14,6 +16,21 @@ interface NearbyScreenProps {
   onMosqueDetails?: (locationId: string) => void;
 }
 
+// Color mapping for filter chips
+const filterColorMap: Record<string, { active: string; badge: string }> = {
+  emerald: { active: 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25', badge: 'bg-emerald-50 border-emerald-100 text-emerald-700' },
+  purple: { active: 'bg-purple-500 text-white shadow-lg shadow-purple-500/25', badge: 'bg-purple-50 border-purple-100 text-purple-700' },
+  amber: { active: 'bg-amber-500 text-white shadow-lg shadow-amber-500/25', badge: 'bg-amber-50 border-amber-100 text-amber-700' },
+  cyan: { active: 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/25', badge: 'bg-cyan-50 border-cyan-100 text-cyan-700' },
+  blue: { active: 'bg-blue-500 text-white shadow-lg shadow-blue-500/25', badge: 'bg-blue-50 border-blue-100 text-blue-700' },
+  rose: { active: 'bg-rose-500 text-white shadow-lg shadow-rose-500/25', badge: 'bg-rose-50 border-rose-100 text-rose-700' },
+  orange: { active: 'bg-orange-500 text-white shadow-lg shadow-orange-500/25', badge: 'bg-orange-50 border-orange-100 text-orange-700' },
+  teal: { active: 'bg-teal-500 text-white shadow-lg shadow-teal-500/25', badge: 'bg-teal-50 border-teal-100 text-teal-700' },
+  indigo: { active: 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25', badge: 'bg-indigo-50 border-indigo-100 text-indigo-700' },
+  pink: { active: 'bg-pink-500 text-white shadow-lg shadow-pink-500/25', badge: 'bg-pink-50 border-pink-100 text-pink-700' },
+  gray: { active: 'bg-gray-500 text-white shadow-lg shadow-gray-500/25', badge: 'bg-gray-50 border-gray-100 text-gray-700' },
+};
+
 export const NearbyScreen = ({
   onLocationSelect,
   onNavigateToHome,
@@ -21,10 +38,7 @@ export const NearbyScreen = ({
 }: NearbyScreenProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [filterSaharFood, setFilterSaharFood] = useState(false);
-  const [filterWomenHall, setFilterWomenHall] = useState(false);
-  const [filterParking, setFilterParking] = useState(false);
-  const [filterAC, setFilterAC] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   const [sortByTime, setSortByTime] = useState(false);
   const [displayCount, setDisplayCount] = useState(10);
 
@@ -33,8 +47,31 @@ export const NearbyScreen = ({
   const { isRamadan } = useRamadanContext();
   const { t } = useLanguage();
 
+  // Dynamic filters from DB
+  const { data: customFilters } = useCustomFilters();
+  const { data: allLocationFilters } = useAllLocationFilters();
+
   const locationIds = useMemo(() => locations?.map(l => l.id) || [], [locations]);
   const { data: prayerStatusMap } = useMosquePrayerStatus(locationIds);
+
+  // Build a map: locationId -> Set of filterIds
+  const locationFilterMap = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    allLocationFilters?.forEach(({ location_id, filter_id }) => {
+      if (!map.has(location_id)) map.set(location_id, new Set());
+      map.get(location_id)!.add(filter_id);
+    });
+    return map;
+  }, [allLocationFilters]);
+
+  const toggleFilter = (filterId: string) => {
+    setActiveFilters(prev => {
+      const next = new Set(prev);
+      if (next.has(filterId)) next.delete(filterId);
+      else next.add(filterId);
+      return next;
+    });
+  };
 
   // Require location access
   if (!latitude || !longitude || locationError) {
@@ -59,14 +96,17 @@ export const NearbyScreen = ({
 
   const filteredLocations = locations?.filter(location => {
     if (searchQuery.trim()) {
-      const matchesSearch = location.mosque_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        location.district.toLowerCase().includes(searchQuery.toLowerCase());
-      if (!matchesSearch) return false;
+      const matchesName = matchesSearch(location.mosque_name, searchQuery);
+      const matchesDistrict = matchesSearch(location.district, searchQuery);
+      if (!matchesName && !matchesDistrict) return false;
     }
-    if (filterSaharFood && !location.sahar_food_availability) return false;
-    if (filterWomenHall && !location.women_prayer_hall) return false;
-    if (filterParking && !location.parking_available) return false;
-    if (filterAC && !location.ac_available) return false;
+    // Dynamic filter: location must have ALL active filters
+    if (activeFilters.size > 0) {
+      const locFilters = locationFilterMap.get(location.id);
+      for (const filterId of activeFilters) {
+        if (!locFilters?.has(filterId)) return false;
+      }
+    }
     return true;
   }) || [];
 
@@ -120,6 +160,13 @@ export const NearbyScreen = ({
     const ampm = hour >= 12 ? 'PM' : 'AM';
     const h12 = hour % 12 || 12;
     return `${h12}:${m} ${ampm}`;
+  };
+
+  // Get the filter badges for a location
+  const getLocationFilterBadges = (locationId: string) => {
+    const locFilterIds = locationFilterMap.get(locationId);
+    if (!locFilterIds || !customFilters) return [];
+    return customFilters.filter(f => locFilterIds.has(f.id));
   };
 
   if (isLoading) {
@@ -177,6 +224,7 @@ export const NearbyScreen = ({
         </div>
 
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {/* Sort by time - always shown */}
           <button
             onClick={() => setSortByTime(!sortByTime)}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 ${sortByTime
@@ -187,46 +235,25 @@ export const NearbyScreen = ({
             <Timer className="w-4 h-4" />
             {t('sortByTime')}
           </button>
-          <button
-            onClick={() => setFilterSaharFood(!filterSaharFood)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 ${filterSaharFood
-              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-          >
-            <Utensils className="w-4 h-4" />
-            {t('saharFood')}
-          </button>
-          <button
-            onClick={() => setFilterWomenHall(!filterWomenHall)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 ${filterWomenHall
-              ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/25'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-          >
-            <Users className="w-4 h-4" />
-            {t('womenHall')}
-          </button>
-          <button
-            onClick={() => setFilterParking(!filterParking)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 ${filterParking
-              ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/25'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-          >
-            <Car className="w-4 h-4" />
-            {t('parking')}
-          </button>
-          <button
-            onClick={() => setFilterAC(!filterAC)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 ${filterAC
-              ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/25'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-          >
-            <Wind className="w-4 h-4" />
-            {t('ac')}
-          </button>
+
+          {/* Dynamic filter chips from DB */}
+          {customFilters?.map(filter => {
+            const isActive = activeFilters.has(filter.id);
+            const colors = filterColorMap[filter.color] || filterColorMap.gray;
+            return (
+              <button
+                key={filter.id}
+                onClick={() => toggleFilter(filter.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 ${isActive
+                  ? colors.active
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+              >
+                <span className="text-base">{filter.icon}</span>
+                {filter.name}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -239,91 +266,93 @@ export const NearbyScreen = ({
             </div>
           ))
         ) : displayedLocations.length > 0 ? (
-          displayedLocations.map((location, index) => (
-            <div
-              key={location.id}
-              onClick={() => onMosqueDetails?.(location.id)}
-              className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              {/* Header */}
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-bold text-gray-800 mb-1 leading-snug truncate">
-                    {location.mosque_name}
-                  </h3>
-                  <div className="flex items-center gap-1 text-sm text-gray-500">
-                    <MapPin className="w-3 h-3 flex-shrink-0" />
-                    <span className="truncate">{location.district}, Tamil Nadu</span>
+          displayedLocations.map((location, index) => {
+            const badges = getLocationFilterBadges(location.id);
+            return (
+              <div
+                key={location.id}
+                onClick={() => onMosqueDetails?.(location.id)}
+                className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                {/* Header */}
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-bold text-gray-800 mb-1 leading-snug truncate">
+                      {location.mosque_name}
+                    </h3>
+                    <div className="flex items-center gap-1 text-sm text-gray-500">
+                      <MapPin className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">{location.district}, Tamil Nadu</span>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-2">
+                    <div className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-xl">
+                      <span className="text-lg font-bold">{location.distance.toFixed(1)}</span>
+                      <span className="text-xs ml-1">km</span>
+                    </div>
                   </div>
                 </div>
-                <div className="text-right flex-shrink-0 ml-2">
-                  <div className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-xl">
-                    <span className="text-lg font-bold">{location.distance.toFixed(1)}</span>
-                    <span className="text-xs ml-1">km</span>
-                  </div>
-                </div>
-              </div>
 
-              {/* Next Iqamah Time Badge */}
-              {location.nextIqamahTime && (
-                <div className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl mb-3 ${location.prayerStatus === 'not_started'
-                  ? 'bg-orange-50 border border-orange-100 text-orange-700'
-                  : 'bg-gray-50 border border-gray-100 text-gray-500'
-                  }`}>
-                  <Clock className="w-3 h-3" />
-                  {location.nextPrayerName} Iqamah: {formatTime(location.nextIqamahTime)}
-                  {location.prayerStatus === 'completed' && (
-                    <span className="ml-1 text-gray-400">• Done</span>
-                  )}
-                </div>
-              )}
-
-              {/* Badges */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {isRamadan && location.sahar_food_availability && (
-                  <div className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-medium px-3 py-1.5 rounded-xl">
-                    <Utensils className="w-3 h-3" />
-                    Sahar Food
-                    {location.sahar_food_time && (
-                      <span className="text-emerald-600 ml-1">• {location.sahar_food_time}</span>
+                {/* Next Iqamah Time Badge */}
+                {location.nextIqamahTime && (
+                  <div className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl mb-3 ${location.prayerStatus === 'not_started'
+                    ? 'bg-orange-50 border border-orange-100 text-orange-700'
+                    : 'bg-gray-50 border border-gray-100 text-gray-500'
+                    }`}>
+                    <Clock className="w-3 h-3" />
+                    {location.nextPrayerName} Iqamah: {formatTime(location.nextIqamahTime)}
+                    {location.prayerStatus === 'completed' && (
+                      <span className="ml-1 text-gray-400">• Done</span>
                     )}
                   </div>
                 )}
-                {location.women_prayer_hall && (
-                  <div className="inline-flex items-center gap-1.5 bg-purple-50 border border-purple-100 text-purple-700 text-xs font-medium px-3 py-1.5 rounded-xl">
-                    <Users className="w-3 h-3" />
-                    Women Hall
+
+                {/* Dynamic Filter Badges */}
+                {badges.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {badges.map(filter => {
+                      const colors = filterColorMap[filter.color] || filterColorMap.gray;
+                      return (
+                        <div
+                          key={filter.id}
+                          className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl border ${colors.badge}`}
+                        >
+                          <span>{filter.icon}</span>
+                          {filter.name}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
-              </div>
 
-              {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleViewPrayerTimings(location); }}
-                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-semibold text-sm py-3 hover:shadow-lg hover:shadow-emerald-500/25 transition-all active:scale-98"
-                >
-                  <Clock className="w-4 h-4" />
-                  {t('prayerTimes')}
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleGetDirections(location); }}
-                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-semibold text-sm py-3 hover:shadow-lg hover:shadow-blue-500/25 transition-all active:scale-98"
-                >
-                  <Navigation className="w-4 h-4" />
-                  {t('directions')}
-                </button>
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleViewPrayerTimings(location); }}
+                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-semibold text-sm py-3 hover:shadow-lg hover:shadow-emerald-500/25 transition-all active:scale-98"
+                  >
+                    <Clock className="w-4 h-4" />
+                    {t('prayerTimes')}
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleGetDirections(location); }}
+                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-semibold text-sm py-3 hover:shadow-lg hover:shadow-blue-500/25 transition-all active:scale-98"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    {t('directions')}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <MapPin className="w-8 h-8 text-gray-400" />
             </div>
             <p className="text-gray-500 font-medium">
-              {searchQuery || filterSaharFood || filterWomenHall
+              {searchQuery || activeFilters.size > 0
                 ? t('noMosquesMatch')
                 : t('noMosquesFound')}
             </p>

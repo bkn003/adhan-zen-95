@@ -1,14 +1,19 @@
 import { Moon, Sun } from 'lucide-react';
 import type { Prayer } from '@/types/prayer.types';
 import { formatTo12Hour } from '@/utils/timeFormat';
+import { useLanguage } from '@/i18n/LanguageContext';
+
 interface RamadanSpecialTimesProps {
   prayers: Prayer[];
   isRamadan: boolean;
 }
+
 export const RamadanSpecialTimes = ({
   prayers,
   isRamadan
 }: RamadanSpecialTimesProps) => {
+  const { t } = useLanguage();
+
   if (!isRamadan) return null;
 
   // Filter special Ramadan timings
@@ -17,7 +22,7 @@ export const RamadanSpecialTimes = ({
   const tharaweeh = prayers.find(p => p.name === 'Tharaweeh');
   const specialTimes = [saharEnd && {
     ...saharEnd,
-    tamilName: 'ஸஹர் முடிவு',
+    localName: t('saharEnd'),
     icon: <Moon className="w-5 h-5" />,
     bgColor: 'bg-purple-100',
     iconBg: 'bg-purple-200',
@@ -25,7 +30,7 @@ export const RamadanSpecialTimes = ({
     timeColor: 'text-purple-900'
   }, iftar && {
     ...iftar,
-    tamilName: 'இஃப்தார்',
+    localName: t('iftar'),
     icon: <Sun className="w-5 h-5" />,
     bgColor: 'bg-yellow-100',
     iconBg: 'bg-yellow-200',
@@ -33,30 +38,32 @@ export const RamadanSpecialTimes = ({
     timeColor: 'text-yellow-900'
   }, tharaweeh && {
     ...tharaweeh,
-    tamilName: 'தராவீஹ்',
+    localName: t('tharaweeh'),
     icon: <Moon className="w-5 h-5" />,
     bgColor: 'bg-purple-100',
     iconBg: 'bg-purple-200',
     textColor: 'text-purple-800',
     timeColor: 'text-purple-900'
   }].filter(Boolean);
+
   if (specialTimes.length === 0) return null;
+
   return <div className="grid grid-cols-3 gap-2 mb-4">
-      {specialTimes.map((time, index) => <div key={index} className={`${time.bgColor} rounded-lg p-3 text-center`}>
-          <div className="flex items-center justify-center mb-2">
-            <div className={`p-1.5 rounded-full ${time.iconBg}`}>
-              <div className={time.textColor}>{time.icon}</div>
-            </div>
-          </div>
-          <div className="space-y-0.5">
-            <h4 className={`text-xs font-semibold ${time.textColor}`}>
-              {time.name}
-            </h4>
-            <p className={`text-xs ${time.textColor}`}>{time.tamilName}</p>
-            <p className={`text-sm font-bold ${time.timeColor} mt-1`}>
-              {formatTo12Hour(time.adhan)}
-            </p>
-          </div>
-        </div>)}
-    </div>;
+    {specialTimes.map((time, index) => <div key={index} className={`${time.bgColor} rounded-lg p-3 text-center`}>
+      <div className="flex items-center justify-center mb-2">
+        <div className={`p-1.5 rounded-full ${time.iconBg}`}>
+          <div className={time.textColor}>{time.icon}</div>
+        </div>
+      </div>
+      <div className="space-y-0.5">
+        <h4 className={`text-xs font-semibold ${time.textColor}`}>
+          {time.name}
+        </h4>
+        <p className={`text-xs ${time.textColor}`}>{time.localName}</p>
+        <p className={`text-sm font-bold ${time.timeColor} mt-1`}>
+          {formatTo12Hour(time.adhan)}
+        </p>
+      </div>
+    </div>)}
+  </div>;
 };

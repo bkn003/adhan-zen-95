@@ -374,14 +374,14 @@ export const SettingsScreen = () => {
       </SettingsCard>
 
       {/* Location Settings */}
-      <SettingsCard title="Location" icon={MapPin} gradient="from-blue-50/50 to-white">
+      <SettingsCard title={t('location')} icon={MapPin} gradient="from-blue-50/50 to-white">
         <LocationSelector selectedLocation={selectedLocation} onLocationChange={handleLocationChange} />
       </SettingsCard>
 
       {/* My Mohalla / Mosque */}
-      <SettingsCard title="My Mohalla / என் மஹல்லா" icon={Home} gradient="from-emerald-50/50 to-white">
+      <SettingsCard title={t('myMohalla')} icon={Home} gradient="from-emerald-50/50 to-white">
         <div className="space-y-2">
-          <p className="text-xs text-gray-500">Set your home mosque to get notified when prayer times change.</p>
+          <p className="text-xs text-gray-500">{t('setHomeMosque')}</p>
           <LocationSelector
             selectedLocation={mohallaLocation}
             onLocationChange={(location: Location) => {
@@ -392,14 +392,14 @@ export const SettingsScreen = () => {
           {mohallaLocation && (
             <div className="p-2 bg-emerald-50 rounded-xl">
               <p className="text-xs text-emerald-700 font-medium">
-                ✅ You'll be notified if prayer times change at {mohallaLocation.mosque_name}
+                ✅ {mohallaLocation.mosque_name}
               </p>
             </div>
           )}
         </div>
       </SettingsCard>
 
-      <SettingsCard title="Date Selection" icon={Calendar} gradient="from-amber-50/50 to-white">
+      <SettingsCard title={t('dateSelection')} icon={Calendar} gradient="from-amber-50/50 to-white">
         <div className="space-y-2">
           <Popover>
             <PopoverTrigger asChild>
@@ -412,7 +412,7 @@ export const SettingsScreen = () => {
               >
                 <span className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-gray-400" />
-                  {selectedDate ? format(selectedDate, "PPP") : "Select date"}
+                  {selectedDate ? format(selectedDate, "PPP") : t('selectDate')}
                 </span>
                 <ChevronRight className="h-4 w-4 text-gray-400" />
               </Button>
@@ -440,7 +440,7 @@ export const SettingsScreen = () => {
               }}
               className="py-2.5 px-3 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-semibold active:scale-95"
             >
-              Today
+              {t('today')}
             </button>
             <button
               onClick={() => {
@@ -451,7 +451,7 @@ export const SettingsScreen = () => {
               }}
               className="py-2.5 px-3 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold active:scale-95"
             >
-              Tomorrow
+              {t('tomorrow')}
             </button>
           </div>
         </div>
@@ -500,7 +500,7 @@ export const SettingsScreen = () => {
 
       {/* DND Settings - Only on Native */}
       {isNative && (
-        <SettingsCard title="Do Not Disturb (DND)" icon={VolumeX} gradient="from-violet-50/50 to-white">
+        <SettingsCard title={t('dndMode')} icon={VolumeX} gradient="from-violet-50/50 to-white">
           <div className="space-y-3">
             {/* Permission Warning */}
             {!dndPermissionGranted && (
@@ -513,7 +513,7 @@ export const SettingsScreen = () => {
 
             <ToggleItem
               icon={VolumeX}
-              label="Enable Auto DND"
+              label={t('enableAutoDnd')}
               sublabel={dndPermissionGranted ? "Silence phone during prayer" : "Permission required"}
               checked={dndEnabled}
               onChange={async (enabled) => {
@@ -538,7 +538,7 @@ export const SettingsScreen = () => {
                 <div className="p-3 bg-white rounded-xl border border-gray-100 space-y-3">
                   <div>
                     <div className="flex justify-between text-sm mb-2">
-                      <span className="text-gray-600">Activate DND before Iqamah</span>
+                      <span className="text-gray-600">{t('activateDndBefore')}</span>
                       <span className="font-bold text-violet-600">{dndBeforeIqamah} min</span>
                     </div>
                     <Slider
@@ -553,7 +553,7 @@ export const SettingsScreen = () => {
 
                   <div>
                     <div className="flex justify-between text-sm mb-2">
-                      <span className="text-gray-600">Deactivate DND after Iqamah</span>
+                      <span className="text-gray-600">{t('deactivateDndAfter')}</span>
                       <span className="font-bold text-violet-600">{dndAfterIqamah} min</span>
                     </div>
                     <Slider
@@ -569,38 +569,38 @@ export const SettingsScreen = () => {
 
                 {/* Per-Prayer Toggles */}
                 <div className="space-y-2">
-                  <p className="text-xs text-gray-500 font-medium px-1">Enable DND for each prayer:</p>
+                  <p className="text-xs text-gray-500 font-medium px-1">{t('enableDndPerPrayer')}</p>
                   <PrayerDndToggle
-                    prayerName="Fajr"
-                    tamilName="ஃபஜ்ர்"
+                    prayerName={t('fajr')}
+                    tamilName=""
                     icon={Sunrise}
                     checked={dndPerPrayer.fajr}
                     onChange={(v) => handlePrayerDndToggle('fajr', v)}
                   />
                   <PrayerDndToggle
-                    prayerName="Dhuhr"
-                    tamilName="லுஹர்"
+                    prayerName={t('dhuhr')}
+                    tamilName=""
                     icon={Sun}
                     checked={dndPerPrayer.dhuhr}
                     onChange={(v) => handlePrayerDndToggle('dhuhr', v)}
                   />
                   <PrayerDndToggle
-                    prayerName="Asr"
-                    tamilName="அஸர்"
+                    prayerName={t('asr')}
+                    tamilName=""
                     icon={Sun}
                     checked={dndPerPrayer.asr}
                     onChange={(v) => handlePrayerDndToggle('asr', v)}
                   />
                   <PrayerDndToggle
-                    prayerName="Maghrib"
-                    tamilName="மஃரிப்"
+                    prayerName={t('maghrib')}
+                    tamilName=""
                     icon={Sunset}
                     checked={dndPerPrayer.maghrib}
                     onChange={(v) => handlePrayerDndToggle('maghrib', v)}
                   />
                   <PrayerDndToggle
-                    prayerName="Isha"
-                    tamilName="இஷா"
+                    prayerName={t('isha')}
+                    tamilName=""
                     icon={Moon}
                     checked={dndPerPrayer.isha}
                     onChange={(v) => handlePrayerDndToggle('isha', v)}
@@ -613,12 +613,12 @@ export const SettingsScreen = () => {
       )}
 
       {/* Prayer Settings */}
-      <SettingsCard title="Prayer Settings" icon={Moon} gradient="from-purple-50/50 to-white">
+      <SettingsCard title={t('prayerSettings')} icon={Moon} gradient="from-purple-50/50 to-white">
         <div className="space-y-2">
           <ToggleItem
             icon={Moon}
-            label="Ramadan Mode"
-            sublabel="ரமலான் நேரங்கள்"
+            label={t('ramadanMode')}
+            sublabel=""
             checked={isRamadanMode}
             onChange={handleRamadanToggle}
           />
@@ -626,8 +626,8 @@ export const SettingsScreen = () => {
           {isRamadanMode && (
             <ToggleItem
               icon={Clock}
-              label="Sahar End Time"
-              sublabel="சஹர் முடிவு நேரம்"
+              label={t('saharEndTime')}
+              sublabel=""
               checked={isSaharEndEnabled}
               onChange={handleSaharEndToggle}
             />
@@ -638,21 +638,21 @@ export const SettingsScreen = () => {
             className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium active:scale-98"
           >
             <RefreshCw className="w-4 h-4" />
-            Reset to Auto-detect
+            {t('resetAutoDetect')}
           </button>
         </div>
       </SettingsCard>
 
       {/* Hijri Date Adjustment */}
-      <SettingsCard title="Hijri Date Adjustment" icon={Calendar} gradient="from-teal-50/50 to-white">
+      <SettingsCard title={t('hijriAdjust')} icon={Calendar} gradient="from-teal-50/50 to-white">
         <HijriAdjustment />
         <p className="text-xs text-gray-500 mt-2 text-center">
-          Adjust to match local moon sighting
+          {t('adjustMoonSighting')}
         </p>
       </SettingsCard>
 
       {/* Notifications */}
-      <SettingsCard title="Adhan Notifications" icon={Bell} gradient="from-rose-50/50 to-white">
+      <SettingsCard title={t('adhanNotifications')} icon={Bell} gradient="from-rose-50/50 to-white">
         <div className="space-y-3">
           {!supported && (
             <div className="p-2 bg-red-50 rounded-xl text-center">
@@ -662,8 +662,8 @@ export const SettingsScreen = () => {
 
           <ToggleItem
             icon={Bell}
-            label="Enable Notifications"
-            sublabel={permission === 'denied' ? 'Permission denied' : 'Play adhan at prayer times'}
+            label={t('enableNotifications')}
+            sublabel={permission === 'denied' ? 'Permission denied' : ''}
             checked={notificationsEnabled}
             onChange={handleNotificationToggle}
             disabled={!supported || permission === 'denied'}
@@ -672,8 +672,8 @@ export const SettingsScreen = () => {
           {/* Full-screen Prayer Alarm Toggle */}
           <ToggleItem
             icon={Volume2}
-            label="Full-screen Prayer Alarm"
-            sublabel="Show alarm overlay with Adhan sound"
+            label={t('fullScreenAlarm')}
+            sublabel=""
             checked={prayerAlarmEnabled}
             onChange={(enabled) => {
               setPrayerAlarmEnabled(enabled);
@@ -715,7 +715,7 @@ export const SettingsScreen = () => {
       </SettingsCard>
 
       {/* Mosque Admin */}
-      <SettingsCard title="Mosque Admin" icon={SettingsIcon} gradient="from-gray-50/50 to-white">
+      <SettingsCard title={t('mosqueAdmin')} icon={SettingsIcon} gradient="from-gray-50/50 to-white">
         <div className="space-y-2">
           <p className="text-xs text-gray-500">Login to manage your mosque's prayer times and info.</p>
           <button
@@ -725,7 +725,7 @@ export const SettingsScreen = () => {
             className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
           >
             <SettingsIcon className="w-4 h-4" />
-            Open Admin Panel
+            {t('openAdminPanel')}
           </button>
           <button
             onClick={() => {
@@ -733,7 +733,7 @@ export const SettingsScreen = () => {
             }}
             className="w-full py-2 px-3 bg-gray-100 text-gray-600 rounded-xl text-xs font-medium flex items-center justify-center gap-2"
           >
-            Super Admin
+            {t('superAdmin')}
           </button>
         </div>
       </SettingsCard>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { MapPin, ChevronDown, Navigation, Search } from 'lucide-react';
 import { useLocations } from '@/hooks/useLocations';
 import { useGeolocation } from '@/hooks/useGeolocation';
+import { matchesSearch } from '@/utils/searchUtils';
 import type { Location } from '@/types/prayer.types';
 
 interface LocationSelectorProps {
@@ -36,8 +37,8 @@ export const LocationSelector = ({
 
   const filteredAndSortedLocations = locations
     ?.filter(location =>
-      location.mosque_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      location.district.toLowerCase().includes(searchQuery.toLowerCase())
+      matchesSearch(location.mosque_name, searchQuery) ||
+      matchesSearch(location.district, searchQuery)
     )
     .map(location => ({
       ...location,
@@ -113,11 +114,10 @@ export const LocationSelector = ({
               filteredAndSortedLocations?.map(location => (
                 <div
                   key={location.id}
-                  className={`flex items-center justify-between rounded-xl mx-1 mb-0.5 transition-colors ${
-                    selectedLocation?.id === location.id
-                      ? 'bg-emerald-50 border border-emerald-200'
-                      : 'hover:bg-gray-50 border border-transparent'
-                  }`}
+                  className={`flex items-center justify-between rounded-xl mx-1 mb-0.5 transition-colors ${selectedLocation?.id === location.id
+                    ? 'bg-emerald-50 border border-emerald-200'
+                    : 'hover:bg-gray-50 border border-transparent'
+                    }`}
                 >
                   <button
                     onClick={() => {
@@ -129,9 +129,8 @@ export const LocationSelector = ({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium truncate ${
-                          selectedLocation?.id === location.id ? 'text-emerald-800' : 'text-gray-800'
-                        }`}>
+                        <p className={`text-sm font-medium truncate ${selectedLocation?.id === location.id ? 'text-emerald-800' : 'text-gray-800'
+                          }`}>
                           {location.mosque_name}
                         </p>
                         <p className="text-xs text-gray-500 truncate">{location.district}</p>

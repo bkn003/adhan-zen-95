@@ -1,14 +1,21 @@
 import { AlertTriangle, Sun, Sunset, Sunrise } from 'lucide-react';
 import type { ForbiddenTime } from '@/types/prayer.types';
-import { tamilText } from '@/utils/tamilText';
+import { useLanguage } from '@/i18n/LanguageContext';
+import { getLocalizedText } from '@/utils/tamilText';
 import { formatTo12Hour } from '@/utils/timeFormat';
+
 interface ForbiddenTimesProps {
   forbiddenTimes: ForbiddenTime[];
 }
+
 export const ForbiddenTimes = ({
   forbiddenTimes
 }: ForbiddenTimesProps) => {
+  const { language } = useLanguage();
+  const localizedText = getLocalizedText(language);
+
   if (forbiddenTimes.length === 0) return null;
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'sunrise':
@@ -21,29 +28,33 @@ export const ForbiddenTimes = ({
         return <AlertTriangle className="w-4 h-4" />;
     }
   };
-  const getTamilName = (type: string) => {
+
+  const getLocalName = (type: string) => {
     switch (type) {
       case 'sunrise':
-        return tamilText.general.sunrise.tamil;
+        return localizedText.general.sunrise.local;
       case 'noon':
-        return tamilText.general.midNoon.tamil;
+        return localizedText.general.midNoon.local;
       case 'sunset':
-        return tamilText.general.sunset.tamil;
+        return localizedText.general.sunset.local;
       default:
         return '';
     }
   };
+
   return (
     <div className="rounded-xl border border-red-200 bg-red-50 p-3">
       <div className="flex items-start gap-2 mb-2">
         <AlertTriangle className="w-5 h-5 text-red-600" />
         <div>
           <h3 className="text-sm font-semibold text-red-700">
-            {tamilText.general.forbiddenTimes.english}
+            {localizedText.general.forbiddenTimes.english}
           </h3>
-          <p className="text-xs text-red-600 -mt-0.5">
-            {tamilText.general.forbiddenTimes.tamil}
-          </p>
+          {language !== 'en' && (
+            <p className="text-xs text-red-600 -mt-0.5">
+              {localizedText.general.forbiddenTimes.local}
+            </p>
+          )}
         </div>
       </div>
 
@@ -57,7 +68,9 @@ export const ForbiddenTimes = ({
               {getIcon(time.type)}
               <span className="text-[11px] font-medium">{time.name}</span>
             </div>
-            <div className="text-[11px] text-red-500">{getTamilName(time.type)}</div>
+            {language !== 'en' && (
+              <div className="text-[11px] text-red-500">{getLocalName(time.type)}</div>
+            )}
             <div className="mt-1 text-sm font-bold text-red-700">
               {formatTo12Hour(time.time)}
             </div>

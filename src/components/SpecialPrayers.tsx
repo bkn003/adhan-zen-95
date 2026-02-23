@@ -1,5 +1,6 @@
 import { Sunrise, Moon, Sparkles } from 'lucide-react';
 import { formatTo12Hour } from '@/utils/timeFormat';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 interface SpecialPrayersProps {
   sunriseTime?: string;
@@ -30,6 +31,8 @@ export const SpecialPrayers = ({
   tahajjudStartOverride,
   tahajjudEndOverride,
 }: SpecialPrayersProps) => {
+  const { t, language } = useLanguage();
+
   const ishraqTime = ishraqTimeOverride
     || (sunriseTime ? addMinutesToTime(sunriseTime, 20) : null);
 
@@ -45,7 +48,7 @@ export const SpecialPrayers = ({
         <Sparkles className="w-5 h-5 text-indigo-600" />
         <div>
           <h3 className="text-sm font-semibold text-indigo-700">
-            Special Prayers / சிறப்பு தொழுகைகள்
+            {t('specialPrayers')}
           </h3>
         </div>
       </div>
@@ -55,9 +58,8 @@ export const SpecialPrayers = ({
         <div className="rounded-xl border border-violet-100 bg-white/80 p-3 text-center">
           <div className="flex items-center justify-center gap-1 text-violet-600 mb-1">
             <Moon className="w-4 h-4" />
-            <span className="text-[11px] font-medium">Tahajjud</span>
+            <span className="text-[11px] font-medium">{t('tahajjud')}</span>
           </div>
-          <div className="text-[11px] text-violet-500">தஹஜ்ஜுத்</div>
           <div className="mt-1.5 text-sm font-bold text-violet-700">
             {formatTo12Hour(tahajjudStart)} - {formatTo12Hour(tahajjudEnd)}
           </div>
@@ -68,9 +70,8 @@ export const SpecialPrayers = ({
           <div className="rounded-xl border border-amber-100 bg-white/80 p-3 text-center">
             <div className="flex items-center justify-center gap-1 text-amber-600 mb-1">
               <Sunrise className="w-4 h-4" />
-              <span className="text-[11px] font-medium">Ishraq</span>
+              <span className="text-[11px] font-medium">{t('ishraq')}</span>
             </div>
-            <div className="text-[11px] text-amber-500">இஷ்ராக்</div>
             <div className="mt-1.5 text-sm font-bold text-amber-700">
               {formatTo12Hour(ishraqTime)}
             </div>

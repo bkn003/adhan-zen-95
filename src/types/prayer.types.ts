@@ -14,6 +14,7 @@ export interface Location {
   wheelchair_accessible?: boolean;
   mosque_capacity?: string;
   admin_username?: string;
+  is_paused?: boolean;
   created_at?: string;
   updated_at?: string;
 }

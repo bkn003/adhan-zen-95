@@ -7,6 +7,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 // --- Types ---
 interface QazaCounts {
@@ -31,20 +32,23 @@ const INITIAL_COUNTS: QazaCounts = {
     witr: 0,
 };
 
-const PRAYERS = [
-    { key: 'fajr', label: 'Fajr', tamil: 'ஃபஜ்ர்', color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
-    { key: 'dhuhr', label: 'Dhuhr', tamil: 'லுஹர்', color: 'text-amber-600 bg-amber-50 border-amber-100' },
-    { key: 'asr', label: 'Asr', tamil: 'அஸர்', color: 'text-orange-600 bg-orange-50 border-orange-100' },
-    { key: 'maghrib', label: 'Maghrib', tamil: 'மஃரிப்', color: 'text-rose-600 bg-rose-50 border-rose-100' },
-    { key: 'isha', label: 'Isha', tamil: 'இஷா', color: 'text-indigo-600 bg-indigo-50 border-indigo-100' },
-    { key: 'witr', label: 'Witr', tamil: 'வித்ர்', color: 'text-purple-600 bg-purple-50 border-purple-100' },
-] as const;
+const PRAYER_KEYS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'witr'] as const;
+
+const PRAYER_COLORS: Record<string, string> = {
+    fajr: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+    dhuhr: 'text-amber-600 bg-amber-50 border-amber-100',
+    asr: 'text-orange-600 bg-orange-50 border-orange-100',
+    maghrib: 'text-rose-600 bg-rose-50 border-rose-100',
+    isha: 'text-indigo-600 bg-indigo-50 border-indigo-100',
+    witr: 'text-purple-600 bg-purple-50 border-purple-100',
+};
 
 export const QazaScreen = () => {
     const [counts, setCounts] = useState<QazaCounts>(INITIAL_COUNTS);
     const [history, setHistory] = useState<HistoryData>({});
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const { toast } = useToast();
+    const { t } = useLanguage();
 
     // --- Qaza Logic ---
     useEffect(() => {
@@ -111,14 +115,10 @@ export const QazaScreen = () => {
     const getDayStatus = (date: Date) => {
         const dateKey = format(date, 'yyyy-MM-dd');
         const dayData = history[dateKey];
-        if (!dayData) return 0; // 0%
-        // Only count 5 obligatory prayers (exclude Witr for completion stats if desired, but let's include all 6)
-        const prayedCount = PRAYERS.filter(p => dayData[p.key]).length;
+        if (!dayData) return 0;
+        const prayedCount = PRAYER_KEYS.filter(p => dayData[p]).length;
         return prayedCount;
     };
-
-    // Custom visual for calendar days (green dot if all prayed?)
-    // modifiers={{ booked: bookedDays }} modifiersStyles...
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50/30 p-4 pb-28 space-y-4">
@@ -127,11 +127,11 @@ export const QazaScreen = () => {
                 <TabsList className="grid w-full grid-cols-2 mb-4">
                     <TabsTrigger value="qaza" className="flex items-center gap-2">
                         <RotateCcw className="w-4 h-4" />
-                        <span>Missed (Qaza)</span>
+                        <span>{t('missedQaza')}</span>
                     </TabsTrigger>
                     <TabsTrigger value="history" className="flex items-center gap-2">
                         <CalendarCheck className="w-4 h-4" />
-                        <span>History</span>
+                        <span>{t('history')}</span>
                     </TabsTrigger>
                 </TabsList>
 
@@ -143,22 +143,21 @@ export const QazaScreen = () => {
                             <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full blur-3xl" />
                         </div>
                         <div className="relative z-10">
-                            <h2 className="text-2xl font-bold text-white mb-1">Total Missed</h2>
+                            <h2 className="text-2xl font-bold text-white mb-1">{t('totalMissed')}</h2>
                             <div className="mt-2">
                                 <span className="text-4xl font-bold text-white">{getTotalMissed()}</span>
-                                <span className="text-white/80 text-sm ml-2">prayers</span>
+                                <span className="text-white/80 text-sm ml-2">{t('prayers')}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Qaza Counts */}
                     <div className="grid grid-cols-1 gap-3">
-                        {PRAYERS.map((prayer) => (
-                            <Card key={prayer.key} className={`p-4 border shadow-sm ${prayer.color}`}>
+                        {PRAYER_KEYS.map((key) => (
+                            <Card key={key} className={`p-4 border shadow-sm ${PRAYER_COLORS[key]}`}>
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <h3 className="font-bold text-lg">{prayer.label}</h3>
-                                        <p className="text-xs opacity-70 font-medium">{prayer.tamil}</p>
+                                        <h3 className="font-bold text-lg">{t(key)}</h3>
                                     </div>
 
                                     <div className="flex items-center gap-3 bg-white/60 p-1.5 rounded-xl backdrop-blur-sm">
@@ -166,21 +165,21 @@ export const QazaScreen = () => {
                                             variant="ghost"
                                             size="icon"
                                             className="h-8 w-8 rounded-lg hover:bg-black/5 text-slate-700"
-                                            onClick={() => updateCount(prayer.key as keyof QazaCounts, -1)}
-                                            disabled={counts[prayer.key as keyof QazaCounts] === 0}
+                                            onClick={() => updateCount(key as keyof QazaCounts, -1)}
+                                            disabled={counts[key as keyof QazaCounts] === 0}
                                         >
                                             <Minus className="w-4 h-4" />
                                         </Button>
 
                                         <span className="w-12 text-center font-bold text-xl tabular-nums">
-                                            {counts[prayer.key as keyof QazaCounts]}
+                                            {counts[key as keyof QazaCounts]}
                                         </span>
 
                                         <Button
                                             variant="ghost"
                                             size="icon"
                                             className="h-8 w-8 rounded-lg hover:bg-black/5 text-slate-700"
-                                            onClick={() => updateCount(prayer.key as keyof QazaCounts, 1)}
+                                            onClick={() => updateCount(key as keyof QazaCounts, 1)}
                                         >
                                             <Plus className="w-4 h-4" />
                                         </Button>
@@ -215,40 +214,39 @@ export const QazaScreen = () => {
                     <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                             <span className="bg-indigo-100 text-indigo-700 p-1.5 rounded-lg text-sm">
-                                {selectedDate ? format(selectedDate, 'MMM d, yyyy') : 'Select Date'}
+                                {selectedDate ? format(selectedDate, 'MMM d, yyyy') : t('selectDate')}
                             </span>
                             <span className="text-gray-500 text-sm font-normal ml-auto">
-                                Mark performed prayers
+                                {t('markPerformedPrayers')}
                             </span>
                         </h3>
 
                         {selectedDate ? (
                             <div className="space-y-3">
-                                {PRAYERS.map((prayer) => {
+                                {PRAYER_KEYS.map((key) => {
                                     const dateKey = format(selectedDate, 'yyyy-MM-dd');
-                                    const isChecked = history[dateKey]?.[prayer.key] || false;
+                                    const isChecked = history[dateKey]?.[key] || false;
 
                                     return (
                                         <div
-                                            key={prayer.key}
+                                            key={key}
                                             className={`flex items-center justify-between p-3 rounded-xl transition-all ${isChecked ? 'bg-emerald-50 border border-emerald-100' : 'bg-gray-50 border border-transparent'
                                                 }`}
-                                            onClick={() => togglePrayerStatus(prayer.key)}
+                                            onClick={() => togglePrayerStatus(key)}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <div className={`w-2 h-8 rounded-full ${isChecked ? 'bg-emerald-500' : 'bg-gray-200'
                                                     }`} />
                                                 <div>
                                                     <p className={`font-semibold ${isChecked ? 'text-emerald-900' : 'text-gray-700'}`}>
-                                                        {prayer.label}
+                                                        {t(key)}
                                                     </p>
-                                                    <p className="text-xs text-gray-400">{prayer.tamil}</p>
                                                 </div>
                                             </div>
 
                                             <Checkbox
                                                 checked={isChecked}
-                                                onCheckedChange={() => togglePrayerStatus(prayer.key)}
+                                                onCheckedChange={() => togglePrayerStatus(key)}
                                                 className="h-6 w-6 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
                                             />
                                         </div>
@@ -256,7 +254,7 @@ export const QazaScreen = () => {
                                 })}
                             </div>
                         ) : (
-                            <p className="text-center text-gray-400 py-8">Select a date to view history</p>
+                            <p className="text-center text-gray-400 py-8">{t('selectDateHistory')}</p>
                         )}
                     </div>
                 </TabsContent>

@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { TimePicker12h, formatTime12h } from '@/components/TimePicker12h';
 import { clearCacheForLocation, clearAllPrayerCache } from '@/utils/prayerCache';
+import { useCustomFilters, useLocationFilters, useSetLocationFilters } from '@/hooks/useCustomFilters';
 
 /**
  * Returns the last day of a given month name (1-indexed).
@@ -60,11 +61,13 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [editingPT, setEditingPT] = useState<string | null>(null);
+  const [addingNewPT, setAddingNewPT] = useState(false);
+  const [newDateRange, setNewDateRange] = useState('1-5');
   const [selectedMonth, setSelectedMonth] = useState(monthNames[new Date().getMonth()]);
   const [expandedSection, setExpandedSection] = useState<string | null>('mosque');
   const queryClient = useQueryClient();
 
-  const { data: locations } = useLocations();
+  const { data: locations } = useLocations({ includePaused: true });
 
   // Restore session
   useEffect(() => {
@@ -157,6 +160,30 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
     }
   };
 
+  const clearPrayerCaches = () => {
+    if (locationId) {
+      clearCacheForLocation(locationId);
+    }
+    clearAllPrayerCache();
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('pt:')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+    } catch (e) {
+      console.warn('Error clearing static prayer cache:', e);
+    }
+    refetchPT();
+    queryClient.invalidateQueries({ queryKey: ['prayer-times'], refetchType: 'all' });
+    queryClient.invalidateQueries({ queryKey: ['static-prayer-times'], refetchType: 'all' });
+    queryClient.invalidateQueries({ queryKey: ['locations'], refetchType: 'all' });
+    queryClient.invalidateQueries({ queryKey: ['mosque-prayer-status'], refetchType: 'all' });
+  };
+
   const handleUpdatePrayerTime = async (ptId: string, fields: Record<string, any>) => {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
@@ -171,34 +198,29 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success('Prayer time updated!');
+      clearPrayerCaches();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
 
-      // Clear ALL prayer caches so fresh Supabase data loads on all pages
-      if (locationId) {
-        clearCacheForLocation(locationId);
-      }
-      clearAllPrayerCache();
-
-      // Also clear static prayer times localStorage entries (pt:* keys)
-      try {
-        const keysToRemove: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith('pt:')) {
-            keysToRemove.push(key);
-          }
-        }
-        keysToRemove.forEach(k => localStorage.removeItem(k));
-        console.log('🧹 Cleared', keysToRemove.length, 'static prayer cache entries');
-      } catch (e) {
-        console.warn('Error clearing static prayer cache:', e);
-      }
-
-      // Force immediate refetch on ALL prayer-time related queries
-      refetchPT();
-      queryClient.invalidateQueries({ queryKey: ['prayer-times'], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: ['static-prayer-times'], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: ['locations'], refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: ['mosque-prayer-status'], refetchType: 'all' });
+  const handleAddPrayerTime = async (fields: Record<string, any>) => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_prayer_times',
+          username, password, location_id: locationId,
+          data: { month: selectedMonth, date_range: newDateRange, ...fields }
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(`Prayer times added for ${newDateRange} ${selectedMonth}!`);
+      setAddingNewPT(false);
+      setNewDateRange('1-5');
+      clearPrayerCaches();
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -293,6 +315,15 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         )}
       </CollapsibleSection>
 
+      {/* Amenities & Filters Section */}
+      <CollapsibleSection
+        title="Amenities & Filters"
+        expanded={expandedSection === 'filters'}
+        onToggle={() => setExpandedSection(expandedSection === 'filters' ? null : 'filters')}
+      >
+        <AmenitiesFiltersSection locationId={locationId} username={username} password={password} />
+      </CollapsibleSection>
+
       {/* Prayer Times Section */}
       <CollapsibleSection
         title="Prayer Times"
@@ -310,6 +341,52 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
+
+          {/* Add New Date Range Button */}
+          <button
+            onClick={() => setAddingNewPT(!addingNewPT)}
+            className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 active:scale-98"
+          >
+            <Clock className="w-4 h-4" />
+            {addingNewPT ? 'Cancel Adding' : '+ Add New Date Range'}
+          </button>
+
+          {/* Add New Prayer Time Form */}
+          {addingNewPT && (
+            <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-3 space-y-3">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-semibold text-emerald-700">Date Range:</label>
+                <select
+                  value={newDateRange}
+                  onChange={e => setNewDateRange(e.target.value)}
+                  className="flex-1 px-2 py-1.5 border border-emerald-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                >
+                  <option value="1-5">1-5</option>
+                  <option value="6-10">6-10</option>
+                  <option value="11-15">11-15</option>
+                  <option value="16-20">16-20</option>
+                  <option value="21-25">21-25</option>
+                  <option value="26-31">26-{getMonthEndDay(selectedMonth)}</option>
+                </select>
+              </div>
+              <p className="text-xs text-emerald-600">
+                Adding prayer times for <strong>{newDateRange} {selectedMonth}</strong>
+              </p>
+              <PrayerTimeEditor
+                prayerTime={{}}
+                onSave={(fields) => handleAddPrayerTime(fields)}
+                onCancel={() => setAddingNewPT(false)}
+              />
+            </div>
+          )}
+
+          {(!prayerTimes || prayerTimes.length === 0) && !addingNewPT && (
+            <div className="text-center py-6 text-gray-400">
+              <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No prayer times for {selectedMonth}</p>
+              <p className="text-xs mt-1">Tap "+ Add New Date Range" to add prayer times</p>
+            </div>
+          )}
 
           {prayerTimes?.map(pt => (
             <div key={pt.id} className="bg-white rounded-xl border border-gray-200 p-3">
@@ -635,6 +712,90 @@ const PrayerTimeEditor = ({ prayerTime, onSave, onCancel }: {
         </Button>
         <Button variant="outline" onClick={onCancel} className="rounded-xl text-xs h-10 px-4">Cancel</Button>
       </div>
+    </div>
+  );
+};
+
+// Amenities & Filters Section - dynamic filter toggles from custom_filters table
+const AmenitiesFiltersSection = ({ locationId, username, password }: { locationId: string; username: string; password: string }) => {
+  const { data: filters, isLoading: filtersLoading } = useCustomFilters();
+  const { data: activeFilterIds, isLoading: locationFiltersLoading } = useLocationFilters(locationId);
+  const setLocationFilters = useSetLocationFilters();
+
+  const colorMap: Record<string, string> = {
+    emerald: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    purple: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    amber: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    cyan: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+    blue: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    rose: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
+    orange: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+    teal: 'bg-teal-500/20 text-teal-400 border-teal-500/30',
+    indigo: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+    pink: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+    gray: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+  };
+
+  const toggleFilter = async (filterId: string) => {
+    if (!activeFilterIds) return;
+    const isActive = activeFilterIds.includes(filterId);
+    const newIds = isActive
+      ? activeFilterIds.filter(id => id !== filterId)
+      : [...activeFilterIds, filterId];
+
+    try {
+      await setLocationFilters.mutateAsync({
+        locationId,
+        filterIds: newIds,
+        username,
+        password,
+      });
+      toast.success(isActive ? 'Filter removed' : 'Filter added');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update filters');
+    }
+  };
+
+  if (filtersLoading || locationFiltersLoading) {
+    return <div className="text-center py-4 text-gray-500 text-xs">Loading filters...</div>;
+  }
+
+  if (!filters || filters.length === 0) {
+    return (
+      <div className="text-center py-4">
+        <p className="text-sm text-gray-500">No custom filters available</p>
+        <p className="text-xs text-gray-600 mt-1">Ask super admin to add filters</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-gray-500 mb-2">Tap to toggle amenities your mosque offers:</p>
+      <div className="flex flex-wrap gap-2">
+        {filters.map(filter => {
+          const isActive = activeFilterIds?.includes(filter.id) || false;
+          const colors = colorMap[filter.color] || colorMap.gray;
+          return (
+            <button
+              key={filter.id}
+              onClick={() => toggleFilter(filter.id)}
+              disabled={setLocationFilters.isPending}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border transition-all ${isActive
+                ? colors
+                : 'bg-gray-800/50 text-gray-500 border-gray-700/30 opacity-50'
+                }`}
+            >
+              <span>{filter.icon}</span>
+              {filter.name}
+              {isActive && <span className="ml-1">✓</span>}
+            </button>
+          );
+        })}
+      </div>
+      {setLocationFilters.isPending && (
+        <p className="text-xs text-amber-400 mt-1">Saving...</p>
+      )}
     </div>
   );
 };

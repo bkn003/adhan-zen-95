@@ -4,15 +4,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { loadCachedLocations, cacheLocations } from '@/storage/prayerStore';
 import type { Location } from '@/types/prayer.types';
 
-export const useLocations = () => {
+export const useLocations = (options?: { includePaused?: boolean }) => {
   return useQuery({
-    queryKey: ['locations'],
+    queryKey: ['locations', options?.includePaused],
     queryFn: async (): Promise<Location[]> => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('locations')
           .select('*')
           .order('mosque_name');
+
+        if (!options?.includePaused) {
+          query = query.not('is_paused', 'eq', true);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
           throw error;

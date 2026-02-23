@@ -1,5 +1,6 @@
 
 import { Moon, Sun, RotateCcw } from 'lucide-react';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 interface RamadanToggleProps {
   isRamadan: boolean;
@@ -9,21 +10,23 @@ interface RamadanToggleProps {
   isRamadanMonth?: boolean;
 }
 
-export const RamadanToggle = ({ 
-  isRamadan, 
-  onToggle, 
-  onResetAuto, 
-  autoOverride, 
-  isRamadanMonth 
+export const RamadanToggle = ({
+  isRamadan,
+  onToggle,
+  onResetAuto,
+  autoOverride,
+  isRamadanMonth
 }: RamadanToggleProps) => {
+  const { t } = useLanguage();
+
   return (
     <div className="space-y-2">
       <button
         onClick={onToggle}
         className={`
           w-full flex items-center gap-3 p-3 rounded-lg border transition-all duration-300
-          ${isRamadan 
-            ? 'bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200 text-indigo-800' 
+          ${isRamadan
+            ? 'bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200 text-indigo-800'
             : 'bg-card border-border text-muted-foreground hover:border-indigo-200'
           }
         `}
@@ -33,7 +36,7 @@ export const RamadanToggle = ({
         </div>
         <div className="text-left flex-1">
           <p className="font-medium">
-            {isRamadan ? 'Ramadan Mode' : 'Regular Mode'}
+            {t('ramadanMode')}
             {isRamadanMonth && !autoOverride && (
               <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
                 Auto-detected
@@ -41,7 +44,7 @@ export const RamadanToggle = ({
             )}
           </p>
           <p className="text-sm opacity-75">
-            {isRamadan ? 'Special timings active' : 'Tap to enable Ramadan mode'}
+            {isRamadan ? t('specialTimingsActive') : t('tapEnableRamadan')}
           </p>
         </div>
         <div className={`
@@ -54,14 +57,14 @@ export const RamadanToggle = ({
           `} />
         </div>
       </button>
-      
+
       {autoOverride && onResetAuto && (
         <button
           onClick={onResetAuto}
           className="w-full flex items-center justify-center gap-2 p-2 text-sm text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
         >
           <RotateCcw className="w-4 h-4" />
-          Reset to Auto-detect
+          {t('resetAutoDetect')}
         </button>
       )}
     </div>
