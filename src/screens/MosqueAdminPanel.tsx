@@ -699,11 +699,44 @@ const PrayerTimeEditor = ({ prayerTime, onSave, onCancel }: {
       <div className="flex gap-2 pt-1">
         <Button onClick={() => {
           const changed: Record<string, any> = {};
-          Object.entries(values).forEach(([k, v]) => {
-            if (v !== (prayerTime[k] || '')) {
-              changed[k] = v || null;
-            }
-          });
+
+          if (!prayerTime.id) {
+            // NEW RECORD: Always include all 10 core fields, sending "" instead of null/undefined
+            const coreFields = [
+              'fajr_adhan', 'fajr_iqamah',
+              'dhuhr_adhan', 'dhuhr_iqamah',
+              'asr_adhan', 'asr_iqamah',
+              'maghrib_adhan', 'maghrib_iqamah',
+              'isha_adhan', 'isha_iqamah'
+            ];
+
+            // Core standard fields MUST be sent even if empty (DB is NOT NULL for these 10)
+            coreFields.forEach(k => {
+              changed[k] = values[k] || '';
+            });
+
+            // For all other fields, if they have a value, include them (DB allows null for the rest)
+            Object.entries(values).forEach(([k, v]) => {
+              if (!coreFields.includes(k) && v) {
+                changed[k] = v;
+              }
+            });
+          } else {
+            // EXISTING RECORD: Only send what changed
+            Object.entries(values).forEach(([k, v]) => {
+              if (v !== (prayerTime[k] || '')) {
+                // If a required field was changed to empty, we MUST send '' otherwise null violates constraint
+                const isCoreField = [
+                  'fajr_adhan', 'fajr_iqamah', 'dhuhr_adhan', 'dhuhr_iqamah',
+                  'asr_adhan', 'asr_iqamah', 'maghrib_adhan', 'maghrib_iqamah',
+                  'isha_adhan', 'isha_iqamah'
+                ].includes(k);
+
+                changed[k] = (v === '' && !isCoreField) ? null : v;
+              }
+            });
+          }
+
           if (Object.keys(changed).length > 0) onSave(changed);
           else onCancel();
         }} className="flex-1 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs h-10 font-semibold">
