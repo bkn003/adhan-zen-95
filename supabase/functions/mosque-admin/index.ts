@@ -103,7 +103,13 @@ serve(async (req) => {
       }
 
       // data should be { id, ...fields } for upsert
-      const { id: ptId, ...ptFields } = data;
+      const { id: ptId, ...rawFields } = data;
+
+      // Sanitize: convert empty strings to null (PostgreSQL TIME columns reject "")
+      const ptFields: Record<string, any> = {};
+      for (const [key, value] of Object.entries(rawFields)) {
+        ptFields[key] = (value === "" || value === undefined) ? null : value;
+      }
 
       if (ptId) {
         // Update existing
