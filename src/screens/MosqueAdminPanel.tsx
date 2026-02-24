@@ -362,11 +362,10 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
                   className="flex-1 px-2 py-1.5 border border-emerald-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                 >
                   <option value="1-5">1-5</option>
-                  <option value="6-10">6-10</option>
-                  <option value="11-15">11-15</option>
-                  <option value="16-20">16-20</option>
-                  <option value="21-25">21-25</option>
-                  <option value="26-31">26-{getMonthEndDay(selectedMonth)}</option>
+                  <option value="6-11">6-11</option>
+                  <option value="12-17">12-17</option>
+                  <option value="18-23">18-23</option>
+                  <option value={`24-${getMonthEndDay(selectedMonth)}`}>24-{getMonthEndDay(selectedMonth)}</option>
                 </select>
               </div>
               <p className="text-xs text-emerald-600">
