@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { ArrowLeft, MapPin, Clock, Navigation, Users, Utensils, Phone, Share2, ChevronLeft, ChevronRight, Car, Wind, Accessibility, Camera } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { ArrowLeft, MapPin, Clock, Navigation, Users, Utensils, Phone, Share2, ChevronLeft, ChevronRight, Car, Wind, Accessibility, Camera, ImageIcon } from 'lucide-react';
 import { useLocations } from '@/hooks/useLocations';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,20 +38,64 @@ const parseDateRangeStart = (dateRange: string): number => {
   return match ? parseInt(match[1]) : 999;
 };
 
-// Get the last day of a month (0-indexed month)
 const getMonthEndDay = (monthIndex: number): number => {
   const year = new Date().getFullYear();
   return new Date(year, monthIndex + 1, 0).getDate();
 };
 
-// Format date range to show proper month end
 const formatDateRange = (dateRange: string, monthIndex: number): string => {
   const endDay = getMonthEndDay(monthIndex);
-  // If range starts at 24 and goes to end, show actual month end
   if (dateRange.startsWith('24-') || dateRange.startsWith('24 ')) {
     return `24-${endDay}`;
   }
   return dateRange;
+};
+
+// Image carousel component
+const ImageCarousel = ({ photos }: { photos: any[] }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const touchStartX = useRef(0);
+
+  useEffect(() => {
+    if (photos.length <= 1) return;
+    intervalRef.current = setInterval(() => {
+      setCurrentIndex(prev => (prev + 1) % photos.length);
+    }, 4000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [photos.length]);
+
+  const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) setCurrentIndex(prev => (prev + 1) % photos.length);
+      else setCurrentIndex(prev => (prev - 1 + photos.length) % photos.length);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      intervalRef.current = setInterval(() => setCurrentIndex(prev => (prev + 1) % photos.length), 4000);
+    }
+  };
+
+  return (
+    <div className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden bg-gray-100" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      {photos.map((photo, i) => (
+        <img
+          key={photo.id}
+          src={photo.photo_url}
+          alt={photo.caption || 'Mosque'}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${i === currentIndex ? 'opacity-100' : 'opacity-0'}`}
+          loading="lazy"
+        />
+      ))}
+      {photos.length > 1 && (
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+          {photos.map((_, i) => (
+            <button key={i} onClick={() => setCurrentIndex(i)} className={`w-2 h-2 rounded-full transition-all ${i === currentIndex ? 'bg-white scale-125' : 'bg-white/50'}`} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
 
 export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: MosqueDetailsScreenProps) => {
@@ -62,7 +106,6 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
   const now = new Date();
   const currentMonthIndex = now.getMonth();
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(currentMonthIndex);
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
   const location = useMemo(() => locations?.find(l => l.id === locationId), [locations, locationId]);
 
@@ -83,7 +126,6 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
     enabled: !!locationId,
   });
 
-
   const { data: prayerTimes, isLoading: timesLoading } = useQuery({
     queryKey: ['mosque-prayer-times', locationId, selectedMonth],
     queryFn: async () => {
@@ -99,7 +141,6 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
     enabled: !!locationId,
   });
 
-  // Sort prayer times by date range start number
   const sortedPrayerTimes = useMemo(() => {
     if (!prayerTimes) return [];
     return [...prayerTimes].sort((a, b) => parseDateRangeStart(a.date_range) - parseDateRangeStart(b.date_range));
@@ -169,7 +210,6 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
   const canGoBack = selectedMonthIndex > 0;
   const canGoForward = selectedMonthIndex < 11;
 
-  // Get special prayer times (ishraq, tahajjud)
   const getIshraqTime = (sunriseTime: string | null | undefined) => {
     if (!sunriseTime) return null;
     const [h, m] = sunriseTime.split(':').map(Number);
@@ -183,7 +223,6 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
     if (pt?.tahajjud_start && pt?.tahajjud_end) {
       return { start: pt.tahajjud_start, end: pt.tahajjud_end };
     }
-    // Default: 1:30 AM to 20 min before Fajr
     const fajrTime = pt?.fajr_adhan;
     if (!fajrTime) return { start: '01:30', end: '04:40' };
     const [h, m] = fajrTime.split(':').map(Number);
@@ -195,28 +234,27 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 pb-28">
-      {/* Map Header */}
+      {/* Header with back/share */}
       <div className="relative bg-gradient-to-br from-blue-500 to-indigo-600 p-4 pt-6">
-        <div className="absolute top-6 left-4 z-10 flex gap-2">
+        <div className="flex items-center justify-between">
           <button onClick={onBack} className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
+          <button onClick={handleShare} className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
+            <Share2 className="w-5 h-5 text-white" />
+          </button>
         </div>
-        <button onClick={handleShare} className="absolute top-6 right-4 z-10 p-2 bg-white/20 backdrop-blur-sm rounded-xl">
-          <Share2 className="w-5 h-5 text-white" />
-        </button>
 
-        <div className="mt-10 rounded-2xl overflow-hidden shadow-lg" style={{ height: '200px' }}>
-          <iframe
-            src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${location.latitude},${location.longitude}&zoom=15`}
-            width="100%"
-            height="100%"
-            style={{ border: 0 }}
-            allowFullScreen
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            title="Mosque location"
-          />
+        {/* Image carousel or placeholder */}
+        <div className="mt-3">
+          {photos && photos.length > 0 ? (
+            <ImageCarousel photos={photos} />
+          ) : (
+            <div className="w-full aspect-[16/9] rounded-2xl bg-white/10 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
+              <ImageIcon className="w-10 h-10 text-white/40" />
+              <p className="text-xs text-white/50">No photos available</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -236,32 +274,27 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
           <div className="flex flex-wrap gap-2 mb-4">
             {location.women_prayer_hall && (
               <div className="inline-flex items-center gap-1.5 bg-purple-50 border border-purple-100 text-purple-700 text-xs font-medium px-3 py-1.5 rounded-xl">
-                <Users className="w-3 h-3" />
-                Women Prayer Hall
+                <Users className="w-3 h-3" /> Women Prayer Hall
               </div>
             )}
             {location.sahar_food_availability && (
               <div className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-medium px-3 py-1.5 rounded-xl">
-                <Utensils className="w-3 h-3" />
-                Sahar Food Available
+                <Utensils className="w-3 h-3" /> Sahar Food Available
               </div>
             )}
             {location.parking_available && (
               <div className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-100 text-blue-700 text-xs font-medium px-3 py-1.5 rounded-xl">
-                <Car className="w-3 h-3" />
-                Parking
+                <Car className="w-3 h-3" /> Parking
               </div>
             )}
             {location.ac_available && (
               <div className="inline-flex items-center gap-1.5 bg-cyan-50 border border-cyan-100 text-cyan-700 text-xs font-medium px-3 py-1.5 rounded-xl">
-                <Wind className="w-3 h-3" />
-                AC
+                <Wind className="w-3 h-3" /> AC
               </div>
             )}
             {location.wheelchair_accessible && (
               <div className="inline-flex items-center gap-1.5 bg-orange-50 border border-orange-100 text-orange-700 text-xs font-medium px-3 py-1.5 rounded-xl">
-                <Accessibility className="w-3 h-3" />
-                Wheelchair Access
+                <Accessibility className="w-3 h-3" /> Wheelchair Access
               </div>
             )}
           </div>
@@ -270,7 +303,6 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
             <p className="text-xs text-gray-500 mb-3">🏛️ Capacity: {location.mosque_capacity}</p>
           )}
 
-          {/* Contact Info */}
           {location.sahar_food_contact_number && (
             <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
               <Phone className="w-4 h-4 text-gray-400" />
@@ -303,38 +335,7 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
           </div>
         </div>
 
-        {/* Photo Gallery */}
-        {photos && photos.length > 0 && (
-          <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
-            <h2 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
-              <Camera className="w-4 h-4 text-blue-500" />
-              Photos ({photos.length})
-            </h2>
-            <div className="grid grid-cols-3 gap-2">
-              {photos.map((photo: any) => (
-                <button
-                  key={photo.id}
-                  onClick={() => setSelectedPhoto(photo.photo_url)}
-                  className="aspect-square rounded-xl overflow-hidden border border-gray-100"
-                >
-                  <img src={photo.photo_url} alt={photo.caption || 'Mosque'} className="w-full h-full object-cover" loading="lazy" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Photo Lightbox */}
-        {selectedPhoto && (
-          <div
-            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-            onClick={() => setSelectedPhoto(null)}
-          >
-            <img src={selectedPhoto} alt="Mosque" className="max-w-full max-h-[80vh] rounded-2xl object-contain" />
-          </div>
-        )}
-        {/* Today's Prayer Times - Combined with special prayers */}
-
+        {/* Today's Prayer Times */}
         {isCurrentMonth && (
           <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
             <h2 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -411,14 +412,14 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
                 {/* Tharaweeh */}
                 {isRamadan && currentPrayerTime.tharaweeh && (
                   <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-gradient-to-r from-purple-100 to-violet-100 border border-purple-200">
-                    <span className="font-bold text-sm text-purple-800 w-20">Tharaweeh</span>
+                    <span className="font-bold text-sm text-purple-800 w-20">Taraweeh</span>
                     <div className="text-sm text-center">
                       <p className="font-bold text-purple-700">{formatTime(currentPrayerTime.tharaweeh)}</p>
                     </div>
                   </div>
                 )}
 
-                {/* Special prayers displayed like other prayers */}
+                {/* Special prayers */}
                 {(() => {
                   const ishraq = (currentPrayerTime as any).ishraq_time || getIshraqTime(currentPrayerTime.sun_rise);
                   const tahajjud = getTahajjudTimes(currentPrayerTime);
@@ -539,7 +540,7 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
                         <p className="font-bold">{formatTime(isRamadan && pt.isha_ramadan_iqamah ? pt.isha_ramadan_iqamah : pt.isha_iqamah)}</p>
                       </div>
                     </div>
-                    {/* Ramadan extra times in monthly schedule */}
+                    {/* Ramadan extra times in monthly schedule - FIXED: no duplicate labels */}
                     {isRamadan && (pt.sahar_end || (pt as any).ifthar_time || pt.tharaweeh) && (
                       <div className="grid grid-cols-3 gap-1 text-center mt-2 pt-2 border-t border-dashed" style={{ borderColor: isCurrentRange ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)' }}>
                         {pt.sahar_end && (
@@ -569,6 +570,28 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
           ) : (
             <p className="text-sm text-gray-400 text-center py-6">No schedule available for {selectedMonth}</p>
           )}
+        </div>
+
+        {/* Map at bottom */}
+        <div className="bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm">
+          <div className="p-4 pb-2">
+            <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-blue-500" />
+              Location
+            </h2>
+          </div>
+          <div style={{ height: '200px' }}>
+            <iframe
+              src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${location.latitude},${location.longitude}&zoom=15`}
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              title="Mosque location"
+            />
+          </div>
         </div>
       </div>
     </div>

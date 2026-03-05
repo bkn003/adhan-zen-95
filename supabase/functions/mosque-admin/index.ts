@@ -17,7 +17,55 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    const SUPER_ADMIN_PASSWORD = Deno.env.get("SUPER_ADMIN_PASSWORD") || "AdhanZen@SuperAdmin2025";
+
     const { action, username, password, location_id, data } = await req.json();
+
+    // Server-side super admin authentication
+    if (action === "super_admin_login") {
+      if (password !== SUPER_ADMIN_PASSWORD) {
+        return new Response(
+          JSON.stringify({ error: "Invalid super admin password" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Super admin: add prayer times for a mosque (used during mosque creation wizard)
+    if (action === "super_add_prayer_times") {
+      if (!location_id || !data?.month || !data?.date_range) {
+        return new Response(
+          JSON.stringify({ error: "Missing location_id, month, or date_range" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { month, date_range, ...rawFields } = data;
+      const ptFields: Record<string, any> = {};
+      for (const [key, value] of Object.entries(rawFields)) {
+        ptFields[key] = (value === "" || value === undefined) ? null : value;
+      }
+
+      const { error } = await supabase
+        .from("prayer_times")
+        .insert({ ...ptFields, location_id, month, date_range });
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (action === "login") {
       // Verify credentials using the DB function
