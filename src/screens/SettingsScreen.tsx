@@ -1,17 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Calendar, Volume2, Clock, Moon, Bell, ChevronRight, Settings as SettingsIcon, RefreshCw, VolumeX, Sunrise, Sun, Sunset, Home, Globe } from 'lucide-react';
+import { MapPin, Volume2, Clock, Moon, Bell, ChevronRight, Settings as SettingsIcon, VolumeX, Sunrise, Sun, Sunset, Home, Globe } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { LANGUAGE_LABELS } from '@/i18n/translations';
 import type { Language } from '@/i18n/translations';
 import { LocationSelector } from '@/components/LocationSelector';
-import { HijriAdjustment } from '@/components/HijriAdjustment';
 import { useLocations } from '@/hooks/useLocations';
 import type { Location } from '@/types/prayer.types';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -19,7 +14,6 @@ import { Capacitor } from '@capacitor/core';
 import { AdhanSoundSelector } from '@/components/AdhanSoundSelector';
 import { VibrationSelector } from '@/components/VibrationSelector';
 
-// Modern Settings Card Component
 const SettingsCard = ({
   children,
   title,
@@ -44,7 +38,6 @@ const SettingsCard = ({
   </div>
 );
 
-// Modern Toggle Item Component
 const ToggleItem = ({
   icon: Icon,
   label,
@@ -79,16 +72,13 @@ const ToggleItem = ({
   </div>
 );
 
-// Prayer DND Toggle Item
 const PrayerDndToggle = ({
   prayerName,
-  tamilName,
   icon: Icon,
   checked,
   onChange,
 }: {
   prayerName: string;
-  tamilName: string;
   icon: React.ElementType;
   checked: boolean;
   onChange: (checked: boolean) => void;
@@ -96,25 +86,15 @@ const PrayerDndToggle = ({
   <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-gray-100">
     <div className="flex items-center gap-2">
       <Icon className="w-4 h-4 text-gray-500" />
-      <div>
-        <span className="text-sm font-medium text-gray-700">{prayerName}</span>
-        <span className="text-xs text-gray-400 ml-1">{tamilName}</span>
-      </div>
+      <span className="text-sm font-medium text-gray-700">{prayerName}</span>
     </div>
-    <Switch
-      checked={checked}
-      onCheckedChange={onChange}
-      className="data-[state=checked]:bg-violet-500"
-    />
+    <Switch checked={checked} onCheckedChange={onChange} className="data-[state=checked]:bg-violet-500" />
   </div>
 );
 
 export const SettingsScreen = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [mohallaLocation, setMohallaLocation] = useState<Location | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [isRamadanMode, setIsRamadanMode] = useState(false);
-  const [isSaharEndEnabled, setIsSaharEndEnabled] = useState(true);
   const [adhanVolume, setAdhanVolume] = useState(50);
   const [prayerAlarmEnabled, setPrayerAlarmEnabled] = useState(false);
 
@@ -123,28 +103,17 @@ export const SettingsScreen = () => {
   const [dndBeforeIqamah, setDndBeforeIqamah] = useState(5);
   const [dndAfterIqamah, setDndAfterIqamah] = useState(15);
   const [dndPerPrayer, setDndPerPrayer] = useState({
-    fajr: true,
-    dhuhr: true,
-    asr: true,
-    maghrib: true,
-    isha: true,
+    fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true,
   });
   const [dndPermissionGranted, setDndPermissionGranted] = useState(true);
   const [showDndPermissionPrompt, setShowDndPermissionPrompt] = useState(false);
 
   const { data: locations } = useLocations();
-  const {
-    permission,
-    supported,
-    enabled: notificationsEnabled,
-    enableNotifications,
-    disableNotifications
-  } = useNotifications();
+  const { permission, supported, enabled: notificationsEnabled, enableNotifications, disableNotifications } = useNotifications();
 
   const isNative = Capacitor.isNativePlatform();
   const { t, language, setLanguage } = useLanguage();
 
-  // Load persisted settings
   useEffect(() => {
     const persistedLocationId = localStorage.getItem('selectedLocationId');
     if (persistedLocationId && locations) {
@@ -152,30 +121,18 @@ export const SettingsScreen = () => {
       if (location) setSelectedLocation(location);
     }
 
-    // Load My Mohalla
     const mohallaId = localStorage.getItem('myMohallaId');
     if (mohallaId && locations) {
       const mohalla = locations.find(loc => loc.id === mohallaId);
       if (mohalla) setMohallaLocation(mohalla);
     }
 
-    // Load prayer alarm setting
     const savedAlarm = localStorage.getItem('prayerAlarmEnabled');
     if (savedAlarm !== null) setPrayerAlarmEnabled(savedAlarm === 'true');
-
-    const savedDate = sessionStorage.getItem('selectedDate');
-    if (savedDate) setSelectedDate(new Date(savedDate));
-
-    const savedRamadanMode = localStorage.getItem('isRamadan');
-    if (savedRamadanMode !== null) setIsRamadanMode(savedRamadanMode === 'true');
-
-    const savedSaharEnd = localStorage.getItem('showSahar');
-    if (savedSaharEnd !== null) setIsSaharEndEnabled(savedSaharEnd === 'true');
 
     const savedAdhanVolume = localStorage.getItem('adhanVolume');
     if (savedAdhanVolume) setAdhanVolume(parseInt(savedAdhanVolume));
 
-    // Load DND settings
     const savedDndEnabled = localStorage.getItem('dndEnabled');
     if (savedDndEnabled !== null) setDndEnabled(savedDndEnabled === 'true');
 
@@ -187,30 +144,20 @@ export const SettingsScreen = () => {
 
     const savedDndPerPrayer = localStorage.getItem('dndPerPrayer');
     if (savedDndPerPrayer) {
-      try {
-        setDndPerPrayer(JSON.parse(savedDndPerPrayer));
-      } catch (e) { }
+      try { setDndPerPrayer(JSON.parse(savedDndPerPrayer)); } catch (e) { }
     }
 
-    // Check actual DND permission status from system
     const checkDndPermissionStatus = async () => {
       if (isNative) {
         try {
           const { checkDndPermission } = await import('@/native/dndService');
           const hasPermission = await checkDndPermission();
           setDndPermissionGranted(hasPermission);
-
-          // If user had DND enabled but permission is now revoked, update state
           if (!hasPermission && savedDndEnabled === 'true') {
-            // Don't auto-disable, just show prompt
             const skipPrompt = localStorage.getItem('dnd_permission_prompt_skipped');
-            if (!skipPrompt) {
-              setShowDndPermissionPrompt(true);
-            }
+            if (!skipPrompt) setShowDndPermissionPrompt(true);
           }
-        } catch (e) {
-          console.error('Failed to check DND permission:', e);
-        }
+        } catch (e) { console.error('Failed to check DND permission:', e); }
       }
     };
     checkDndPermissionStatus();
@@ -221,64 +168,34 @@ export const SettingsScreen = () => {
     localStorage.setItem('selectedLocationId', location.id);
   };
 
-  const handleRamadanToggle = (enabled: boolean) => {
-    setIsRamadanMode(enabled);
-    localStorage.setItem('isRamadan', enabled.toString());
-    localStorage.setItem('autoRamadanOverride', 'true');
-  };
-
-  const handleSaharEndToggle = (enabled: boolean) => {
-    setIsSaharEndEnabled(enabled);
-    localStorage.setItem('showSahar', enabled.toString());
-  };
-
   const handleVolumeChange = (value: number[]) => {
     setAdhanVolume(value[0]);
     localStorage.setItem('adhanVolume', value[0].toString());
-
-    // Also update native volume setting if on Android
     if (isNative) {
-      import('@/native/dndService').then(({ setAdhanVolume }) => {
-        setAdhanVolume(value[0]);
-      });
+      import('@/native/dndService').then(({ setAdhanVolume }) => { setAdhanVolume(value[0]); });
     }
   };
 
   const handleNotificationToggle = async (enabled: boolean) => {
-    if (enabled) {
-      await enableNotifications();
-    } else {
-      disableNotifications();
-    }
-  };
-
-  const handleResetAutoRamadan = () => {
-    localStorage.removeItem('autoRamadanOverride');
-    localStorage.removeItem('isRamadan');
-    setIsRamadanMode(false);
+    if (enabled) await enableNotifications();
+    else disableNotifications();
   };
 
   const handleDndEnabledToggle = async (enabled: boolean) => {
     setDndEnabled(enabled);
     localStorage.setItem('dndEnabled', enabled.toString());
-
-    // CRITICAL: Sync to native layer so DND actually works
     await syncDndToNative(enabled, dndPerPrayer, dndBeforeIqamah, dndAfterIqamah);
   };
 
   const handleDndBeforeChange = async (value: number[]) => {
     setDndBeforeIqamah(value[0]);
     localStorage.setItem('dndBeforeIqamah', value[0].toString());
-
-    // Sync to native
     await syncDndToNative(dndEnabled, dndPerPrayer, value[0], dndAfterIqamah);
   };
 
   const handleDndAfterChange = async (value: number[]) => {
     setDndAfterIqamah(value[0]);
     localStorage.setItem('dndAfterIqamah', value[0].toString());
-
-    // Sync to native
     await syncDndToNative(dndEnabled, dndPerPrayer, dndBeforeIqamah, value[0]);
   };
 
@@ -286,57 +203,31 @@ export const SettingsScreen = () => {
     const updated = { ...dndPerPrayer, [prayer]: enabled };
     setDndPerPrayer(updated);
     localStorage.setItem('dndPerPrayer', JSON.stringify(updated));
-
-    // Sync to native
     await syncDndToNative(dndEnabled, updated, dndBeforeIqamah, dndAfterIqamah);
   };
 
-  // CRITICAL: Sync DND settings to native layer
-  const syncDndToNative = async (
-    enabled: boolean,
-    perPrayer: typeof dndPerPrayer,
-    beforeMin: number,
-    afterMin: number
-  ) => {
+  const syncDndToNative = async (enabled: boolean, perPrayer: typeof dndPerPrayer, beforeMin: number, afterMin: number) => {
     if (!isNative) return;
-
     try {
       const { Capacitor } = await import('@capacitor/core');
       const { registerPlugin } = Capacitor;
       const AdhanNative = registerPlugin('AdhanNative');
-
-      // Build array of enabled prayers
       const enabledPrayers: string[] = [];
       if (enabled) {
         Object.entries(perPrayer).forEach(([prayer, isEnabled]) => {
           if (isEnabled) enabledPrayers.push(prayer);
         });
       }
-
-      await (AdhanNative as any).saveDndSettings({
-        enabled,
-        beforeMinutes: beforeMin,
-        afterMinutes: afterMin,
-        enabledPrayers
-      });
-
-      console.log('✅ DND settings synced to native:', { enabled, enabledPrayers, beforeMin, afterMin });
-    } catch (e) {
-      console.error('❌ Failed to sync DND to native:', e);
-    }
+      await (AdhanNative as any).saveDndSettings({ enabled, beforeMinutes: beforeMin, afterMinutes: afterMin, enabledPrayers });
+    } catch (e) { console.error('Failed to sync DND:', e); }
   };
 
-  // Sync DND settings on initial load
   useEffect(() => {
     if (isNative) {
-      // Small delay to ensure settings are loaded
-      const timer = setTimeout(() => {
-        syncDndToNative(dndEnabled, dndPerPrayer, dndBeforeIqamah, dndAfterIqamah);
-      }, 1000);
+      const timer = setTimeout(() => { syncDndToNative(dndEnabled, dndPerPrayer, dndBeforeIqamah, dndAfterIqamah); }, 1000);
       return () => clearTimeout(timer);
     }
   }, [isNative]);
-
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/30 p-3 pb-28 space-y-3">
@@ -349,9 +240,7 @@ export const SettingsScreen = () => {
           <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl mx-auto mb-2 flex items-center justify-center">
             <SettingsIcon className="w-6 h-6 text-white" />
           </div>
-          <h2 className="text-xl font-bold text-white">
-            {t('settings')}
-          </h2>
+          <h2 className="text-xl font-bold text-white">{t('settings')}</h2>
         </div>
       </div>
 
@@ -378,7 +267,7 @@ export const SettingsScreen = () => {
         <LocationSelector selectedLocation={selectedLocation} onLocationChange={handleLocationChange} />
       </SettingsCard>
 
-      {/* My Mohalla / Mosque */}
+      {/* My Mohalla */}
       <SettingsCard title={t('myMohalla')} icon={Home} gradient="from-emerald-50/50 to-white">
         <div className="space-y-2">
           <p className="text-xs text-gray-500">{t('setHomeMosque')}</p>
@@ -391,69 +280,9 @@ export const SettingsScreen = () => {
           />
           {mohallaLocation && (
             <div className="p-2 bg-emerald-50 rounded-xl">
-              <p className="text-xs text-emerald-700 font-medium">
-                ✅ {mohallaLocation.mosque_name}
-              </p>
+              <p className="text-xs text-emerald-700 font-medium">✅ {mohallaLocation.mosque_name}</p>
             </div>
           )}
-        </div>
-      </SettingsCard>
-
-      <SettingsCard title={t('dateSelection')} icon={Calendar} gradient="from-amber-50/50 to-white">
-        <div className="space-y-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-between text-left font-normal rounded-xl h-11 border-gray-200",
-                  !selectedDate && "text-muted-foreground"
-                )}
-              >
-                <span className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-gray-400" />
-                  {selectedDate ? format(selectedDate, "PPP") : t('selectDate')}
-                </span>
-                <ChevronRight className="h-4 w-4 text-gray-400" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <CalendarComponent
-                mode="single"
-                selected={selectedDate}
-                onSelect={date => {
-                  setSelectedDate(date);
-                  if (date) sessionStorage.setItem('selectedDate', date.toISOString());
-                }}
-                initialFocus
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
-
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => {
-                const today = new Date();
-                setSelectedDate(today);
-                sessionStorage.setItem('selectedDate', today.toISOString());
-              }}
-              className="py-2.5 px-3 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-semibold active:scale-95"
-            >
-              {t('today')}
-            </button>
-            <button
-              onClick={() => {
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                setSelectedDate(tomorrow);
-                sessionStorage.setItem('selectedDate', tomorrow.toISOString());
-              }}
-              className="py-2.5 px-3 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold active:scale-95"
-            >
-              {t('tomorrow')}
-            </button>
-          </div>
         </div>
       </SettingsCard>
 
@@ -461,14 +290,10 @@ export const SettingsScreen = () => {
       {showDndPermissionPrompt && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm">
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-amber-100 rounded-xl">
-              <VolumeX className="w-5 h-5 text-amber-600" />
-            </div>
+            <div className="p-2 bg-amber-100 rounded-xl"><VolumeX className="w-5 h-5 text-amber-600" /></div>
             <div className="flex-1">
               <h3 className="text-sm font-bold text-amber-800">DND Permission Required</h3>
-              <p className="text-xs text-amber-700 mt-1">
-                Auto-silence during prayer requires DND permission. Please enable it in settings.
-              </p>
+              <p className="text-xs text-amber-700 mt-1">Auto-silence during prayer requires DND permission.</p>
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={async () => {
@@ -477,21 +302,16 @@ export const SettingsScreen = () => {
                     setShowDndPermissionPrompt(false);
                   }}
                   className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-semibold"
-                >
-                  Enable Now
-                </button>
+                >Enable Now</button>
                 <button
                   onClick={() => {
                     localStorage.setItem('dnd_permission_prompt_skipped', 'true');
                     setShowDndPermissionPrompt(false);
-                    // Also disable DND in app since no permission
                     setDndEnabled(false);
                     localStorage.setItem('dndEnabled', 'false');
                   }}
                   className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold"
-                >
-                  Skip
-                </button>
+                >Skip</button>
               </div>
             </div>
           </div>
@@ -502,15 +322,11 @@ export const SettingsScreen = () => {
       {isNative && (
         <SettingsCard title={t('dndMode')} icon={VolumeX} gradient="from-violet-50/50 to-white">
           <div className="space-y-3">
-            {/* Permission Warning */}
             {!dndPermissionGranted && (
               <div className="p-2 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-xs text-red-600 font-medium">
-                  ⚠️ DND permission not granted. Enable in system settings.
-                </p>
+                <p className="text-xs text-red-600 font-medium">⚠️ DND permission not granted.</p>
               </div>
             )}
-
             <ToggleItem
               icon={VolumeX}
               label={t('enableAutoDnd')}
@@ -518,138 +334,46 @@ export const SettingsScreen = () => {
               checked={dndEnabled}
               onChange={async (enabled) => {
                 if (enabled && !dndPermissionGranted) {
-                  // Try to request permission first
                   const { requestDndPermission, checkDndPermission } = await import('@/native/dndService');
                   await requestDndPermission();
                   const hasPermission = await checkDndPermission();
                   setDndPermissionGranted(hasPermission);
-                  if (!hasPermission) {
-                    // Permission still not granted, don't enable
-                    return;
-                  }
+                  if (!hasPermission) return;
                 }
                 handleDndEnabledToggle(enabled);
               }}
             />
-
             {dndEnabled && (
               <>
-                {/* Time Adjustments */}
                 <div className="p-3 bg-white rounded-xl border border-gray-100 space-y-3">
                   <div>
                     <div className="flex justify-between text-sm mb-2">
                       <span className="text-gray-600">{t('activateDndBefore')}</span>
                       <span className="font-bold text-violet-600">{dndBeforeIqamah} min</span>
                     </div>
-                    <Slider
-                      value={[dndBeforeIqamah]}
-                      onValueChange={handleDndBeforeChange}
-                      max={15}
-                      min={0}
-                      step={1}
-                      className="w-full"
-                    />
+                    <Slider value={[dndBeforeIqamah]} onValueChange={handleDndBeforeChange} max={15} min={0} step={1} />
                   </div>
-
                   <div>
                     <div className="flex justify-between text-sm mb-2">
                       <span className="text-gray-600">{t('deactivateDndAfter')}</span>
                       <span className="font-bold text-violet-600">{dndAfterIqamah} min</span>
                     </div>
-                    <Slider
-                      value={[dndAfterIqamah]}
-                      onValueChange={handleDndAfterChange}
-                      max={30}
-                      min={5}
-                      step={1}
-                      className="w-full"
-                    />
+                    <Slider value={[dndAfterIqamah]} onValueChange={handleDndAfterChange} max={30} min={5} step={1} />
                   </div>
                 </div>
-
-                {/* Per-Prayer Toggles */}
                 <div className="space-y-2">
                   <p className="text-xs text-gray-500 font-medium px-1">{t('enableDndPerPrayer')}</p>
-                  <PrayerDndToggle
-                    prayerName={t('fajr')}
-                    tamilName=""
-                    icon={Sunrise}
-                    checked={dndPerPrayer.fajr}
-                    onChange={(v) => handlePrayerDndToggle('fajr', v)}
-                  />
-                  <PrayerDndToggle
-                    prayerName={t('dhuhr')}
-                    tamilName=""
-                    icon={Sun}
-                    checked={dndPerPrayer.dhuhr}
-                    onChange={(v) => handlePrayerDndToggle('dhuhr', v)}
-                  />
-                  <PrayerDndToggle
-                    prayerName={t('asr')}
-                    tamilName=""
-                    icon={Sun}
-                    checked={dndPerPrayer.asr}
-                    onChange={(v) => handlePrayerDndToggle('asr', v)}
-                  />
-                  <PrayerDndToggle
-                    prayerName={t('maghrib')}
-                    tamilName=""
-                    icon={Sunset}
-                    checked={dndPerPrayer.maghrib}
-                    onChange={(v) => handlePrayerDndToggle('maghrib', v)}
-                  />
-                  <PrayerDndToggle
-                    prayerName={t('isha')}
-                    tamilName=""
-                    icon={Moon}
-                    checked={dndPerPrayer.isha}
-                    onChange={(v) => handlePrayerDndToggle('isha', v)}
-                  />
+                  <PrayerDndToggle prayerName={t('fajr')} icon={Sunrise} checked={dndPerPrayer.fajr} onChange={(v) => handlePrayerDndToggle('fajr', v)} />
+                  <PrayerDndToggle prayerName={t('dhuhr')} icon={Sun} checked={dndPerPrayer.dhuhr} onChange={(v) => handlePrayerDndToggle('dhuhr', v)} />
+                  <PrayerDndToggle prayerName={t('asr')} icon={Sun} checked={dndPerPrayer.asr} onChange={(v) => handlePrayerDndToggle('asr', v)} />
+                  <PrayerDndToggle prayerName={t('maghrib')} icon={Sunset} checked={dndPerPrayer.maghrib} onChange={(v) => handlePrayerDndToggle('maghrib', v)} />
+                  <PrayerDndToggle prayerName={t('isha')} icon={Moon} checked={dndPerPrayer.isha} onChange={(v) => handlePrayerDndToggle('isha', v)} />
                 </div>
               </>
             )}
           </div>
         </SettingsCard>
       )}
-
-      {/* Prayer Settings */}
-      <SettingsCard title={t('prayerSettings')} icon={Moon} gradient="from-purple-50/50 to-white">
-        <div className="space-y-2">
-          <ToggleItem
-            icon={Moon}
-            label={t('ramadanMode')}
-            sublabel=""
-            checked={isRamadanMode}
-            onChange={handleRamadanToggle}
-          />
-
-          {isRamadanMode && (
-            <ToggleItem
-              icon={Clock}
-              label={t('saharEndTime')}
-              sublabel=""
-              checked={isSaharEndEnabled}
-              onChange={handleSaharEndToggle}
-            />
-          )}
-
-          <button
-            onClick={handleResetAutoRamadan}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium active:scale-98"
-          >
-            <RefreshCw className="w-4 h-4" />
-            {t('resetAutoDetect')}
-          </button>
-        </div>
-      </SettingsCard>
-
-      {/* Hijri Date Adjustment */}
-      <SettingsCard title={t('hijriAdjust')} icon={Calendar} gradient="from-teal-50/50 to-white">
-        <HijriAdjustment />
-        <p className="text-xs text-gray-500 mt-2 text-center">
-          {t('adjustMoonSighting')}
-        </p>
-      </SettingsCard>
 
       {/* Notifications */}
       <SettingsCard title={t('adhanNotifications')} icon={Bell} gradient="from-rose-50/50 to-white">
@@ -659,7 +383,6 @@ export const SettingsScreen = () => {
               <p className="text-xs text-red-600">Notifications not supported</p>
             </div>
           )}
-
           <ToggleItem
             icon={Bell}
             label={t('enableNotifications')}
@@ -668,48 +391,29 @@ export const SettingsScreen = () => {
             onChange={handleNotificationToggle}
             disabled={!supported || permission === 'denied'}
           />
-
-          {/* Full-screen Prayer Alarm Toggle */}
           <ToggleItem
             icon={Volume2}
             label={t('fullScreenAlarm')}
-            sublabel=""
             checked={prayerAlarmEnabled}
             onChange={(enabled) => {
               setPrayerAlarmEnabled(enabled);
               localStorage.setItem('prayerAlarmEnabled', enabled.toString());
-              if (enabled) {
-                enableNotifications();
-              }
+              if (enabled) enableNotifications();
             }}
             disabled={!supported}
           />
-
           {isNative && notificationsEnabled && (
             <div className="p-3 bg-white rounded-xl border border-gray-100">
               <AdhanSoundSelector />
             </div>
           )}
-
-          {isNative && (
-            <VibrationSelector />
-          )}
-
+          {isNative && <VibrationSelector />}
           <div className="p-3 bg-white rounded-xl border border-gray-100">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-gray-600">Volume</span>
-              <span className="text-sm font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded">
-                {adhanVolume}%
-              </span>
+              <span className="text-sm font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded">{adhanVolume}%</span>
             </div>
-            <Slider
-              value={[adhanVolume]}
-              onValueChange={handleVolumeChange}
-              max={100}
-              min={0}
-              step={5}
-              className="w-full"
-            />
+            <Slider value={[adhanVolume]} onValueChange={handleVolumeChange} max={100} min={0} step={5} />
           </div>
         </div>
       </SettingsCard>
@@ -719,18 +423,14 @@ export const SettingsScreen = () => {
         <div className="space-y-2">
           <p className="text-xs text-gray-500">Login to manage your mosque's prayer times and info.</p>
           <button
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent('navigate-admin'));
-            }}
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate-admin'))}
             className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
           >
             <SettingsIcon className="w-4 h-4" />
             {t('openAdminPanel')}
           </button>
           <button
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent('navigate-super-admin'));
-            }}
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate-super-admin'))}
             className="w-full py-2 px-3 bg-gray-100 text-gray-600 rounded-xl text-xs font-medium flex items-center justify-center gap-2"
           >
             {t('superAdmin')}

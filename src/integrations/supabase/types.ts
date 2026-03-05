@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          created_at: string | null
+          device_id: string | null
+          event_type: string
+          id: string
+          location_id: string | null
+          metadata: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_id?: string | null
+          event_type: string
+          id?: string
+          location_id?: string | null
+          metadata?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          device_id?: string | null
+          event_type?: string
+          id?: string
+          location_id?: string | null
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string | null
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string | null
+          value: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       custom_filters: {
         Row: {
           color: string | null
@@ -89,6 +142,7 @@ export type Database = {
           created_at: string | null
           district: string
           id: string
+          is_paused: boolean | null
           is_visible: boolean | null
           latitude: number
           longitude: number
@@ -98,6 +152,7 @@ export type Database = {
           sahar_food_availability: boolean | null
           sahar_food_contact_number: string | null
           sahar_food_time: string | null
+          show_month_schedule: boolean | null
           updated_at: string | null
           wheelchair_accessible: boolean | null
           women_prayer_hall: boolean | null
@@ -110,6 +165,7 @@ export type Database = {
           created_at?: string | null
           district: string
           id?: string
+          is_paused?: boolean | null
           is_visible?: boolean | null
           latitude: number
           longitude: number
@@ -119,6 +175,7 @@ export type Database = {
           sahar_food_availability?: boolean | null
           sahar_food_contact_number?: string | null
           sahar_food_time?: string | null
+          show_month_schedule?: boolean | null
           updated_at?: string | null
           wheelchair_accessible?: boolean | null
           women_prayer_hall?: boolean | null
@@ -131,6 +188,7 @@ export type Database = {
           created_at?: string | null
           district?: string
           id?: string
+          is_paused?: boolean | null
           is_visible?: boolean | null
           latitude?: number
           longitude?: number
@@ -140,11 +198,44 @@ export type Database = {
           sahar_food_availability?: boolean | null
           sahar_food_contact_number?: string | null
           sahar_food_time?: string | null
+          show_month_schedule?: boolean | null
           updated_at?: string | null
           wheelchair_accessible?: boolean | null
           women_prayer_hall?: boolean | null
         }
         Relationships: []
+      }
+      mosque_announcements: {
+        Row: {
+          body: string
+          created_at: string | null
+          id: string
+          location_id: string | null
+          title: string
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          id?: string
+          location_id?: string | null
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          id?: string
+          location_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mosque_announcements_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       mosque_photos: {
         Row: {
@@ -181,30 +272,65 @@ export type Database = {
           },
         ]
       }
+      mosque_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string | null
+          device_id: string
+          id: string
+          location_id: string
+          rating: number
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string | null
+          device_id: string
+          id?: string
+          location_id: string
+          rating: number
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string | null
+          device_id?: string
+          id?: string
+          location_id?: string
+          rating?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mosque_reviews_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prayer_times: {
         Row: {
-          asr_adhan: string
-          asr_iqamah: string
+          asr_adhan: string | null
+          asr_iqamah: string | null
           created_at: string | null
           date_from: string | null
           date_range: string
           date_to: string | null
-          dhuhr_adhan: string
-          dhuhr_iqamah: string
-          fajr_adhan: string
-          fajr_iqamah: string
+          dhuhr_adhan: string | null
+          dhuhr_iqamah: string | null
+          fajr_adhan: string | null
+          fajr_iqamah: string | null
           fajr_ramadan_iqamah: string | null
           id: string
           ifthar_time: string | null
-          isha_adhan: string
-          isha_iqamah: string
+          isha_adhan: string | null
+          isha_iqamah: string | null
           isha_ramadan_iqamah: string | null
           ishraq_time: string | null
           jummah_adhan: string | null
           jummah_iqamah: string | null
           location_id: string | null
-          maghrib_adhan: string
-          maghrib_iqamah: string
+          maghrib_adhan: string | null
+          maghrib_iqamah: string | null
           maghrib_ramadan_adhan: string | null
           maghrib_ramadan_iqamah: string | null
           mid_noon: string | null
@@ -217,28 +343,28 @@ export type Database = {
           tharaweeh: string | null
         }
         Insert: {
-          asr_adhan: string
-          asr_iqamah: string
+          asr_adhan?: string | null
+          asr_iqamah?: string | null
           created_at?: string | null
           date_from?: string | null
           date_range: string
           date_to?: string | null
-          dhuhr_adhan: string
-          dhuhr_iqamah: string
-          fajr_adhan: string
-          fajr_iqamah: string
+          dhuhr_adhan?: string | null
+          dhuhr_iqamah?: string | null
+          fajr_adhan?: string | null
+          fajr_iqamah?: string | null
           fajr_ramadan_iqamah?: string | null
           id?: string
           ifthar_time?: string | null
-          isha_adhan: string
-          isha_iqamah: string
+          isha_adhan?: string | null
+          isha_iqamah?: string | null
           isha_ramadan_iqamah?: string | null
           ishraq_time?: string | null
           jummah_adhan?: string | null
           jummah_iqamah?: string | null
           location_id?: string | null
-          maghrib_adhan: string
-          maghrib_iqamah: string
+          maghrib_adhan?: string | null
+          maghrib_iqamah?: string | null
           maghrib_ramadan_adhan?: string | null
           maghrib_ramadan_iqamah?: string | null
           mid_noon?: string | null
@@ -251,28 +377,28 @@ export type Database = {
           tharaweeh?: string | null
         }
         Update: {
-          asr_adhan?: string
-          asr_iqamah?: string
+          asr_adhan?: string | null
+          asr_iqamah?: string | null
           created_at?: string | null
           date_from?: string | null
           date_range?: string
           date_to?: string | null
-          dhuhr_adhan?: string
-          dhuhr_iqamah?: string
-          fajr_adhan?: string
-          fajr_iqamah?: string
+          dhuhr_adhan?: string | null
+          dhuhr_iqamah?: string | null
+          fajr_adhan?: string | null
+          fajr_iqamah?: string | null
           fajr_ramadan_iqamah?: string | null
           id?: string
           ifthar_time?: string | null
-          isha_adhan?: string
-          isha_iqamah?: string
+          isha_adhan?: string | null
+          isha_iqamah?: string | null
           isha_ramadan_iqamah?: string | null
           ishraq_time?: string | null
           jummah_adhan?: string | null
           jummah_iqamah?: string | null
           location_id?: string | null
-          maghrib_adhan?: string
-          maghrib_iqamah?: string
+          maghrib_adhan?: string | null
+          maghrib_iqamah?: string | null
           maghrib_ramadan_adhan?: string | null
           maghrib_ramadan_iqamah?: string | null
           mid_noon?: string | null
@@ -288,6 +414,88 @@ export type Database = {
           {
             foreignKeyName: "prayer_times_location_id_fkey"
             columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_tokens: {
+        Row: {
+          created_at: string | null
+          device_id: string
+          expo_push_token: string
+          id: string
+          location_id: string | null
+          platform: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_id: string
+          expo_push_token: string
+          id?: string
+          location_id?: string | null
+          platform?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_id?: string
+          expo_push_token?: string
+          id?: string
+          location_id?: string | null
+          platform?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_tokens_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_preferences: {
+        Row: {
+          created_at: string | null
+          dnd_settings: Json | null
+          id: string
+          language: string | null
+          prayer_tracker: Json | null
+          preferred_location_id: string | null
+          theme: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dnd_settings?: Json | null
+          id?: string
+          language?: string | null
+          prayer_tracker?: Json | null
+          preferred_location_id?: string | null
+          theme?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dnd_settings?: Json | null
+          id?: string
+          language?: string | null
+          prayer_tracker?: Json | null
+          preferred_location_id?: string | null
+          theme?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_preferred_location_id_fkey"
+            columns: ["preferred_location_id"]
             isOneToOne: false
             referencedRelation: "locations"
             referencedColumns: ["id"]
