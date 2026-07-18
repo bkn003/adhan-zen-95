@@ -69,7 +69,7 @@ export const LocationSelector = ({
     <div className="relative location-selector-container">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-white to-gray-50 border border-gray-200 rounded-xl hover:border-emerald-300 hover:shadow-sm transition-all"
+        className="w-full flex items-center justify-between p-2 bg-gradient-to-r from-white to-gray-50 border border-gray-200 rounded-lg hover:border-emerald-300 hover:shadow-sm transition-all"
       >
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
           <div className="p-1.5 bg-emerald-50 rounded-lg shrink-0">

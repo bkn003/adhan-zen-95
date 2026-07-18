@@ -80,73 +80,51 @@ export const NextPrayerCard = ({
   // Prayer names are kept untranslated per requirement
 
   const TimeBlock = ({ value, label }: { value: number; label: string }) => (
-    <div className="flex flex-col items-center">
-      <div className={`text-2xl font-bold font-mono tabular-nums ${isUrgent ? 'text-red-300 animate-pulse' : 'text-white'}`}>
+    <div className="flex flex-col items-center leading-none">
+      <div className={`text-base font-bold font-mono tabular-nums ${isUrgent ? 'text-red-300 animate-pulse' : 'text-white'}`}>
         {String(value).padStart(2, '0')}
       </div>
-      <div className="text-white/60 text-[10px] uppercase tracking-wider">{label}</div>
+      <div className="text-white/60 text-[8px] uppercase tracking-wider mt-0.5">{label}</div>
     </div>
   );
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${getGradient()} p-4 shadow-xl`}>
-      {/* Subtle background pattern */}
+    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${getGradient()} px-3 py-2.5 shadow-lg`}>
       <div className="absolute inset-0 opacity-5">
-        <Star className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48" />
+        <Star className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40" />
       </div>
 
-      {/* Content */}
-      <div className="relative z-10">
-        {/* Header - Compact */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/10 backdrop-blur-sm rounded-xl">
-              {getPrayerIcon()}
+      <div className="relative z-10 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="p-1.5 bg-white/15 backdrop-blur-sm rounded-lg shrink-0">
+            {getPrayerIcon()}
+          </div>
+          <div className="min-w-0">
+            <div className="text-white/70 text-[10px] font-medium leading-tight">{t('nextPrayer')}</div>
+            <div className="text-white text-base font-bold leading-tight truncate">
+              {nextPrayer.name}
             </div>
-            <div>
-              <div className="text-white/70 text-xs font-medium">{t('nextPrayer')}</div>
-              <div className="text-white text-lg font-bold tracking-tight">
-                {nextPrayer.name}
+            {selectedLocation && (
+              <div className="flex items-center gap-1 text-white/60 text-[10px] mt-0.5">
+                <div className="w-1 h-1 bg-green-300 rounded-full animate-pulse" />
+                <span className="truncate max-w-[140px]">{selectedLocation.mosque_name}</span>
               </div>
-            </div>
-          </div>
-
-          <div className="text-right">
-            <div className="text-white/60 text-[10px] uppercase tracking-wider">Adhan</div>
-            <div className="text-white text-lg font-bold">
-              {formatTo12Hour(nextPrayer.adhan)}
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Countdown Timer - Compact */}
-        <div className="bg-black/20 backdrop-blur-sm rounded-xl p-3 border border-white/10">
-          <div className="flex items-center justify-center gap-2">
-            <TimeBlock value={timeRemaining.hours} label="Hrs" />
-            <div className="text-xl text-white/50 font-light">:</div>
-            <TimeBlock value={timeRemaining.minutes} label="Min" />
-            <div className="text-xl text-white/50 font-light">:</div>
-            <TimeBlock value={timeRemaining.seconds} label="Sec" />
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <div className="text-white text-sm font-bold leading-none">
+            {formatTo12Hour(nextPrayer.adhan)}
           </div>
-
-          {/* Progress bar */}
-          <div className="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-1000 ${isUrgent ? 'bg-red-400' : 'bg-white/50'}`}
-              style={{
-                width: `${Math.max(0, 100 - ((timeRemaining.hours * 60 + timeRemaining.minutes) / 60) * 100)}%`
-              }}
-            />
+          <div className="flex items-center gap-1 bg-black/25 backdrop-blur-sm rounded-lg px-2 py-1 border border-white/10">
+            <TimeBlock value={timeRemaining.hours} label="H" />
+            <span className="text-white/50 text-xs -mt-1">:</span>
+            <TimeBlock value={timeRemaining.minutes} label="M" />
+            <span className="text-white/50 text-xs -mt-1">:</span>
+            <TimeBlock value={timeRemaining.seconds} label="S" />
           </div>
         </div>
-
-        {/* Location indicator - Compact */}
-        {selectedLocation && (
-          <div className="mt-2 flex items-center justify-center gap-1.5 text-white/50 text-xs">
-            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-            <span className="truncate max-w-[180px]">{selectedLocation.mosque_name}</span>
-          </div>
-        )}
       </div>
     </div>
   );
