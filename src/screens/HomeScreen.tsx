@@ -342,7 +342,7 @@ export const HomeScreen = ({
   const { language } = useLanguage();
   const localizedText = getLocalizedText(language);
   return <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-white">
-    <div className="p-4 space-y-4 px-[4px] py-[2px]">
+    <div className="p-4 space-y-2 px-[4px] py-[2px]">
       {/* Offline indicator */}
       <OfflineBanner />
       {/* Next Prayer Card */}
@@ -352,13 +352,14 @@ export const HomeScreen = ({
           selectedLocation={selectedLocation || undefined}
         />
       )}
-      {/* Location Selector */}
-      <div className="bg-white rounded-xl p-4 border border-green-100 shadow-sm">
+      {/* Location Selector - compact, no outer card */}
+      <div className="bg-white rounded-xl px-2 py-1.5 border border-green-100 shadow-sm">
         <LocationSelector selectedLocation={selectedLocation} onLocationChange={handleLocationChange} />
       </div>
 
       {/* Hijri Date */}
       <HijriDate selectedDate={selectedDate} />
+
 
 
       {/* Ramadan Special Times */}
