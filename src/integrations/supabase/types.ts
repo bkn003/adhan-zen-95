@@ -245,6 +245,7 @@ export type Database = {
           id: string
           location_id: string
           photo_url: string
+          storage_path: string | null
         }
         Insert: {
           caption?: string | null
@@ -253,6 +254,7 @@ export type Database = {
           id?: string
           location_id: string
           photo_url: string
+          storage_path?: string | null
         }
         Update: {
           caption?: string | null
@@ -261,6 +263,7 @@ export type Database = {
           id?: string
           location_id?: string
           photo_url?: string
+          storage_path?: string | null
         }
         Relationships: [
           {
