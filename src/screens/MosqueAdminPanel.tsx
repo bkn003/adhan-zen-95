@@ -977,8 +977,3 @@ const PhotoGrid = ({ photos, onDelete }: { photos: any[]; onDelete: (id: string)
     </div>
   );
 };
-
-      <p className="text-[10px] text-gray-400">Images auto-compressed to ~100KB each</p>
-    </div>
-  );
-};
