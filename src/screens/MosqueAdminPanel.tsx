@@ -949,21 +949,34 @@ const PhotoManager = ({ locationId, username, password }: { locationId: string; 
         </label>
       </div>
 
-      {photos && photos.length > 0 && (
-        <div className="grid grid-cols-3 gap-2">
-          {photos.map((photo: any) => (
-            <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200">
-              <img src={photo.photo_url} alt="" className="w-full h-full object-cover" />
-              <button
-                onClick={() => handleDelete(photo.id)}
-                className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+      {photos && photos.length > 0 && <PhotoGrid photos={photos} onDelete={handleDelete} />}
+
+      <p className="text-[10px] text-gray-400">Images auto-compressed to ~100KB each</p>
+    </div>
+  );
+};
+
+const PhotoGrid = ({ photos, onDelete }: { photos: any[]; onDelete: (id: string) => void }) => {
+  const signed = useSignedPhotoUrls(photos.map((p) => p.id));
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {photos.map((photo) => {
+        const src = signed[photo.id] || photo.photo_url || '';
+        return (
+          <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 bg-gray-100">
+            {src && <img src={src} alt="" className="w-full h-full object-cover" />}
+            <button
+              onClick={() => { invalidateSignedPhotoUrl(photo.id); onDelete(photo.id); }}
+              className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
       <p className="text-[10px] text-gray-400">Images auto-compressed to ~100KB each</p>
     </div>
