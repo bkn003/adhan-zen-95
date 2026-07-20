@@ -76,17 +76,23 @@ const ImageCarousel = ({ photos }: { photos: any[] }) => {
     }
   };
 
+  const signedUrls = useSignedPhotoUrls(photos.map((p: any) => p.id));
+
   return (
     <div className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden bg-gray-100" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-      {photos.map((photo, i) => (
-        <img
-          key={photo.id}
-          src={photo.photo_url}
-          alt={photo.caption || 'Mosque'}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${i === currentIndex ? 'opacity-100' : 'opacity-0'}`}
-          loading="lazy"
-        />
-      ))}
+      {photos.map((photo, i) => {
+        const src = signedUrls[photo.id] || photo.photo_url || '';
+        if (!src) return null;
+        return (
+          <img
+            key={photo.id}
+            src={src}
+            alt={photo.caption || 'Mosque'}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${i === currentIndex ? 'opacity-100' : 'opacity-0'}`}
+            loading="lazy"
+          />
+        );
+      })}
       {photos.length > 1 && (
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
           {photos.map((_, i) => (
