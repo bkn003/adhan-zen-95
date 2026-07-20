@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { TimePicker12h, formatTime12h } from '@/components/TimePicker12h';
 import { clearCacheForLocation, clearAllPrayerCache } from '@/utils/prayerCache';
 import { useCustomFilters, useLocationFilters, useSetLocationFilters } from '@/hooks/useCustomFilters';
+import { useSignedPhotoUrls, invalidateSignedPhotoUrl } from '@/utils/signedPhotoUrls';
 
 /**
  * Returns the last day of a given month name (1-indexed).
