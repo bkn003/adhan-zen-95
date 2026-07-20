@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { useRamadanContext } from '@/contexts/RamadanContext';
+import { useSignedPhotoUrls } from '@/utils/signedPhotoUrls';
 
 interface MosqueDetailsScreenProps {
   locationId: string;
