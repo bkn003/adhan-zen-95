@@ -11,7 +11,7 @@ export const useLocations = (options?: { includePaused?: boolean }) => {
       try {
         let query = supabase
           .from('locations')
-          .select('*')
+          .select('id, mosque_name, district, latitude, longitude, sahar_food_availability, sahar_food_contact_number, sahar_food_time, women_prayer_hall, parking_available, ac_available, wheelchair_accessible, mosque_capacity, admin_username, is_paused, created_at, updated_at')
           .order('mosque_name');
 
         if (!options?.includePaused) {
