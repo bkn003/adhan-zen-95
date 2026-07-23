@@ -172,20 +172,32 @@ export const QazaScreen = () => {
                 </TabsList>
 
                 <TabsContent value="qaza" className="space-y-4">
-                    {/* Qaza Header */}
-                    <div className="relative overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 text-center shadow-xl shadow-indigo-500/20">
-                        <div className="absolute inset-0 opacity-10">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-3xl" />
-                            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full blur-3xl" />
-                        </div>
-                        <div className="relative z-10">
-                            <h2 className="text-2xl font-bold text-white mb-1">{t('totalMissed')}</h2>
-                            <div className="mt-2">
-                                <span className="text-4xl font-bold text-white">{getTotalMissed()}</span>
-                                <span className="text-white/80 text-sm ml-2">{t('prayers')}</span>
+                    {/* Streak Card */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-rose-500 rounded-2xl p-4 text-white shadow-lg">
+                            <div className="flex items-center gap-2 opacity-90">
+                                <Flame className="w-4 h-4" />
+                                <span className="text-xs font-semibold uppercase tracking-wide">Streak</span>
                             </div>
+                            <div className="mt-2 flex items-baseline gap-1">
+                                <span className="text-3xl font-extrabold">{streak}</span>
+                                <span className="text-xs opacity-90">day{streak === 1 ? '' : 's'}</span>
+                            </div>
+                            <p className="text-[10px] opacity-80 mt-1">All 5 fard prayed</p>
+                        </div>
+                        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-4 text-white shadow-lg">
+                            <div className="flex items-center gap-2 opacity-90">
+                                <RotateCcw className="w-4 h-4" />
+                                <span className="text-xs font-semibold uppercase tracking-wide">{t('totalMissed')}</span>
+                            </div>
+                            <div className="mt-2 flex items-baseline gap-1">
+                                <span className="text-3xl font-extrabold">{getTotalMissed()}</span>
+                                <span className="text-xs opacity-90">{t('prayers')}</span>
+                            </div>
+                            <p className="text-[10px] opacity-80 mt-1">Qaza remaining</p>
                         </div>
                     </div>
+
 
                     {/* Qaza Counts */}
                     <div className="grid grid-cols-1 gap-3">
