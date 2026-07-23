@@ -236,7 +236,44 @@ export const QazaScreen = () => {
                             </Card>
                         ))}
                     </div>
+
+                    {/* Missed Prayer Log (last 30 days) */}
+                    <Card className="p-4 border-none shadow-sm bg-white/80">
+                        <div className="flex items-center gap-2 mb-3">
+                            <AlertTriangle className="w-4 h-4 text-amber-600" />
+                            <h3 className="text-sm font-bold text-gray-800">Missed Log (last 30 days)</h3>
+                        </div>
+                        {missedLog.length === 0 ? (
+                            <p className="text-xs text-emerald-600 text-center py-4">
+                                🎉 No missed prayers logged in the last 30 days.
+                            </p>
+                        ) : (
+                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                                {missedLog.map((row) => (
+                                    <div
+                                        key={row.date}
+                                        className="flex items-center justify-between p-2 rounded-lg bg-amber-50 border border-amber-100"
+                                    >
+                                        <span className="text-xs font-medium text-gray-700">
+                                            {format(new Date(row.date), 'MMM d, yyyy')}
+                                        </span>
+                                        <div className="flex gap-1 flex-wrap justify-end">
+                                            {row.missed.map((m) => (
+                                                <span
+                                                    key={m}
+                                                    className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-white text-amber-700 border border-amber-200"
+                                                >
+                                                    {m}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </Card>
                 </TabsContent>
+
 
                 <TabsContent value="history" className="space-y-4">
                     <Card className="p-4 border-none shadow-md bg-white/80 backdrop-blur-sm">
