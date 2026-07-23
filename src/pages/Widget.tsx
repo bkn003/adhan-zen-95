@@ -8,7 +8,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 const Widget: React.FC = () => {
   const navigate = useNavigate();
   const savedLocationId = localStorage.getItem('selectedLocationId') || undefined;
-  const { prayers } = usePrayerTimes(savedLocationId);
+  const { prayerTimes: prayers } = usePrayerTimes(savedLocationId);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
