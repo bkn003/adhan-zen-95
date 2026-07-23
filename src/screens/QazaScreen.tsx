@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Minus, Plus, CalendarCheck, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Minus, Plus, CalendarCheck, RotateCcw, Flame, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -85,6 +85,42 @@ export const QazaScreen = () => {
 
     const getTotalMissed = () => Object.values(counts).reduce((a, b) => a + b, 0);
 
+    // Streak: consecutive days ending yesterday with all 5 fard prayers marked prayed
+    const FARD = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const;
+    const streak = useMemo(() => {
+        let count = 0;
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        // Include today if all 5 already marked
+        for (let i = 0; i < 365; i++) {
+            const check = new Date(d);
+            check.setDate(d.getDate() - i);
+            const key = format(check, 'yyyy-MM-dd');
+            const day = history[key];
+            const allPrayed = day && FARD.every((p) => day[p]);
+            if (allPrayed) count++;
+            else if (i > 0) break; // today may be incomplete — allow starting from yesterday
+        }
+        return count;
+    }, [history]);
+
+    // Missed log: last 30 days where any fard prayer is unmarked
+    const missedLog = useMemo(() => {
+        const entries: { date: string; missed: string[] }[] = [];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        for (let i = 1; i <= 30; i++) {
+            const check = new Date(today);
+            check.setDate(today.getDate() - i);
+            const key = format(check, 'yyyy-MM-dd');
+            const day = history[key] || {};
+            const missed = FARD.filter((p) => !day[p]);
+            if (missed.length) entries.push({ date: key, missed });
+        }
+        return entries;
+    }, [history]);
+
+
     // --- History Logic ---
     const handleDateSelect = (date: Date | undefined) => {
         setSelectedDate(date);
@@ -136,20 +172,32 @@ export const QazaScreen = () => {
                 </TabsList>
 
                 <TabsContent value="qaza" className="space-y-4">
-                    {/* Qaza Header */}
-                    <div className="relative overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 text-center shadow-xl shadow-indigo-500/20">
-                        <div className="absolute inset-0 opacity-10">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full blur-3xl" />
-                            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full blur-3xl" />
-                        </div>
-                        <div className="relative z-10">
-                            <h2 className="text-2xl font-bold text-white mb-1">{t('totalMissed')}</h2>
-                            <div className="mt-2">
-                                <span className="text-4xl font-bold text-white">{getTotalMissed()}</span>
-                                <span className="text-white/80 text-sm ml-2">{t('prayers')}</span>
+                    {/* Streak Card */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-rose-500 rounded-2xl p-4 text-white shadow-lg">
+                            <div className="flex items-center gap-2 opacity-90">
+                                <Flame className="w-4 h-4" />
+                                <span className="text-xs font-semibold uppercase tracking-wide">Streak</span>
                             </div>
+                            <div className="mt-2 flex items-baseline gap-1">
+                                <span className="text-3xl font-extrabold">{streak}</span>
+                                <span className="text-xs opacity-90">day{streak === 1 ? '' : 's'}</span>
+                            </div>
+                            <p className="text-[10px] opacity-80 mt-1">All 5 fard prayed</p>
+                        </div>
+                        <div className="relative overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-4 text-white shadow-lg">
+                            <div className="flex items-center gap-2 opacity-90">
+                                <RotateCcw className="w-4 h-4" />
+                                <span className="text-xs font-semibold uppercase tracking-wide">{t('totalMissed')}</span>
+                            </div>
+                            <div className="mt-2 flex items-baseline gap-1">
+                                <span className="text-3xl font-extrabold">{getTotalMissed()}</span>
+                                <span className="text-xs opacity-90">{t('prayers')}</span>
+                            </div>
+                            <p className="text-[10px] opacity-80 mt-1">Qaza remaining</p>
                         </div>
                     </div>
+
 
                     {/* Qaza Counts */}
                     <div className="grid grid-cols-1 gap-3">
@@ -188,7 +236,44 @@ export const QazaScreen = () => {
                             </Card>
                         ))}
                     </div>
+
+                    {/* Missed Prayer Log (last 30 days) */}
+                    <Card className="p-4 border-none shadow-sm bg-white/80">
+                        <div className="flex items-center gap-2 mb-3">
+                            <AlertTriangle className="w-4 h-4 text-amber-600" />
+                            <h3 className="text-sm font-bold text-gray-800">Missed Log (last 30 days)</h3>
+                        </div>
+                        {missedLog.length === 0 ? (
+                            <p className="text-xs text-emerald-600 text-center py-4">
+                                🎉 No missed prayers logged in the last 30 days.
+                            </p>
+                        ) : (
+                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                                {missedLog.map((row) => (
+                                    <div
+                                        key={row.date}
+                                        className="flex items-center justify-between p-2 rounded-lg bg-amber-50 border border-amber-100"
+                                    >
+                                        <span className="text-xs font-medium text-gray-700">
+                                            {format(new Date(row.date), 'MMM d, yyyy')}
+                                        </span>
+                                        <div className="flex gap-1 flex-wrap justify-end">
+                                            {row.missed.map((m) => (
+                                                <span
+                                                    key={m}
+                                                    className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-white text-amber-700 border border-amber-200"
+                                                >
+                                                    {m}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </Card>
                 </TabsContent>
+
 
                 <TabsContent value="history" className="space-y-4">
                     <Card className="p-4 border-none shadow-md bg-white/80 backdrop-blur-sm">

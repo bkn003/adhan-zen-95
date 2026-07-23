@@ -438,6 +438,36 @@ export const SettingsScreen = () => {
         </div>
       </SettingsCard>
 
+      {/* Tools */}
+      <SettingsCard title="Tools" icon={SettingsIcon} gradient="from-amber-50/50 to-white">
+        <div className="space-y-2">
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate-zakat'))}
+            className="w-full py-2.5 px-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">💰 Zakat Calculator</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <a
+            href="/widget"
+            className="w-full py-2.5 px-3 bg-slate-900 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">📲 Open Next-Prayer Widget</span>
+            <ChevronRight className="w-4 h-4" />
+          </a>
+          <p className="text-[11px] text-gray-500 px-1">
+            Tip: Install the app, then long-press its icon for quick Widget / Qibla / Tracker shortcuts.
+          </p>
+        </div>
+      </SettingsCard>
+
+      {/* Smart Notifications */}
+      <SettingsCard title="Smart Reminders" icon={Bell} gradient="from-sky-50/50 to-white">
+        <WeatherReminderToggle />
+      </SettingsCard>
+
+
+
       {/* App Version */}
       <div className="text-center py-3">
         <p className="text-xs text-gray-400">Adhan Zen v2.1</p>
@@ -446,3 +476,31 @@ export const SettingsScreen = () => {
     </div>
   );
 };
+
+const WeatherReminderToggle: React.FC = () => {
+  const [on, setOn] = useState(() => localStorage.getItem('weatherReminders') === 'true');
+  return (
+    <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="p-1.5 bg-sky-50 rounded-lg shrink-0">🌦️</div>
+        <div className="min-w-0">
+          <span className="text-sm font-medium text-gray-700 block truncate">
+            Weather-aware reminders
+          </span>
+          <p className="text-xs text-gray-500 truncate">
+            15-min before prayer + weather tip (rain / heat / cold).
+          </p>
+        </div>
+      </div>
+      <Switch
+        checked={on}
+        onCheckedChange={(v) => {
+          setOn(v);
+          localStorage.setItem('weatherReminders', String(v));
+        }}
+        className="data-[state=checked]:bg-sky-500 shrink-0 ml-2"
+      />
+    </div>
+  );
+};
+
