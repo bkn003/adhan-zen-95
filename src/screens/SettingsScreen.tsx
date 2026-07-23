@@ -476,3 +476,31 @@ export const SettingsScreen = () => {
     </div>
   );
 };
+
+const WeatherReminderToggle: React.FC = () => {
+  const [on, setOn] = useState(() => localStorage.getItem('weatherReminders') === 'true');
+  return (
+    <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="p-1.5 bg-sky-50 rounded-lg shrink-0">🌦️</div>
+        <div className="min-w-0">
+          <span className="text-sm font-medium text-gray-700 block truncate">
+            Weather-aware reminders
+          </span>
+          <p className="text-xs text-gray-500 truncate">
+            15-min before prayer + weather tip (rain / heat / cold).
+          </p>
+        </div>
+      </div>
+      <Switch
+        checked={on}
+        onCheckedChange={(v) => {
+          setOn(v);
+          localStorage.setItem('weatherReminders', String(v));
+        }}
+        className="data-[state=checked]:bg-sky-500 shrink-0 ml-2"
+      />
+    </div>
+  );
+};
+
