@@ -146,9 +146,14 @@ const Index = () => {
   };
 
   const renderScreen = () => {
+    if (showZakat) {
+      return <ZakatScreen onBack={() => setShowZakat(false)} />;
+    }
+
     if (showSuperAdmin) {
       return <SuperAdminPanel onBack={() => setShowSuperAdmin(false)} />;
     }
+
 
     if (showAdminPanel) {
       return (
