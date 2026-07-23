@@ -17,7 +17,7 @@
       "purpose": "any maskable"
     },
     {
-      "src": "/app-icon-512.png", 
+      "src": "/app-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -26,17 +26,24 @@
   "categories": ["lifestyle", "religion"],
   "shortcuts": [
     {
-      "name": "Prayer Times",
-      "short_name": "Prayers",
-      "description": "View current prayer times",
-      "url": "/",
+      "name": "Next Prayer Widget",
+      "short_name": "Widget",
+      "description": "Big countdown to next prayer",
+      "url": "/widget",
       "icons": [{ "src": "/app-icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Qibla Direction",
       "short_name": "Qibla",
       "description": "Find Qibla direction",
-      "url": "/qibla",
+      "url": "/?screen=qibla",
+      "icons": [{ "src": "/app-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Prayer Tracker",
+      "short_name": "Tracker",
+      "description": "Track prayers and Qaza",
+      "url": "/?screen=qaza",
       "icons": [{ "src": "/app-icon-192.png", "sizes": "192x192" }]
     }
   ]
