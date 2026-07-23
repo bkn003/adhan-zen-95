@@ -85,6 +85,42 @@ export const QazaScreen = () => {
 
     const getTotalMissed = () => Object.values(counts).reduce((a, b) => a + b, 0);
 
+    // Streak: consecutive days ending yesterday with all 5 fard prayers marked prayed
+    const FARD = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const;
+    const streak = useMemo(() => {
+        let count = 0;
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        // Include today if all 5 already marked
+        for (let i = 0; i < 365; i++) {
+            const check = new Date(d);
+            check.setDate(d.getDate() - i);
+            const key = format(check, 'yyyy-MM-dd');
+            const day = history[key];
+            const allPrayed = day && FARD.every((p) => day[p]);
+            if (allPrayed) count++;
+            else if (i > 0) break; // today may be incomplete — allow starting from yesterday
+        }
+        return count;
+    }, [history]);
+
+    // Missed log: last 30 days where any fard prayer is unmarked
+    const missedLog = useMemo(() => {
+        const entries: { date: string; missed: string[] }[] = [];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        for (let i = 1; i <= 30; i++) {
+            const check = new Date(today);
+            check.setDate(today.getDate() - i);
+            const key = format(check, 'yyyy-MM-dd');
+            const day = history[key] || {};
+            const missed = FARD.filter((p) => !day[p]);
+            if (missed.length) entries.push({ date: key, missed });
+        }
+        return entries;
+    }, [history]);
+
+
     // --- History Logic ---
     const handleDateSelect = (date: Date | undefined) => {
         setSelectedDate(date);
