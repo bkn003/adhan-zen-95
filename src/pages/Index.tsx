@@ -64,7 +64,9 @@ const Index = () => {
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       e.preventDefault();
-      if (showSuperAdmin) {
+      if (showZakat) {
+        setShowZakat(false);
+      } else if (showSuperAdmin) {
         setShowSuperAdmin(false);
       } else if (showAdminPanel) {
         setShowAdminPanel(false);
@@ -81,7 +83,7 @@ const Index = () => {
     window.history.pushState(null, '', window.location.href);
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
+  }, [showZakat, showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
 
   // Persist current screen
   useEffect(() => {
