@@ -8,6 +8,7 @@ import { RamadanProvider } from "@/contexts/RamadanContext";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import Widget from "./pages/Widget";
 import { MandatoryPermissionsScreen } from "./components/MandatoryPermissionsScreen";
 import { Capacitor } from '@capacitor/core';
 
@@ -54,6 +55,7 @@ const AppContent = () => {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/widget" element={<Widget />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
