@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Minus, Plus, CalendarCheck, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Minus, Plus, CalendarCheck, RotateCcw, Flame, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
