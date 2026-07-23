@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getWeather, describeWeather, contextualTip } from '@/utils/weather';
 
 interface NotificationState {
   permission: NotificationPermission;
@@ -55,38 +56,66 @@ export const useNotifications = () => {
     }
 
     const timeUntilAdhan = adhanDate.getTime() - now.getTime();
+    const timeUntilPre = timeUntilAdhan - 15 * 60 * 1000;
 
-    // Schedule notification
-    setTimeout(() => {
+    const weatherEnabled = localStorage.getItem('weatherReminders') === 'true';
+    const buildBody = async (base: string) => {
+      if (!weatherEnabled) return base;
+      try {
+        const locData = localStorage.getItem('selectedLocationData');
+        if (!locData) return base;
+        const loc = JSON.parse(locData);
+        if (!loc?.latitude || !loc?.longitude) return base;
+        const snap = await getWeather(loc.latitude, loc.longitude);
+        if (!snap) return base;
+        const tip = contextualTip(snap, prayerName);
+        return `${base}\n${describeWeather(snap)}${tip ? '\n' + tip : ''}`;
+      } catch {
+        return base;
+      }
+    };
+
+    // 15-minute pre-prayer reminder with weather context
+    if (timeUntilPre > 0) {
+      setTimeout(async () => {
+        const body = await buildBody(`Prayer in 15 minutes — Adhan at ${adhanTime}`);
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.ready.then((reg) =>
+            reg.showNotification(`${prayerName} soon`, {
+              body,
+              icon: '/app-icon-192.png',
+              badge: '/app-icon-192.png',
+              tag: `pre-${prayerName}`,
+            })
+          );
+        } else {
+          new Notification(`${prayerName} soon`, { body, icon: '/app-icon-192.png' });
+        }
+      }, timeUntilPre);
+    }
+
+    // Schedule main adhan notification
+    setTimeout(async () => {
+      const body = await buildBody(`Adhan: ${adhanTime} | Iqamah: ${iqamahTime}`);
       if ('serviceWorker' in navigator && 'Notification' in window) {
-        // Use service worker for background notifications
         navigator.serviceWorker.ready.then(registration => {
           registration.showNotification(`${prayerName} Prayer Time`, {
-            body: `Adhan: ${adhanTime} | Iqamah: ${iqamahTime}`,
+            body,
             icon: '/app-icon-192.png',
             badge: '/app-icon-192.png',
             tag: `adhan-${prayerName}`,
             requireInteraction: true,
-            data: {
-              prayerName,
-              adhanTime,
-              iqamahTime
-            }
+            data: { prayerName, adhanTime, iqamahTime }
           });
         });
-
-        // Play adhan sound
         playAdhanSound();
       } else {
-        // Fallback to regular notification
-        new Notification(`${prayerName} Prayer Time`, {
-          body: `Adhan: ${adhanTime} | Iqamah: ${iqamahTime}`,
-          icon: '/app-icon-192.png',
-        });
+        new Notification(`${prayerName} Prayer Time`, { body, icon: '/app-icon-192.png' });
         playAdhanSound();
       }
     }, timeUntilAdhan);
   };
+
 
   const playAdhanSound = () => {
     const volume = parseFloat(localStorage.getItem('adhanVolume') || '50') / 100;
