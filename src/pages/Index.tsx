@@ -11,6 +11,7 @@ import { SettingsScreen } from '@/screens/SettingsScreen';
 import { MosqueDetailsScreen } from '@/screens/MosqueDetailsScreen';
 import { MosqueAdminPanel } from '@/screens/MosqueAdminPanel';
 import { SuperAdminPanel } from '@/screens/SuperAdminPanel';
+import { ZakatScreen } from '@/screens/ZakatScreen';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import type { Screen } from '@/types/navigation.types';
 import type { Location } from '@/types/prayer.types';
@@ -28,6 +29,7 @@ const Index = () => {
   const [isFirstTime, setIsFirstTime] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showSuperAdmin, setShowSuperAdmin] = useState(false);
+  const [showZakat, setShowZakat] = useState(false);
 
   // Enable realtime sync for locations & prayer_times
   useRealtimeSync();
@@ -36,12 +38,26 @@ const Index = () => {
   useEffect(() => {
     const handler = () => setShowAdminPanel(true);
     const superHandler = () => setShowSuperAdmin(true);
+    const zakatHandler = () => setShowZakat(true);
     window.addEventListener('navigate-admin', handler);
     window.addEventListener('navigate-super-admin', superHandler);
+    window.addEventListener('navigate-zakat', zakatHandler);
     return () => {
       window.removeEventListener('navigate-admin', handler);
       window.removeEventListener('navigate-super-admin', superHandler);
+      window.removeEventListener('navigate-zakat', zakatHandler);
     };
+  }, []);
+
+  // Deep-link support: /?screen=qibla|qaza|settings from manifest shortcuts
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const s = params.get('screen');
+    if (s && ['home', 'nearby', 'qibla', 'qaza', 'settings'].includes(s)) {
+      setCurrentScreen(s as Screen);
+      // Clean the URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, []);
 
   // Handle hardware back button / browser back
