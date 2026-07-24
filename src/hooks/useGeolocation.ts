@@ -29,16 +29,39 @@ const smoothAngle = (currentAngle: number, targetAngle: number, alpha: number = 
   return result;
 };
 
+const LAST_KNOWN_LOCATION_KEY = 'qibla_last_known_location';
+
+interface CachedLocation {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  timestamp: number;
+}
+
+const loadCachedLocation = (): CachedLocation | null => {
+  try {
+    const raw = localStorage.getItem(LAST_KNOWN_LOCATION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+};
+
+const saveCachedLocation = (loc: CachedLocation) => {
+  try { localStorage.setItem(LAST_KNOWN_LOCATION_KEY, JSON.stringify(loc)); } catch {}
+};
+
 export const useGeolocation = () => {
-  const [state, setState] = useState<GeolocationState>({
-    latitude: null,
-    longitude: null,
+  const cached = loadCachedLocation();
+  const [state, setState] = useState<GeolocationState & { cachedFallback?: boolean; cachedTimestamp?: number | null }>({
+    latitude: cached?.latitude ?? null,
+    longitude: cached?.longitude ?? null,
     error: null,
-    loading: true,
+    loading: !cached,
     heading: null,
     magneticHeading: null,
-    accuracy: null,
+    accuracy: cached?.accuracy ?? null,
     isCalibrated: false,
+    cachedFallback: !!cached,
+    cachedTimestamp: cached?.timestamp ?? null,
   });
 
   // Use refs for smooth heading updates
