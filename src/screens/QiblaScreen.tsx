@@ -218,8 +218,17 @@ export const QiblaScreen = () => {
           </div>
         </div>
 
-        {/* Calibrate */}
-        <div className="flex items-center justify-center gap-3 pt-2">
+        {/* Actions */}
+        <div className="flex items-center justify-center gap-2 pt-2 flex-wrap">
+          <Button
+            onClick={() => setArOpen(true)}
+            size="sm"
+            className="bg-emerald-500/90 hover:bg-emerald-500 text-white rounded-xl text-xs border border-emerald-300/40"
+          >
+            <Camera className="w-3.5 h-3.5 mr-1.5" />
+            AR View
+          </Button>
+
           <Button
             onClick={handleCalibrate}
             disabled={isCalibrating}
@@ -240,9 +249,9 @@ export const QiblaScreen = () => {
           </Button>
 
           {magneticHeading === null && heading === null && (
-            <span className="text-amber-400 text-xs flex items-center gap-1">
+            <span className="text-amber-400 text-xs flex items-center gap-1 w-full justify-center mt-1">
               <AlertCircle className="w-3 h-3" />
-              Move in figure-8
+              Move phone in a figure-8 to calibrate
             </span>
           )}
         </div>
