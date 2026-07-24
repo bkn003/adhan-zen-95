@@ -80,18 +80,32 @@ export const useGeolocation = () => {
     let animationFrameId: number | undefined;
 
     const success = (position: GeolocationPosition) => {
-      setState(prev => ({
-        ...prev,
+      const loc = {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
         accuracy: position.coords.accuracy,
+        timestamp: Date.now(),
+      };
+      saveCachedLocation(loc);
+      setState(prev => ({
+        ...prev,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        accuracy: loc.accuracy,
         error: null,
         loading: false,
+        cachedFallback: false,
+        cachedTimestamp: loc.timestamp,
       }));
     };
 
     const onGeoError = (err: GeolocationPositionError) => {
-      setState(prev => ({ ...prev, error: err.message, loading: false }));
+      setState(prev => ({
+        ...prev,
+        // If we have cached coords, keep them and don't surface as fatal error
+        error: prev.latitude != null ? null : err.message,
+        loading: false,
+      }));
       if (err.code === 1) {
         if (!retryIntervalId) {
           retryIntervalId = window.setInterval(() => requestOnce(), 15000);
