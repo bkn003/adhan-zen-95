@@ -29,16 +29,39 @@ const smoothAngle = (currentAngle: number, targetAngle: number, alpha: number = 
   return result;
 };
 
+const LAST_KNOWN_LOCATION_KEY = 'qibla_last_known_location';
+
+interface CachedLocation {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  timestamp: number;
+}
+
+const loadCachedLocation = (): CachedLocation | null => {
+  try {
+    const raw = localStorage.getItem(LAST_KNOWN_LOCATION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+};
+
+const saveCachedLocation = (loc: CachedLocation) => {
+  try { localStorage.setItem(LAST_KNOWN_LOCATION_KEY, JSON.stringify(loc)); } catch {}
+};
+
 export const useGeolocation = () => {
-  const [state, setState] = useState<GeolocationState>({
-    latitude: null,
-    longitude: null,
+  const cached = loadCachedLocation();
+  const [state, setState] = useState<GeolocationState & { cachedFallback?: boolean; cachedTimestamp?: number | null }>({
+    latitude: cached?.latitude ?? null,
+    longitude: cached?.longitude ?? null,
     error: null,
-    loading: true,
+    loading: !cached,
     heading: null,
     magneticHeading: null,
-    accuracy: null,
+    accuracy: cached?.accuracy ?? null,
     isCalibrated: false,
+    cachedFallback: !!cached,
+    cachedTimestamp: cached?.timestamp ?? null,
   });
 
   // Use refs for smooth heading updates
@@ -57,18 +80,32 @@ export const useGeolocation = () => {
     let animationFrameId: number | undefined;
 
     const success = (position: GeolocationPosition) => {
-      setState(prev => ({
-        ...prev,
+      const loc = {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
         accuracy: position.coords.accuracy,
+        timestamp: Date.now(),
+      };
+      saveCachedLocation(loc);
+      setState(prev => ({
+        ...prev,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        accuracy: loc.accuracy,
         error: null,
         loading: false,
+        cachedFallback: false,
+        cachedTimestamp: loc.timestamp,
       }));
     };
 
     const onGeoError = (err: GeolocationPositionError) => {
-      setState(prev => ({ ...prev, error: err.message, loading: false }));
+      setState(prev => ({
+        ...prev,
+        // If we have cached coords, keep them and don't surface as fatal error
+        error: prev.latitude != null ? null : err.message,
+        loading: false,
+      }));
       if (err.code === 1) {
         if (!retryIntervalId) {
           retryIntervalId = window.setInterval(() => requestOnce(), 15000);
