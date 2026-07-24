@@ -9,6 +9,7 @@ export const QiblaScreen = () => {
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [arOpen, setArOpen] = useState(false);
 
+  const geo = useGeolocation() as any;
   const {
     latitude,
     longitude,
@@ -22,9 +23,8 @@ export const QiblaScreen = () => {
     calculateQiblaDirection,
     getCompassDirection,
     getRelativeQiblaDirection,
-  } = useGeolocation() as any;
-
-  const cachedFallback: boolean = (useGeolocation() as any).cachedFallback || false;
+  } = geo;
+  const cachedFallback: boolean = !!geo.cachedFallback;
 
   const qiblaDirection = calculateQiblaDirection();
   const relativeQiblaDirection = getRelativeQiblaDirection();
