@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
-import { Compass, Navigation, RotateCcw, AlertCircle, MapPin, Star } from 'lucide-react';
+import { useState } from 'react';
+import { Compass, Navigation, RotateCcw, AlertCircle, MapPin, Star, Camera, WifiOff } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { tamilText } from '@/utils/tamilText';
+import { QiblaAROverlay } from '@/components/QiblaAROverlay';
 
 export const QiblaScreen = () => {
   const [isCalibrating, setIsCalibrating] = useState(false);
+  const [arOpen, setArOpen] = useState(false);
 
   const {
     latitude,
@@ -14,11 +16,15 @@ export const QiblaScreen = () => {
     loading,
     heading,
     magneticHeading,
+    accuracy,
+    isCalibrated,
     calculateDistance,
     calculateQiblaDirection,
     getCompassDirection,
-    getRelativeQiblaDirection
-  } = useGeolocation();
+    getRelativeQiblaDirection,
+  } = useGeolocation() as any;
+
+  const cachedFallback: boolean = (useGeolocation() as any).cachedFallback || false;
 
   const qiblaDirection = calculateQiblaDirection();
   const relativeQiblaDirection = getRelativeQiblaDirection();
