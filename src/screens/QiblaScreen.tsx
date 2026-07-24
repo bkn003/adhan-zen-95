@@ -51,25 +51,42 @@ export const QiblaScreen = () => {
     );
   }
 
-  if (error) {
+  // Show hard error only if we have no coordinates at all (no cache either).
+  if (error && (latitude == null || longitude == null)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-teal-900 to-slate-900 p-4 pb-28 flex items-center justify-center">
         <div className="text-center max-w-xs px-4">
           <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-red-400" />
           </div>
-          <h3 className="text-lg font-bold text-white mb-2">Location Error</h3>
+          <h3 className="text-lg font-bold text-white mb-2">Location Needed</h3>
           <p className="text-gray-400 text-sm mb-4">{error}</p>
-          <Button className="bg-white/10 border-white/20 text-white">Try Again</Button>
+          <p className="text-gray-500 text-xs">Enable location once to use Qibla offline afterwards.</p>
         </div>
       </div>
     );
   }
 
+  const accuracyLabel = accuracy == null
+    ? null
+    : accuracy < 30 ? 'High accuracy'
+    : accuracy < 100 ? 'Medium accuracy'
+    : 'Low accuracy';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-teal-900 to-slate-900 p-4 pb-28">
+      {arOpen && (
+        <QiblaAROverlay
+          relativeQiblaDirection={relativeQiblaDirection}
+          qiblaDirection={qiblaDirection}
+          deviceHeading={deviceHeading}
+          isPointingToQibla={isPointingToQibla}
+          onClose={() => setArOpen(false)}
+        />
+      )}
+
       {/* Header - Compact */}
-      <div className="text-center pt-2 mb-4">
+      <div className="text-center pt-2 mb-3">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-full mb-2">
           <div className={`w-2 h-2 rounded-full ${isPointingToQibla ? 'bg-green-400' : 'bg-emerald-400'} animate-pulse`} />
           <span className="text-emerald-300 text-xs font-medium">
@@ -77,6 +94,29 @@ export const QiblaScreen = () => {
           </span>
         </div>
         <h1 className="text-xl font-bold text-white">{tamilText.general.qiblaDirection.english}</h1>
+
+        {/* Status chips */}
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
+          {cachedFallback && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-200 text-[10px]">
+              <WifiOff className="w-3 h-3" /> Offline · last-known
+            </span>
+          )}
+          {accuracyLabel && (
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] border ${
+              accuracy! < 30 ? 'bg-green-500/15 border-green-400/40 text-green-200'
+              : accuracy! < 100 ? 'bg-yellow-500/15 border-yellow-400/40 text-yellow-200'
+              : 'bg-red-500/15 border-red-400/40 text-red-200'
+            }`}>
+              ±{Math.round(accuracy!)}m · {accuracyLabel}
+            </span>
+          )}
+          {!isCalibrated && (magneticHeading != null || heading != null) && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/15 border border-orange-400/40 text-orange-200 text-[10px]">
+              <AlertCircle className="w-3 h-3" /> Compass needs calibration
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Compass - Responsive size */}
