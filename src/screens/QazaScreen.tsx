@@ -81,6 +81,8 @@ export const QazaScreen = () => {
         const current = counts[prayer];
         const newValue = Math.max(0, current + delta);
         if (navigator.vibrate) navigator.vibrate(delta > 0 ? 50 : 30);
+        // Track recovered qaza (when count decreases)
+        if (delta < 0 && current > 0) bumpRecovered(1);
         saveCounts({ ...counts, [prayer]: newValue });
     };
 
