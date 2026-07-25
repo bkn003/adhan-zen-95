@@ -206,6 +206,49 @@ export const QazaScreen = () => {
                         </div>
                     </div>
 
+                    {/* Badges & Milestones */}
+                    <Card className="p-4 border-none shadow-sm bg-white/80">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                                <Award className="w-4 h-4 text-amber-600" />
+                                <h3 className="text-sm font-bold text-gray-800">Milestones</h3>
+                            </div>
+                            <span className="text-[11px] font-semibold text-gray-500">
+                                {earnedCount} / {badges.length} earned
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                            {badges.map((b) => (
+                                <div
+                                    key={b.id}
+                                    className={`relative rounded-2xl p-2 text-center border transition-all ${
+                                        b.earned
+                                            ? `bg-gradient-to-br ${b.color} text-white border-transparent shadow-md`
+                                            : 'bg-gray-50 border-gray-100 text-gray-500'
+                                    }`}
+                                    title={b.description}
+                                >
+                                    <div className="text-2xl leading-none">
+                                        {b.earned ? b.icon : <Lock className="w-5 h-5 mx-auto opacity-50" />}
+                                    </div>
+                                    <div className={`text-[10px] font-bold mt-1 leading-tight ${b.earned ? '' : 'text-gray-600'}`}>
+                                        {b.title}
+                                    </div>
+                                    <div className={`text-[9px] mt-0.5 ${b.earned ? 'opacity-90' : 'text-gray-400'}`}>
+                                        {b.description}
+                                    </div>
+                                    {!b.earned && (
+                                        <div className="mt-1.5 h-1 rounded-full bg-gray-200 overflow-hidden">
+                                            <div
+                                                className="h-full bg-emerald-400"
+                                                style={{ width: `${Math.round(b.progress * 100)}%` }}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
 
                     {/* Qaza Counts */}
                     <div className="grid grid-cols-1 gap-3">
