@@ -13,6 +13,7 @@ import { MosqueAdminPanel } from '@/screens/MosqueAdminPanel';
 import { SuperAdminPanel } from '@/screens/SuperAdminPanel';
 import { ZakatScreen } from '@/screens/ZakatScreen';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
+import { useAdaptiveTimezone } from '@/hooks/useAdaptiveTimezone';
 import type { Screen } from '@/types/navigation.types';
 import type { Location } from '@/types/prayer.types';
 
@@ -33,6 +34,8 @@ const Index = () => {
 
   // Enable realtime sync for locations & prayer_times
   useRealtimeSync();
+  // Watch for timezone / significant GPS drift and re-schedule
+  useAdaptiveTimezone();
 
   // Listen for admin panel navigation event
   useEffect(() => {
