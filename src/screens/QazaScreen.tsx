@@ -123,6 +123,11 @@ export const QazaScreen = () => {
         return entries;
     }, [history]);
 
+    const badges = useMemo(() => computeBadges(streak, history), [streak, history, counts]);
+    const earnedCount = badges.filter((b) => b.earned).length;
+
+
+
 
     // --- History Logic ---
     const handleDateSelect = (date: Date | undefined) => {
