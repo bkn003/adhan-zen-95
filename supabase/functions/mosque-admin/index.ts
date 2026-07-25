@@ -35,6 +35,24 @@ serve(async (req) => {
       );
     }
 
+    // Super admin: list which locations have admin credentials (returns location_id -> username)
+    if (action === "super_list_admins") {
+      const { data: admins, error } = await supabase
+        .from("mosque_admins")
+        .select("location_id, username");
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ admins: admins || [] }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+
     // Super admin: add prayer times for a mosque (used during mosque creation wizard)
     if (action === "super_add_prayer_times") {
       if (!location_id || !data?.month || !data?.date_range) {
