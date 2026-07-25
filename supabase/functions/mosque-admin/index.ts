@@ -204,13 +204,13 @@ serve(async (req) => {
       }
 
       // Check if credentials already exist
-      const { data: loc } = await supabase
-        .from("locations")
-        .select("admin_username")
-        .eq("id", location_id)
-        .single();
+      const { data: existingAdmin } = await supabase
+        .from("mosque_admins")
+        .select("username")
+        .eq("location_id", location_id)
+        .maybeSingle();
 
-      if (loc?.admin_username) {
+      if (existingAdmin?.username) {
         // Credentials already exist, need old credentials to change
         const { old_username, old_password } = data || {};
         if (!old_username || !old_password) {
@@ -283,9 +283,9 @@ serve(async (req) => {
       }
 
       const { error } = await supabase
-        .from("locations")
-        .update({ admin_username: null, admin_password_hash: null })
-        .eq("id", location_id);
+        .from("mosque_admins")
+        .delete()
+        .eq("location_id", location_id);
 
       if (error) {
         return new Response(
