@@ -145,7 +145,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       setEditingId(null);
       setNewUsername('');
       setNewPassword('');
-      refetchLocations();
+      refetchLocations(); fetchAdmins();
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -165,7 +165,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success('Credentials removed!');
-      refetchLocations();
+      refetchLocations(); fetchAdmins();
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -184,7 +184,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success(location.is_paused ? 'Mosque resumed' : 'Mosque paused');
-      refetchLocations();
+      refetchLocations(); fetchAdmins();
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -208,7 +208,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success('Mosque deleted!');
-      refetchLocations();
+      refetchLocations(); fetchAdmins();
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -241,7 +241,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       if (!res.ok) throw new Error(data.error);
 
       // Get the newly created mosque ID
-      await refetchLocations();
+      await refetchLocations(); await fetchAdmins(); fetchAdmins();
       // We need to find it by name since the API doesn't return the ID
       toast.success('Mosque added! Now add prayer times.');
       setAddMosqueStep('prayer-times');
@@ -294,7 +294,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
         setNewMosqueId(null);
         setWizardRangeIndex(0);
         setWizardPrayerTimes({});
-        refetchLocations();
+        refetchLocations(); fetchAdmins();
       }
     } catch (err: any) {
       toast.error(err.message);
