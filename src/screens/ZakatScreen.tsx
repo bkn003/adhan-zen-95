@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowLeft, Copy, Printer, Info, Coins } from 'lucide-react';
+import { ArrowLeft, Copy, Printer, Info, Coins, FileDown, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface ZakatScreenProps {
   onBack: () => void;
