@@ -341,8 +341,14 @@ export const ZakatScreen: React.FC<ZakatScreenProps> = ({ onBack }) => {
           <Button onClick={copySummary} variant="outline" className="rounded-xl">
             <Copy className="w-4 h-4 mr-2" /> Copy
           </Button>
-          <Button onClick={printPage} className="rounded-xl bg-emerald-600 hover:bg-emerald-700">
-            <Printer className="w-4 h-4 mr-2" /> Export / Print
+          <Button onClick={printPage} variant="outline" className="rounded-xl">
+            <Printer className="w-4 h-4 mr-2" /> Print
+          </Button>
+          <Button onClick={exportCSV} variant="outline" className="rounded-xl">
+            <FileDown className="w-4 h-4 mr-2" /> CSV
+          </Button>
+          <Button onClick={exportPDF} className="rounded-xl bg-emerald-600 hover:bg-emerald-700">
+            <FileText className="w-4 h-4 mr-2" /> PDF Report
           </Button>
         </div>
       </div>
