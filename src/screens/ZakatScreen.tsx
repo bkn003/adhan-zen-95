@@ -142,8 +142,8 @@ export const ZakatScreen: React.FC<ZakatScreenProps> = ({ onBack }) => {
 
     // Visual breakdown bar
     const endY = (doc as any).lastAutoTable.finalY + 10;
-    const segs = [
-      { label: 'Cash', v: num(cash), c: [52, 152, 219] as [number, number, number] },
+    const segs: { label: string; v: number; c: [number, number, number] }[] = [
+      { label: 'Cash', v: num(cash), c: [52, 152, 219] },
       { label: 'Bank', v: num(bank), c: [155, 89, 182] },
       { label: 'Gold', v: calc.goldValue, c: [241, 196, 15] },
       { label: 'Silver', v: calc.silverValue, c: [149, 165, 166] },
