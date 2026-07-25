@@ -92,6 +92,112 @@ export const ZakatScreen: React.FC<ZakatScreenProps> = ({ onBack }) => {
 
   const printPage = () => window.print();
 
+  const rows: [string, string][] = [
+    ['Cash on hand', fmt(num(cash))],
+    ['Bank balance', fmt(num(bank))],
+    [`Gold (${num(goldGrams)}g @ ${fmt(num(goldPrice))})`, fmt(calc.goldValue)],
+    [`Silver (${num(silverGrams)}g @ ${fmt(num(silverPrice))})`, fmt(calc.silverValue)],
+    ['Business assets', fmt(num(business))],
+    ['Liabilities', `- ${fmt(num(liabilities))}`],
+    ['Total assets', fmt(calc.totalAssets)],
+    ['Zakatable wealth', fmt(calc.zakatableWealth)],
+    [`Nisab threshold (${nisabBasis})`, fmt(calc.nisabThreshold)],
+    ['Liable', calc.liable ? 'Yes' : 'No'],
+    ['Zakat due (2.5%)', fmt(calc.zakatDue)],
+  ];
+
+  const exportCSV = () => {
+    const header = 'Item,Value\n';
+    const body = rows.map(([k, v]) => `"${k}","${v.replace(/"/g, '""')}"`).join('\n');
+    const blob = new Blob([header + body], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `zakat-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: 'CSV exported', description: 'Zakat report downloaded.' });
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('Zakat Report', 14, 18);
+    doc.setFontSize(10);
+    doc.setTextColor(120);
+    doc.text(
+      `Generated ${new Date().toLocaleDateString()} · Currency: ${currency} · Nisab: ${nisabBasis}`,
+      14,
+      25
+    );
+
+    autoTable(doc, {
+      startY: 32,
+      head: [['Item', 'Value']],
+      body: rows,
+      styles: { fontSize: 10, cellPadding: 3 },
+      headStyles: { fillColor: [16, 129, 91] },
+      alternateRowStyles: { fillColor: [244, 250, 247] },
+    });
+
+    // Visual breakdown bar
+    const endY = (doc as any).lastAutoTable.finalY + 10;
+    const segs = [
+      { label: 'Cash', v: num(cash), c: [52, 152, 219] as [number, number, number] },
+      { label: 'Bank', v: num(bank), c: [155, 89, 182] },
+      { label: 'Gold', v: calc.goldValue, c: [241, 196, 15] },
+      { label: 'Silver', v: calc.silverValue, c: [149, 165, 166] },
+      { label: 'Business', v: num(business), c: [231, 76, 60] },
+    ].filter((s) => s.v > 0);
+    const total = segs.reduce((a, b) => a + b.v, 0) || 1;
+
+    doc.setFontSize(12);
+    doc.setTextColor(30);
+    doc.text('Asset Composition', 14, endY);
+    let x = 14;
+    const barY = endY + 4;
+    const barW = 180;
+    const barH = 8;
+    segs.forEach((s) => {
+      const w = (s.v / total) * barW;
+      doc.setFillColor(...s.c);
+      doc.rect(x, barY, w, barH, 'F');
+      x += w;
+    });
+    let ly = barY + barH + 8;
+    doc.setFontSize(9);
+    segs.forEach((s) => {
+      doc.setFillColor(...s.c);
+      doc.rect(14, ly - 3, 4, 4, 'F');
+      doc.setTextColor(60);
+      doc.text(
+        `${s.label}: ${fmt(s.v)} (${((s.v / total) * 100).toFixed(1)}%)`,
+        22,
+        ly
+      );
+      ly += 6;
+    });
+
+    doc.setFontSize(14);
+    doc.setTextColor(16, 129, 91);
+    doc.text(
+      calc.liable ? `Zakat Due: ${fmt(calc.zakatDue)}` : 'Below Nisab — no zakat due',
+      14,
+      ly + 6
+    );
+
+    doc.setFontSize(8);
+    doc.setTextColor(140);
+    doc.text(
+      'Subtitle: Zakat is 2.5% of net zakatable wealth held for one lunar year, above the Nisab threshold.',
+      14,
+      285
+    );
+
+    doc.save(`zakat-${new Date().toISOString().slice(0, 10)}.pdf`);
+    toast({ title: 'PDF exported', description: 'Zakat report downloaded.' });
+  };
+
   const Field = ({
     label,
     value,
