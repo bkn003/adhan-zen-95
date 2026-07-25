@@ -35,6 +35,24 @@ serve(async (req) => {
       );
     }
 
+    // Super admin: list which locations have admin credentials (returns location_id -> username)
+    if (action === "super_list_admins") {
+      const { data: admins, error } = await supabase
+        .from("mosque_admins")
+        .select("location_id, username");
+
+      if (error) {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ admins: admins || [] }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+
     // Super admin: add prayer times for a mosque (used during mosque creation wizard)
     if (action === "super_add_prayer_times") {
       if (!location_id || !data?.month || !data?.date_range) {
@@ -204,13 +222,13 @@ serve(async (req) => {
       }
 
       // Check if credentials already exist
-      const { data: loc } = await supabase
-        .from("locations")
-        .select("admin_username")
-        .eq("id", location_id)
-        .single();
+      const { data: existingAdmin } = await supabase
+        .from("mosque_admins")
+        .select("username")
+        .eq("location_id", location_id)
+        .maybeSingle();
 
-      if (loc?.admin_username) {
+      if (existingAdmin?.username) {
         // Credentials already exist, need old credentials to change
         const { old_username, old_password } = data || {};
         if (!old_username || !old_password) {
@@ -283,9 +301,9 @@ serve(async (req) => {
       }
 
       const { error } = await supabase
-        .from("locations")
-        .update({ admin_username: null, admin_password_hash: null })
-        .eq("id", location_id);
+        .from("mosque_admins")
+        .delete()
+        .eq("location_id", location_id);
 
       if (error) {
         return new Response(

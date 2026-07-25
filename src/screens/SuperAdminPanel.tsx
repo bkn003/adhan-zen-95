@@ -53,12 +53,37 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
+  const [adminMap, setAdminMap] = useState<Record<string, string>>({});
   const { t } = useLanguage();
   const { isRamadan, setIsRamadan } = useRamadanContext();
 
-  const { data: locations, refetch: refetchLocations } = useLocations({ includePaused: true });
+  const { data: rawLocations, refetch: refetchLocations } = useLocations({ includePaused: true });
+  const locations = React.useMemo(
+    () => rawLocations?.map(l => ({ ...l, admin_username: adminMap[l.id] })),
+    [rawLocations, adminMap]
+  );
   const { data: allFilters, refetch: refetchFilters } = useAllCustomFilters();
   const manageFilter = useManageFilter();
+
+  const fetchAdmins = React.useCallback(async () => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'super_list_admins' }),
+      });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.admins)) {
+        const map: Record<string, string> = {};
+        for (const a of data.admins) map[a.location_id] = a.username;
+        setAdminMap(map);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) fetchAdmins();
+  }, [isAuthenticated, fetchAdmins]);
 
   const [showAddFilter, setShowAddFilter] = useState(false);
   const [newFilter, setNewFilter] = useState({ name: '', icon: '🏷️', color: 'gray' });
@@ -120,7 +145,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       setEditingId(null);
       setNewUsername('');
       setNewPassword('');
-      refetchLocations();
+      refetchLocations(); fetchAdmins();
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -140,7 +165,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success('Credentials removed!');
-      refetchLocations();
+      refetchLocations(); fetchAdmins();
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -159,7 +184,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success(location.is_paused ? 'Mosque resumed' : 'Mosque paused');
-      refetchLocations();
+      refetchLocations(); fetchAdmins();
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -183,7 +208,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success('Mosque deleted!');
-      refetchLocations();
+      refetchLocations(); fetchAdmins();
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -216,7 +241,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       if (!res.ok) throw new Error(data.error);
 
       // Get the newly created mosque ID
-      await refetchLocations();
+      await refetchLocations(); await fetchAdmins(); fetchAdmins();
       // We need to find it by name since the API doesn't return the ID
       toast.success('Mosque added! Now add prayer times.');
       setAddMosqueStep('prayer-times');
@@ -269,7 +294,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
         setNewMosqueId(null);
         setWizardRangeIndex(0);
         setWizardPrayerTimes({});
-        refetchLocations();
+        refetchLocations(); fetchAdmins();
       }
     } catch (err: any) {
       toast.error(err.message);
