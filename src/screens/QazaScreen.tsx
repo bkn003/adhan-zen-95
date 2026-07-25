@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Minus, Plus, CalendarCheck, RotateCcw, Flame, AlertTriangle } from 'lucide-react';
+import { Minus, Plus, CalendarCheck, RotateCcw, Flame, AlertTriangle, Award, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { computeBadges, bumpRecovered } from '@/utils/badges';
 
 // --- Types ---
 interface QazaCounts {
