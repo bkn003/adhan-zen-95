@@ -136,9 +136,6 @@ export type Database = {
       locations: {
         Row: {
           ac_available: boolean | null
-          admin_password_hash: string | null
-          admin_paused: boolean | null
-          admin_username: string | null
           created_at: string | null
           district: string
           id: string
@@ -159,9 +156,6 @@ export type Database = {
         }
         Insert: {
           ac_available?: boolean | null
-          admin_password_hash?: string | null
-          admin_paused?: boolean | null
-          admin_username?: string | null
           created_at?: string | null
           district: string
           id?: string
@@ -182,9 +176,6 @@ export type Database = {
         }
         Update: {
           ac_available?: boolean | null
-          admin_password_hash?: string | null
-          admin_paused?: boolean | null
-          admin_username?: string | null
           created_at?: string | null
           district?: string
           id?: string
@@ -204,6 +195,41 @@ export type Database = {
           women_prayer_hall?: boolean | null
         }
         Relationships: []
+      }
+      mosque_admins: {
+        Row: {
+          created_at: string
+          is_paused: boolean
+          location_id: string
+          password_hash: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          is_paused?: boolean
+          location_id: string
+          password_hash: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          is_paused?: boolean
+          location_id?: string
+          password_hash?: string
+          updated_at?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mosque_admins_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: true
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       mosque_announcements: {
         Row: {
