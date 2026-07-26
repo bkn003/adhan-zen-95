@@ -12,6 +12,8 @@ import { MosqueDetailsScreen } from '@/screens/MosqueDetailsScreen';
 import { MosqueAdminPanel } from '@/screens/MosqueAdminPanel';
 import { SuperAdminPanel } from '@/screens/SuperAdminPanel';
 import { ZakatScreen } from '@/screens/ZakatScreen';
+import { TasbeehScreen } from '@/screens/TasbeehScreen';
+import { useEventReminders } from '@/components/MosqueEvents';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { useAdaptiveTimezone } from '@/hooks/useAdaptiveTimezone';
 import type { Screen } from '@/types/navigation.types';
@@ -31,24 +33,30 @@ const Index = () => {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showSuperAdmin, setShowSuperAdmin] = useState(false);
   const [showZakat, setShowZakat] = useState(false);
+  const [showTasbeeh, setShowTasbeeh] = useState(false);
 
   // Enable realtime sync for locations & prayer_times
   useRealtimeSync();
   // Watch for timezone / significant GPS drift and re-schedule
   useAdaptiveTimezone();
+  // Background event reminder notifications
+  useEventReminders();
 
   // Listen for admin panel navigation event
   useEffect(() => {
     const handler = () => setShowAdminPanel(true);
     const superHandler = () => setShowSuperAdmin(true);
     const zakatHandler = () => setShowZakat(true);
+    const tasbeehHandler = () => setShowTasbeeh(true);
     window.addEventListener('navigate-admin', handler);
     window.addEventListener('navigate-super-admin', superHandler);
     window.addEventListener('navigate-zakat', zakatHandler);
+    window.addEventListener('navigate-tasbeeh', tasbeehHandler);
     return () => {
       window.removeEventListener('navigate-admin', handler);
       window.removeEventListener('navigate-super-admin', superHandler);
       window.removeEventListener('navigate-zakat', zakatHandler);
+      window.removeEventListener('navigate-tasbeeh', tasbeehHandler);
     };
   }, []);
 
@@ -67,7 +75,9 @@ const Index = () => {
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       e.preventDefault();
-      if (showZakat) {
+      if (showTasbeeh) {
+        setShowTasbeeh(false);
+      } else if (showZakat) {
         setShowZakat(false);
       } else if (showSuperAdmin) {
         setShowSuperAdmin(false);
@@ -86,7 +96,7 @@ const Index = () => {
     window.history.pushState(null, '', window.location.href);
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [showZakat, showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
+  }, [showTasbeeh, showZakat, showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
 
   // Persist current screen
   useEffect(() => {
@@ -149,6 +159,9 @@ const Index = () => {
   };
 
   const renderScreen = () => {
+    if (showTasbeeh) {
+      return <TasbeehScreen onBack={() => setShowTasbeeh(false)} />;
+    }
     if (showZakat) {
       return <ZakatScreen onBack={() => setShowZakat(false)} />;
     }

@@ -9,6 +9,8 @@ import { TimePicker12h, formatTime12h } from '@/components/TimePicker12h';
 import { clearCacheForLocation, clearAllPrayerCache } from '@/utils/prayerCache';
 import { useCustomFilters, useLocationFilters, useSetLocationFilters } from '@/hooks/useCustomFilters';
 import { useSignedPhotoUrls, invalidateSignedPhotoUrl } from '@/utils/signedPhotoUrls';
+import { EventsAdmin } from '@/components/admin/EventsAdmin';
+import { DonationAdmin } from '@/components/admin/DonationAdmin';
 
 /**
  * Returns the last day of a given month name (1-indexed).
@@ -538,6 +540,24 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         onToggle={() => setExpandedSection(expandedSection === 'photos' ? null : 'photos')}
       >
         <PhotoManager locationId={locationId!} username={username} password={password} />
+      </CollapsibleSection>
+
+      {/* Events & Announcements */}
+      <CollapsibleSection
+        title="Events & Announcements"
+        expanded={expandedSection === 'events'}
+        onToggle={() => setExpandedSection(expandedSection === 'events' ? null : 'events')}
+      >
+        <EventsAdmin locationId={locationId!} username={username} password={password} />
+      </CollapsibleSection>
+
+      {/* Donations */}
+      <CollapsibleSection
+        title="Donations (UPI / Bank)"
+        expanded={expandedSection === 'donations'}
+        onToggle={() => setExpandedSection(expandedSection === 'donations' ? null : 'donations')}
+      >
+        <DonationAdmin locationId={locationId!} location={mosque} username={username} password={password} />
       </CollapsibleSection>
     </div>
   );
