@@ -442,6 +442,13 @@ export const SettingsScreen = () => {
       <SettingsCard title="Tools" icon={SettingsIcon} gradient="from-amber-50/50 to-white">
         <div className="space-y-2">
           <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate-tasbeeh'))}
+            className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">📿 Tasbeeh Counter</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
             onClick={() => window.dispatchEvent(new CustomEvent('navigate-zakat'))}
             className="w-full py-2.5 px-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
           >

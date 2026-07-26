@@ -138,6 +138,13 @@ export type Database = {
           ac_available: boolean | null
           created_at: string | null
           district: string
+          donation_account_holder: string | null
+          donation_account_number: string | null
+          donation_bank_name: string | null
+          donation_enabled: boolean
+          donation_ifsc: string | null
+          donation_notes: string | null
+          donation_upi_id: string | null
           id: string
           is_paused: boolean | null
           is_visible: boolean | null
@@ -158,6 +165,13 @@ export type Database = {
           ac_available?: boolean | null
           created_at?: string | null
           district: string
+          donation_account_holder?: string | null
+          donation_account_number?: string | null
+          donation_bank_name?: string | null
+          donation_enabled?: boolean
+          donation_ifsc?: string | null
+          donation_notes?: string | null
+          donation_upi_id?: string | null
           id?: string
           is_paused?: boolean | null
           is_visible?: boolean | null
@@ -178,6 +192,13 @@ export type Database = {
           ac_available?: boolean | null
           created_at?: string | null
           district?: string
+          donation_account_holder?: string | null
+          donation_account_number?: string | null
+          donation_bank_name?: string | null
+          donation_enabled?: boolean
+          donation_ifsc?: string | null
+          donation_notes?: string | null
+          donation_upi_id?: string | null
           id?: string
           is_paused?: boolean | null
           is_visible?: boolean | null
@@ -233,25 +254,43 @@ export type Database = {
       }
       mosque_announcements: {
         Row: {
+          allow_rsvp: boolean
           body: string
+          category: string
           created_at: string | null
+          end_at: string | null
+          event_at: string | null
           id: string
           location_id: string | null
+          location_note: string | null
           title: string
+          updated_at: string
         }
         Insert: {
+          allow_rsvp?: boolean
           body: string
+          category?: string
           created_at?: string | null
+          end_at?: string | null
+          event_at?: string | null
           id?: string
           location_id?: string | null
+          location_note?: string | null
           title: string
+          updated_at?: string
         }
         Update: {
+          allow_rsvp?: boolean
           body?: string
+          category?: string
           created_at?: string | null
+          end_at?: string | null
+          event_at?: string | null
           id?: string
           location_id?: string | null
+          location_note?: string | null
           title?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -259,6 +298,44 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mosque_event_rsvps: {
+        Row: {
+          created_at: string
+          device_id: string
+          display_name: string | null
+          event_id: string
+          id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          display_name?: string | null
+          event_id: string
+          id?: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          display_name?: string | null
+          event_id?: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mosque_event_rsvps_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_announcements"
             referencedColumns: ["id"]
           },
         ]

@@ -52,6 +52,7 @@ serve(async (req) => {
         JSON.stringify({ admins: admins || [] }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
 
     // Super admin: add prayer times for a mosque (used during mosque creation wizard)
     if (action === "super_add_prayer_times") {
@@ -669,6 +670,52 @@ serve(async (req) => {
       );
     }
 
+    // === Events / Announcements ===
+    const verifyAdmin = async (): Promise<string | null> => {
+      if (!username || !password || !location_id) return null;
+      const { data: verifiedId } = await supabase.rpc("verify_mosque_admin", {
+        p_username: username,
+        p_password: password,
+      });
+      return verifiedId && verifiedId === location_id ? verifiedId : null;
+    };
+
+    if (action === "upsert_announcement") {
+      const ok = await verifyAdmin();
+      if (!ok) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const { id, ...fields } = (data || {}) as any;
+      const payload = { ...fields, location_id };
+      let resp;
+      if (id) {
+        resp = await supabase.from("mosque_announcements").update(payload).eq("id", id).eq("location_id", location_id).select().maybeSingle();
+      } else {
+        resp = await supabase.from("mosque_announcements").insert(payload).select().maybeSingle();
+      }
+      if (resp.error) return new Response(JSON.stringify({ error: resp.error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ success: true, event: resp.data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (action === "delete_announcement") {
+      const ok = await verifyAdmin();
+      if (!ok) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const { id } = (data || {}) as any;
+      const { error } = await supabase.from("mosque_announcements").delete().eq("id", id).eq("location_id", location_id);
+      if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (action === "update_donation") {
+      const ok = await verifyAdmin();
+      if (!ok) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const allowed = ["donation_enabled","donation_upi_id","donation_account_holder","donation_bank_name","donation_account_number","donation_ifsc","donation_notes"];
+      const patch: Record<string, unknown> = {};
+      for (const k of allowed) if (k in (data || {})) patch[k] = (data as any)[k];
+      const { error } = await supabase.from("locations").update(patch).eq("id", location_id);
+      if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+
     return new Response(
       JSON.stringify({ error: "Unknown action" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -679,5 +726,6 @@ serve(async (req) => {
       JSON.stringify({ error: message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+  }
   }
 });

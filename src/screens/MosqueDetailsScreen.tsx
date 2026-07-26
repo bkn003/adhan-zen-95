@@ -7,6 +7,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { useRamadanContext } from '@/contexts/RamadanContext';
 import { useSignedPhotoUrls } from '@/utils/signedPhotoUrls';
+import { MosqueEvents } from '@/components/MosqueEvents';
+import { MosqueDonate } from '@/components/MosqueDonate';
 
 interface MosqueDetailsScreenProps {
   locationId: string;
@@ -578,6 +580,19 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
             <p className="text-sm text-gray-400 text-center py-6">No schedule available for {selectedMonth}</p>
           )}
         </div>
+
+        {/* Donate */}
+        <MosqueDonate mosqueName={location.mosque_name} info={location as any} />
+
+        {/* Events & Announcements */}
+        <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm">
+          <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 mb-3">
+            📢 Events & Announcements
+          </h2>
+          <MosqueEvents locationId={location.id} />
+        </div>
+
+
 
         {/* Map at bottom */}
         <div className="bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm">
