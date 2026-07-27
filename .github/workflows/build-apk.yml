@@ -51,6 +51,9 @@ jobs:
         run: |
           npm install
           npm run build
+          # Ensure Adhan audio is bundled into android/app/src/main/res/raw/azan1.mp3
+          chmod +x ./scripts/copy-adhan-to-android.sh || true
+          ./scripts/copy-adhan-to-android.sh
           npx cap sync android
 
       - name: Build Debug APK
