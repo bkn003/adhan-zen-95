@@ -16,6 +16,8 @@ import { TasbeehScreen } from '@/screens/TasbeehScreen';
 import { useEventReminders } from '@/components/MosqueEvents';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { useAdaptiveTimezone } from '@/hooks/useAdaptiveTimezone';
+import { configureAndroidBackgroundSync } from '@/native/backgroundSync';
+import { supabase } from '@/integrations/supabase/client';
 import type { Screen } from '@/types/navigation.types';
 import type { Location } from '@/types/prayer.types';
 
@@ -125,6 +127,29 @@ const Index = () => {
     }, 500);
     return () => clearTimeout(timer);
   }, []);
+
+  // Configure Android background sync whenever the selected mosque changes.
+  // WorkManager needs to know which mosque's JSON to fetch daily even when
+  // the app is closed. Safe no-op on web.
+  useEffect(() => {
+    if (!selectedLocationId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('locations')
+          .select('mosque_name')
+          .eq('id', selectedLocationId)
+          .single();
+        if (!cancelled && data?.mosque_name) {
+          await configureAndroidBackgroundSync(data.mosque_name);
+        }
+      } catch (e) {
+        console.warn('background sync configure failed', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedLocationId]);
 
   const handleLocationSelect = (locationId: string) => {
     setSelectedLocationId(locationId);

@@ -82,11 +82,44 @@ public class AdhanNativePlugin extends Plugin {
 
     @PluginMethod
     public void refreshPrayerTimes(PluginCall call) {
-        // Placeholder: background CDN sync arrives in Phase 2 (WorkManager).
+        // Kick a one-time background sync via WorkManager
+        try { SyncScheduler.runOnce(getContext()); } catch (Throwable ignored) {}
         JSObject ret = new JSObject();
         ret.put("success", true);
         call.resolve(ret);
     }
+
+    /**
+     * Configure the background sync source. Called from JS whenever the user
+     * selects/changes their mosque so the daily WorkManager job knows what to
+     * fetch even when the app is closed.
+     *
+     * Params: { baseUrl: string, locationSlug: string, mosqueName?: string }
+     */
+    @PluginMethod
+    public void configureBackgroundSync(PluginCall call) {
+        String baseUrl = call.getString("baseUrl");
+        String slug = call.getString("locationSlug");
+        String mosqueName = call.getString("mosqueName", "Your Mosque");
+        if (baseUrl == null || slug == null) { call.reject("Missing baseUrl or locationSlug"); return; }
+
+        SharedPreferences p = getContext().getSharedPreferences(PrayerSyncWorker.PREFS, Context.MODE_PRIVATE);
+        p.edit()
+                .putString(PrayerSyncWorker.KEY_BASE_URL, baseUrl)
+                .putString(PrayerSyncWorker.KEY_SLUG, slug)
+                .putString(PrayerSyncWorker.KEY_MOSQUE_NAME, mosqueName)
+                .apply();
+
+        try {
+            SyncScheduler.enqueueDaily(getContext());
+            SyncScheduler.runOnce(getContext());
+        } catch (Throwable ignored) {}
+
+        JSObject ret = new JSObject();
+        ret.put("success", true);
+        call.resolve(ret);
+    }
+
 
     // -------- Battery optimization --------
 
