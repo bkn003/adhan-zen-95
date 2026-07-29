@@ -16,6 +16,8 @@ import { TasbeehScreen } from '@/screens/TasbeehScreen';
 import { useEventReminders } from '@/components/MosqueEvents';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { useAdaptiveTimezone } from '@/hooks/useAdaptiveTimezone';
+import { configureAndroidBackgroundSync } from '@/native/backgroundSync';
+import { supabase } from '@/integrations/supabase/client';
 import type { Screen } from '@/types/navigation.types';
 import type { Location } from '@/types/prayer.types';
 
