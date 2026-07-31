@@ -107,12 +107,25 @@ public class PrayerSyncWorker extends Worker {
                 AlarmScheduler.scheduleFromJson(ctx, todayPrayers);
             }
 
+            // Record status for the in-app "Background sync" card
+            JSONArray changeArr = new JSONArray();
+            for (String c : changes) changeArr.put(c);
+            prefs.edit()
+                    .putLong(KEY_LAST_SYNC_AT, System.currentTimeMillis())
+                    .putString(KEY_LAST_STATUS, "success")
+                    .putString(KEY_LAST_CHANGES, changeArr.toString())
+                    .apply();
+
             // Post change notification if anything shifted
             if (!changes.isEmpty()) {
                 postChangeNotification(ctx, mosqueName, changes);
             }
             return Result.success();
         } catch (Exception e) {
+            prefs.edit()
+                    .putLong(KEY_LAST_SYNC_AT, System.currentTimeMillis())
+                    .putString(KEY_LAST_STATUS, "error")
+                    .apply();
             return Result.retry();
         }
     }
