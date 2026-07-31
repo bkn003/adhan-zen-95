@@ -111,7 +111,7 @@ function buildWindow(entries: StaticPrayerTime[], days = 7): Record<string, Reco
     if (!entry) continue;
     const slim: Record<string, string> = {};
     for (const [field] of TRACKED) {
-      const v = (entry as Record<string, unknown>)[field as string];
+      const v = (entry as unknown as Record<string, unknown>)[field as string];
       if (typeof v === 'string' && v) slim[field as string] = v;
     }
     out[isoDate(d)] = slim;
