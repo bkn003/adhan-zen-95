@@ -53,15 +53,18 @@ const Index = () => {
     const superHandler = () => setShowSuperAdmin(true);
     const zakatHandler = () => setShowZakat(true);
     const tasbeehHandler = () => setShowTasbeeh(true);
+    const syncHandler = () => setShowSyncChanges(true);
     window.addEventListener('navigate-admin', handler);
     window.addEventListener('navigate-super-admin', superHandler);
     window.addEventListener('navigate-zakat', zakatHandler);
     window.addEventListener('navigate-tasbeeh', tasbeehHandler);
+    window.addEventListener('navigate-sync-changes', syncHandler);
     return () => {
       window.removeEventListener('navigate-admin', handler);
       window.removeEventListener('navigate-super-admin', superHandler);
       window.removeEventListener('navigate-zakat', zakatHandler);
       window.removeEventListener('navigate-tasbeeh', tasbeehHandler);
+      window.removeEventListener('navigate-sync-changes', syncHandler);
     };
   }, []);
 
