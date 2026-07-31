@@ -38,6 +38,7 @@ const Index = () => {
   const [showSuperAdmin, setShowSuperAdmin] = useState(false);
   const [showZakat, setShowZakat] = useState(false);
   const [showTasbeeh, setShowTasbeeh] = useState(false);
+  const [showSyncChanges, setShowSyncChanges] = useState(false);
 
   // Enable realtime sync for locations & prayer_times
   useRealtimeSync();
