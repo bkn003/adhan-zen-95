@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Calendar, Clock, MapPin, Check, HelpCircle, X, Users, Bell, ChevronDown, ChevronUp } from 'lucide-react';
 import { getDeviceId } from '@/utils/deviceId';
+import { ensureAnonSession } from '@/utils/anonAuth';
+
 import { toast } from 'sonner';
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string; icon: string }> = {
