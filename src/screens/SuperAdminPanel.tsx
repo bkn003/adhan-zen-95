@@ -9,6 +9,8 @@ import { TimePicker12h, formatTime12h } from '@/components/TimePicker12h';
 import { HijriAdjustment } from '@/components/HijriAdjustment';
 import { useRamadanContext } from '@/contexts/RamadanContext';
 
+import { getSuperToken, setSuperToken } from '@/utils/superSession';
+
 const SUPABASE_URL = "https://lhufqnokmdqkvzcxqwkl.supabase.co";
 
 interface SuperAdminPanelProps {
@@ -70,7 +72,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'super_list_admins' }),
+        body: JSON.stringify({ super_token: getSuperToken(), action: 'super_list_admins' }),
       });
       const data = await res.json();
       if (res.ok && Array.isArray(data.admins)) {
@@ -106,10 +108,11 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'super_admin_login', password: superPassword }),
+        body: JSON.stringify({ super_token: getSuperToken(), action: 'super_admin_login', password: superPassword }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Authentication failed');
+      setSuperToken(data.super_token || null);
       setIsAuthenticated(true);
       toast.success('Super Admin authenticated');
     } catch (err: any) {
@@ -128,6 +131,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
     try {
       const loc = locations?.find(l => l.id === locationId);
       const body: any = {
+        super_token: getSuperToken(),
         action: loc?.admin_username ? 'super_set_credentials' : 'set_credentials',
         location_id: locationId,
         username: newUsername,
@@ -160,7 +164,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'super_delete_credentials', location_id: locationId }),
+        body: JSON.stringify({ super_token: getSuperToken(), action: 'super_delete_credentials', location_id: locationId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -179,7 +183,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'super_pause_mosque', location_id: location.id, data: { is_paused: !location.is_paused } }),
+        body: JSON.stringify({ super_token: getSuperToken(), action: 'super_pause_mosque', location_id: location.id, data: { is_paused: !location.is_paused } }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -203,7 +207,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'super_delete_mosque', location_id: location.id }),
+        body: JSON.stringify({ super_token: getSuperToken(), action: 'super_delete_mosque', location_id: location.id }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -228,6 +232,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          super_token: getSuperToken(),
           action: 'super_add_mosque',
           data: {
             mosque_name: newMosque.mosque_name,
@@ -275,6 +280,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          super_token: getSuperToken(),
           action: 'super_add_prayer_times',
           location_id: newMosqueId,
           data: { month: wizardMonth, date_range: currentWizardRange, ...fields }

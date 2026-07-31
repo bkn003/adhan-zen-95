@@ -1,5 +1,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getSuperToken } from '@/utils/superSession';
 
 const SUPABASE_URL = "https://lhufqnokmdqkvzcxqwkl.supabase.co";
 
@@ -39,7 +40,7 @@ export const useAllCustomFilters = () => {
             const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'list_all_filters' }),
+                body: JSON.stringify({ action: 'list_all_filters', super_token: getSuperToken() }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
@@ -142,6 +143,7 @@ export const useManageFilter = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'super_manage_filter',
+                    super_token: getSuperToken(),
                     data: {
                         sub_action: subAction,
                         filter_id: filterId,

@@ -56,21 +56,30 @@ export const MosqueEvents: React.FC<MosqueEventsProps> = ({ locationId }) => {
     queryFn: async () => {
       const ids = (events ?? []).map((e: any) => e.id);
       if (ids.length === 0) return { my: {}, counts: {} };
-      const { data } = await supabase
-        .from('mosque_event_rsvps')
-        .select('event_id, status, device_id')
-        .in('event_id', ids);
-      const my: Record<string, string> = {};
+
+      // Aggregate counts come from a security-definer RPC (no participant rows exposed)
+      const [{ data: countRows }, { data: mine }] = await Promise.all([
+        (supabase as any).rpc('get_event_rsvp_counts', { p_event_ids: ids }),
+        supabase
+          .from('mosque_event_rsvps')
+          .select('event_id, status')
+          .in('event_id', ids),
+      ]);
+
       const counts: Record<string, { yes: number; maybe: number; no: number }> = {};
-      (data ?? []).forEach((r: any) => {
+      (countRows ?? []).forEach((r: any) => {
         counts[r.event_id] ??= { yes: 0, maybe: 0, no: 0 };
-        counts[r.event_id][r.status as 'yes' | 'maybe' | 'no']++;
-        if (r.device_id === deviceId) my[r.event_id] = r.status;
+        counts[r.event_id][r.status as 'yes' | 'maybe' | 'no'] = Number(r.count) || 0;
       });
+
+      const my: Record<string, string> = {};
+      (mine ?? []).forEach((r: any) => { my[r.event_id] = r.status; });
+
       return { my, counts };
     },
     enabled: !!events && events.length > 0,
   });
+
 
   const { upcoming, past } = useMemo(() => {
     const now = Date.now();
