@@ -142,6 +142,7 @@ const Index = () => {
   useEffect(() => {
     if (!selectedLocationId) return;
     let cancelled = false;
+    let stopAutoSync: (() => void) | undefined;
     (async () => {
       try {
         const { data } = await supabase
@@ -151,12 +152,14 @@ const Index = () => {
           .single();
         if (!cancelled && data?.mosque_name) {
           await configureAndroidBackgroundSync(data.mosque_name);
+          // Cross-platform (web + iOS) sync loop: fetch, diff, pre-schedule alerts
+          stopAutoSync = startAutoSync(data.mosque_name);
         }
       } catch (e) {
         console.warn('background sync configure failed', e);
       }
     })();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; stopAutoSync?.(); };
   }, [selectedLocationId]);
 
   const handleLocationSelect = (locationId: string) => {
