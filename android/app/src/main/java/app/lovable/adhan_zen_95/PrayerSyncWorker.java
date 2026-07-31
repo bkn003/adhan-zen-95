@@ -44,6 +44,9 @@ public class PrayerSyncWorker extends Worker {
     static final String KEY_SLUG = "sync_location_slug";
     static final String KEY_MOSQUE_NAME = "sync_mosque_name";
     static final String KEY_LAST_SNAPSHOT = "sync_last_snapshot";
+    static final String KEY_LAST_SYNC_AT = "sync_last_at";
+    static final String KEY_LAST_STATUS = "sync_last_status";
+    static final String KEY_LAST_CHANGES = "sync_last_changes";
 
     private static final String[] PRAYER_FIELDS = {
             "fajr", "dhuhr", "asr", "maghrib", "isha",
@@ -104,12 +107,25 @@ public class PrayerSyncWorker extends Worker {
                 AlarmScheduler.scheduleFromJson(ctx, todayPrayers);
             }
 
+            // Record status for the in-app "Background sync" card
+            JSONArray changeArr = new JSONArray();
+            for (String c : changes) changeArr.put(c);
+            prefs.edit()
+                    .putLong(KEY_LAST_SYNC_AT, System.currentTimeMillis())
+                    .putString(KEY_LAST_STATUS, "success")
+                    .putString(KEY_LAST_CHANGES, changeArr.toString())
+                    .apply();
+
             // Post change notification if anything shifted
             if (!changes.isEmpty()) {
                 postChangeNotification(ctx, mosqueName, changes);
             }
             return Result.success();
         } catch (Exception e) {
+            prefs.edit()
+                    .putLong(KEY_LAST_SYNC_AT, System.currentTimeMillis())
+                    .putString(KEY_LAST_STATUS, "error")
+                    .apply();
             return Result.retry();
         }
     }

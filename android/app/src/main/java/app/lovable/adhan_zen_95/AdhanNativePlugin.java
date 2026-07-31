@@ -120,6 +120,35 @@ public class AdhanNativePlugin extends Plugin {
         call.resolve(ret);
     }
 
+    /** Per-prayer notification toggles pushed from JS (adhan / iqamah / ramadan). */
+    @PluginMethod
+    public void setNotificationToggles(PluginCall call) {
+        String toggles = call.getString("toggles");
+        if (toggles == null) { call.reject("Missing 'toggles'"); return; }
+        getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit().putString(AlarmScheduler.KEY_NOTIF_TOGGLES, toggles).apply();
+        // Re-apply immediately to already-scheduled alarms
+        try {
+            AlarmScheduler.cancelAll(getContext());
+            AlarmScheduler.rescheduleFromPersisted(getContext());
+        } catch (Throwable ignored) {}
+        JSObject ret = new JSObject();
+        ret.put("success", true);
+        call.resolve(ret);
+    }
+
+    /** Last background sync timestamp, status and detected changes. */
+    @PluginMethod
+    public void getSyncStatus(PluginCall call) {
+        SharedPreferences p = getContext().getSharedPreferences(PrayerSyncWorker.PREFS, Context.MODE_PRIVATE);
+        JSObject ret = new JSObject();
+        ret.put("lastSyncAt", p.getLong(PrayerSyncWorker.KEY_LAST_SYNC_AT, 0));
+        ret.put("status", p.getString(PrayerSyncWorker.KEY_LAST_STATUS, "idle"));
+        ret.put("changes", p.getString(PrayerSyncWorker.KEY_LAST_CHANGES, "[]"));
+        ret.put("mosqueName", p.getString(PrayerSyncWorker.KEY_MOSQUE_NAME, null));
+        call.resolve(ret);
+    }
+
 
     // -------- Battery optimization --------
 

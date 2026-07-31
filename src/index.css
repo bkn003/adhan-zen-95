@@ -117,3 +117,38 @@ All colors MUST be HSL.
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+/* ---- Android-app feel: native-like touch behaviour across every screen ---- */
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+  body {
+    overscroll-behavior-y: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  /* Keep text selectable where it matters */
+  input, textarea, [contenteditable="true"], .selectable {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  /* Momentum scrolling + hidden scrollbars like a native app */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+  /* Material-style press feedback on any tappable element */
+  button, a, [role="button"] {
+    transition: transform 120ms ease, opacity 120ms ease, background-color 120ms ease;
+  }
+  button:active, a:active, [role="button"]:active {
+    transform: scale(0.97);
+  }
+}

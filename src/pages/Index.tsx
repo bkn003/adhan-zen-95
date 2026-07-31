@@ -13,10 +13,12 @@ import { MosqueAdminPanel } from '@/screens/MosqueAdminPanel';
 import { SuperAdminPanel } from '@/screens/SuperAdminPanel';
 import { ZakatScreen } from '@/screens/ZakatScreen';
 import { TasbeehScreen } from '@/screens/TasbeehScreen';
+import { SyncChangesScreen } from '@/screens/SyncChangesScreen';
 import { useEventReminders } from '@/components/MosqueEvents';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { useAdaptiveTimezone } from '@/hooks/useAdaptiveTimezone';
 import { configureAndroidBackgroundSync } from '@/native/backgroundSync';
+import { startAutoSync } from '@/native/syncEngine';
 import { supabase } from '@/integrations/supabase/client';
 import type { Screen } from '@/types/navigation.types';
 import type { Location } from '@/types/prayer.types';
@@ -36,6 +38,7 @@ const Index = () => {
   const [showSuperAdmin, setShowSuperAdmin] = useState(false);
   const [showZakat, setShowZakat] = useState(false);
   const [showTasbeeh, setShowTasbeeh] = useState(false);
+  const [showSyncChanges, setShowSyncChanges] = useState(false);
 
   // Enable realtime sync for locations & prayer_times
   useRealtimeSync();
@@ -50,15 +53,18 @@ const Index = () => {
     const superHandler = () => setShowSuperAdmin(true);
     const zakatHandler = () => setShowZakat(true);
     const tasbeehHandler = () => setShowTasbeeh(true);
+    const syncHandler = () => setShowSyncChanges(true);
     window.addEventListener('navigate-admin', handler);
     window.addEventListener('navigate-super-admin', superHandler);
     window.addEventListener('navigate-zakat', zakatHandler);
     window.addEventListener('navigate-tasbeeh', tasbeehHandler);
+    window.addEventListener('navigate-sync-changes', syncHandler);
     return () => {
       window.removeEventListener('navigate-admin', handler);
       window.removeEventListener('navigate-super-admin', superHandler);
       window.removeEventListener('navigate-zakat', zakatHandler);
       window.removeEventListener('navigate-tasbeeh', tasbeehHandler);
+      window.removeEventListener('navigate-sync-changes', syncHandler);
     };
   }, []);
 
@@ -77,7 +83,9 @@ const Index = () => {
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       e.preventDefault();
-      if (showTasbeeh) {
+      if (showSyncChanges) {
+        setShowSyncChanges(false);
+      } else if (showTasbeeh) {
         setShowTasbeeh(false);
       } else if (showZakat) {
         setShowZakat(false);
@@ -98,7 +106,7 @@ const Index = () => {
     window.history.pushState(null, '', window.location.href);
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [showTasbeeh, showZakat, showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
+  }, [showSyncChanges, showTasbeeh, showZakat, showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
 
   // Persist current screen
   useEffect(() => {
@@ -134,6 +142,7 @@ const Index = () => {
   useEffect(() => {
     if (!selectedLocationId) return;
     let cancelled = false;
+    let stopAutoSync: (() => void) | undefined;
     (async () => {
       try {
         const { data } = await supabase
@@ -143,12 +152,14 @@ const Index = () => {
           .single();
         if (!cancelled && data?.mosque_name) {
           await configureAndroidBackgroundSync(data.mosque_name);
+          // Cross-platform (web + iOS) sync loop: fetch, diff, pre-schedule alerts
+          stopAutoSync = startAutoSync(data.mosque_name);
         }
       } catch (e) {
         console.warn('background sync configure failed', e);
       }
     })();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; stopAutoSync?.(); };
   }, [selectedLocationId]);
 
   const handleLocationSelect = (locationId: string) => {
@@ -189,6 +200,10 @@ const Index = () => {
     }
     if (showZakat) {
       return <ZakatScreen onBack={() => setShowZakat(false)} />;
+    }
+
+    if (showSyncChanges) {
+      return <SyncChangesScreen onBack={() => setShowSyncChanges(false)} />;
     }
 
     if (showSuperAdmin) {

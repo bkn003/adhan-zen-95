@@ -13,6 +13,8 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { Capacitor } from '@capacitor/core';
 import { AdhanSoundSelector } from '@/components/AdhanSoundSelector';
 import { VibrationSelector } from '@/components/VibrationSelector';
+import { SyncStatusCard } from '@/components/SyncStatusCard';
+import { PrayerNotificationToggles } from '@/components/PrayerNotificationToggles';
 
 const SettingsCard = ({
   children,
@@ -466,6 +468,16 @@ export const SettingsScreen = () => {
             Tip: Install the app, then long-press its icon for quick Widget / Qibla / Tracker shortcuts.
           </p>
         </div>
+      </SettingsCard>
+
+      {/* Per-prayer notification toggles */}
+      <SettingsCard title="Per-prayer alerts" icon={Bell} gradient="from-emerald-50/50 to-white">
+        <PrayerNotificationToggles />
+      </SettingsCard>
+
+      {/* Background sync */}
+      <SettingsCard title="Background sync" icon={Clock} gradient="from-blue-50/50 to-white">
+        <SyncStatusCard />
       </SettingsCard>
 
       {/* Smart Notifications */}
