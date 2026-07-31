@@ -3,8 +3,13 @@ import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from './App.tsx'
 import './index.css'
+import { ensureAnonSession } from '@/utils/anonAuth'
 
 const queryClient = new QueryClient();
+
+// Establish a verified (anonymous) identity so writes are owned by auth.uid()
+ensureAnonSession();
+
 
 // Register service worker for PWA and notifications
 if ('serviceWorker' in navigator) {
