@@ -13,6 +13,8 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { Capacitor } from '@capacitor/core';
 import { AdhanSoundSelector } from '@/components/AdhanSoundSelector';
 import { VibrationSelector } from '@/components/VibrationSelector';
+import { SyncStatusCard } from '@/components/SyncStatusCard';
+import { PrayerNotificationToggles } from '@/components/PrayerNotificationToggles';
 
 const SettingsCard = ({
   children,
