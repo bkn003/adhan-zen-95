@@ -83,7 +83,9 @@ const Index = () => {
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       e.preventDefault();
-      if (showTasbeeh) {
+      if (showSyncChanges) {
+        setShowSyncChanges(false);
+      } else if (showTasbeeh) {
         setShowTasbeeh(false);
       } else if (showZakat) {
         setShowZakat(false);
