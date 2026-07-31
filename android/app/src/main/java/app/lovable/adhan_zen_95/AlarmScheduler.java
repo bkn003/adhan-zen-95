@@ -90,6 +90,13 @@ public class AlarmScheduler {
         int count = 0;
         Set<String> ids = new HashSet<>(prefs(ctx).getStringSet(KEY_ALARM_IDS, new HashSet<>()));
 
+        boolean adhanOn = isPhaseEnabled(ctx, type, "adhan");
+        boolean iqamahOn = isPhaseEnabled(ctx, type, "iqamah");
+        if (!adhanOn) adhan = null;
+        if (!iqamahOn) iqamah = null;
+
+
+
         if (adhan != null && !adhan.isEmpty()) {
             Calendar when = parseTime(adhan, base, true);
             if (when != null) {
