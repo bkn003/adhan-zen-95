@@ -191,6 +191,10 @@ const Index = () => {
       return <ZakatScreen onBack={() => setShowZakat(false)} />;
     }
 
+    if (showSyncChanges) {
+      return <SyncChangesScreen onBack={() => setShowSyncChanges(false)} />;
+    }
+
     if (showSuperAdmin) {
       return <SuperAdminPanel onBack={() => setShowSuperAdmin(false)} />;
     }
