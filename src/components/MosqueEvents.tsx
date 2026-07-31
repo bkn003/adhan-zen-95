@@ -102,22 +102,33 @@ export const MosqueEvents: React.FC<MosqueEventsProps> = ({ locationId }) => {
   const rsvp = async (eventId: string, status: 'yes' | 'maybe' | 'no') => {
     const current = rsvps?.my?.[eventId];
     try {
+      const uid = await ensureAnonSession();
+      if (!uid) {
+        toast.error('Could not save RSVP');
+        return;
+      }
       if (current === status) {
-        await (supabase as any)
+        const { error } = await (supabase as any)
           .from('mosque_event_rsvps')
           .delete()
           .eq('event_id', eventId)
-          .eq('device_id', deviceId);
+          .eq('user_id', uid);
+        if (error) throw error;
       } else {
-        await (supabase as any)
+        const { error } = await (supabase as any)
           .from('mosque_event_rsvps')
-          .upsert({ event_id: eventId, device_id: deviceId, status }, { onConflict: 'event_id,device_id' });
+          .upsert(
+            { event_id: eventId, user_id: uid, device_id: deviceId, status },
+            { onConflict: 'event_id,user_id' },
+          );
+        if (error) throw error;
       }
-      queryClient.invalidateQueries({ queryKey: ['mosque-event-rsvps', locationId, deviceId] });
+      queryClient.invalidateQueries({ queryKey: ['mosque-event-rsvps', locationId] });
     } catch (e: any) {
       toast.error('Could not save RSVP');
     }
   };
+
 
   const toggleNotify = (event: any) => {
     const ids = new Set(readNotifyIds());
