@@ -613,6 +613,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_event_rsvp_counts: {
+        Args: { p_event_ids: string[] }
+        Returns: {
+          count: number
+          event_id: string
+          status: string
+        }[]
+      }
+      get_mosque_donation_details: {
+        Args: { p_location_id: string }
+        Returns: {
+          donation_account_holder: string
+          donation_account_number: string
+          donation_bank_name: string
+          donation_enabled: boolean
+          donation_ifsc: string
+          donation_notes: string
+          donation_upi_id: string
+        }[]
+      }
       set_mosque_admin_credentials: {
         Args: { p_location_id: string; p_password: string; p_username: string }
         Returns: boolean
