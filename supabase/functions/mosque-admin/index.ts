@@ -17,23 +17,84 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const SUPER_ADMIN_PASSWORD = Deno.env.get("SUPER_ADMIN_PASSWORD") || "AdhanZen@SuperAdmin2025";
+    const SUPER_ADMIN_PASSWORD = Deno.env.get("SUPER_ADMIN_PASSWORD");
 
-    const { action, username, password, location_id, data } = await req.json();
+    const body = await req.json();
+    const { action, username, password, location_id, data } = body;
+    const superToken: string | undefined = body?.super_token;
+
+    const json = (payload: unknown, status = 200) =>
+      new Response(JSON.stringify(payload), {
+        status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+
+    // ---- Super admin session tokens (HMAC-signed, 2h expiry, stateless) ----
+    const SUPER_ACTIONS = new Set([
+      "super_list_admins",
+      "super_add_prayer_times",
+      "super_set_credentials",
+      "super_delete_credentials",
+      "super_add_mosque",
+      "super_pause_mosque",
+      "super_delete_mosque",
+      "super_manage_filter",
+      "list_all_filters",
+    ]);
+
+    const b64url = (bytes: Uint8Array) =>
+      btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+    const sign = async (payload: string) => {
+      const key = await crypto.subtle.importKey(
+        "raw",
+        new TextEncoder().encode(SUPER_ADMIN_PASSWORD!),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"],
+      );
+      const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+      return b64url(new Uint8Array(sig));
+    };
+
+    const issueSuperToken = async () => {
+      const payload = `super.${Date.now() + 2 * 60 * 60 * 1000}`;
+      return `${payload}.${await sign(payload)}`;
+    };
+
+    const verifySuperToken = async (token?: string) => {
+      if (!token) return false;
+      const parts = token.split(".");
+      if (parts.length !== 3 || parts[0] !== "super") return false;
+      const expiry = Number(parts[1]);
+      if (!Number.isFinite(expiry) || expiry < Date.now()) return false;
+      const expected = await sign(`${parts[0]}.${parts[1]}`);
+      if (expected.length !== parts[2].length) return false;
+      let diff = 0;
+      for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ parts[2].charCodeAt(i);
+      return diff === 0;
+    };
+
+    // Fail closed if the super admin password secret is not configured
+    if (
+      (SUPER_ACTIONS.has(action) || action === "super_admin_login") && !SUPER_ADMIN_PASSWORD
+    ) {
+      return json({ error: "Super admin is not configured on this server" }, 500);
+    }
+
+    // Every privileged super admin action must present a valid session token
+    if (SUPER_ACTIONS.has(action) && !(await verifySuperToken(superToken))) {
+      return json({ error: "Super admin authentication required" }, 401);
+    }
 
     // Server-side super admin authentication
     if (action === "super_admin_login") {
-      if (password !== SUPER_ADMIN_PASSWORD) {
-        return new Response(
-          JSON.stringify({ error: "Invalid super admin password" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (typeof password !== "string" || password !== SUPER_ADMIN_PASSWORD) {
+        return json({ error: "Invalid super admin password" }, 401);
       }
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return json({ success: true, super_token: await issueSuperToken() });
     }
+
 
     // Super admin: list which locations have admin credentials (returns location_id -> username)
     if (action === "super_list_admins") {
