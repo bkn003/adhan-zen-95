@@ -14,8 +14,10 @@ interface DonationInfo {
 
 interface Props {
   mosqueName: string;
+  locationId: string;
   info: DonationInfo | null | undefined;
 }
+
 
 const CopyRow: React.FC<{ label: string; value: string }> = ({ label, value }) => {
   const [copied, setCopied] = useState(false);
