@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Calendar, Clock, MapPin, Check, HelpCircle, X, Users, Bell, ChevronDown, ChevronUp } from 'lucide-react';
 import { getDeviceId } from '@/utils/deviceId';
+import { ensureAnonSession } from '@/utils/anonAuth';
+
 import { toast } from 'sonner';
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string; icon: string }> = {
@@ -52,18 +54,20 @@ export const MosqueEvents: React.FC<MosqueEventsProps> = ({ locationId }) => {
   });
 
   const { data: rsvps } = useQuery({
-    queryKey: ['mosque-event-rsvps', locationId, deviceId],
+    queryKey: ['mosque-event-rsvps', locationId],
     queryFn: async () => {
       const ids = (events ?? []).map((e: any) => e.id);
       if (ids.length === 0) return { my: {}, counts: {} };
 
-      // Aggregate counts come from a security-definer RPC (no participant rows exposed)
-      const [{ data: countRows }, { data: mine }] = await Promise.all([
+      const uid = await ensureAnonSession();
+
+      // Aggregate counts come from a security-definer RPC (no participant rows exposed).
+      // Own RSVPs are readable only through the verified auth.uid() ownership policy.
+      const [{ data: countRows }, mineRes] = await Promise.all([
         (supabase as any).rpc('get_event_rsvp_counts', { p_event_ids: ids }),
-        supabase
-          .from('mosque_event_rsvps')
-          .select('event_id, status')
-          .in('event_id', ids),
+        uid
+          ? supabase.from('mosque_event_rsvps').select('event_id, status').in('event_id', ids)
+          : Promise.resolve({ data: [] as any[] }),
       ]);
 
       const counts: Record<string, { yes: number; maybe: number; no: number }> = {};
@@ -73,12 +77,13 @@ export const MosqueEvents: React.FC<MosqueEventsProps> = ({ locationId }) => {
       });
 
       const my: Record<string, string> = {};
-      (mine ?? []).forEach((r: any) => { my[r.event_id] = r.status; });
+      ((mineRes as any).data ?? []).forEach((r: any) => { my[r.event_id] = r.status; });
 
       return { my, counts };
     },
     enabled: !!events && events.length > 0,
   });
+
 
 
   const { upcoming, past } = useMemo(() => {
@@ -97,22 +102,33 @@ export const MosqueEvents: React.FC<MosqueEventsProps> = ({ locationId }) => {
   const rsvp = async (eventId: string, status: 'yes' | 'maybe' | 'no') => {
     const current = rsvps?.my?.[eventId];
     try {
+      const uid = await ensureAnonSession();
+      if (!uid) {
+        toast.error('Could not save RSVP');
+        return;
+      }
       if (current === status) {
-        await (supabase as any)
+        const { error } = await (supabase as any)
           .from('mosque_event_rsvps')
           .delete()
           .eq('event_id', eventId)
-          .eq('device_id', deviceId);
+          .eq('user_id', uid);
+        if (error) throw error;
       } else {
-        await (supabase as any)
+        const { error } = await (supabase as any)
           .from('mosque_event_rsvps')
-          .upsert({ event_id: eventId, device_id: deviceId, status }, { onConflict: 'event_id,device_id' });
+          .upsert(
+            { event_id: eventId, user_id: uid, device_id: deviceId, status },
+            { onConflict: 'event_id,user_id' },
+          );
+        if (error) throw error;
       }
-      queryClient.invalidateQueries({ queryKey: ['mosque-event-rsvps', locationId, deviceId] });
+      queryClient.invalidateQueries({ queryKey: ['mosque-event-rsvps', locationId] });
     } catch (e: any) {
       toast.error('Could not save RSVP');
     }
   };
+
 
   const toggleNotify = (event: any) => {
     const ids = new Set(readNotifyIds());
