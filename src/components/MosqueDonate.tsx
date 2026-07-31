@@ -45,14 +45,34 @@ const CopyRow: React.FC<{ label: string; value: string }> = ({ label, value }) =
   );
 };
 
-export const MosqueDonate: React.FC<Props> = ({ mosqueName, info }) => {
+export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: baseInfo }) => {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState<number | ''>('');
+  const [details, setDetails] = useState<DonationInfo | null>(null);
 
-  if (!info?.donation_enabled) return null;
+  const enabled = !!baseInfo?.donation_enabled;
+
+  // Banking details are not publicly readable; fetch them for this mosque only,
+  // via a security-definer RPC that returns data only when donations are enabled.
+  useEffect(() => {
+    if (!enabled || !locationId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase as any).rpc('get_mosque_donation_details', {
+        p_location_id: locationId,
+      });
+      if (!cancelled) setDetails(Array.isArray(data) ? (data[0] ?? null) : (data ?? null));
+    })();
+    return () => { cancelled = true; };
+  }, [enabled, locationId]);
+
+  const info: DonationInfo = { ...(baseInfo ?? {}), ...(details ?? {}) };
+
+  if (!enabled) return null;
   const hasUpi = !!info.donation_upi_id;
   const hasBank = !!(info.donation_account_number && info.donation_ifsc);
   if (!hasUpi && !hasBank) return null;
+
 
   const upiLink = () => {
     if (!info.donation_upi_id) return '';
