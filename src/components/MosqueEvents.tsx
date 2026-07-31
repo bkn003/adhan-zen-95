@@ -52,18 +52,20 @@ export const MosqueEvents: React.FC<MosqueEventsProps> = ({ locationId }) => {
   });
 
   const { data: rsvps } = useQuery({
-    queryKey: ['mosque-event-rsvps', locationId, deviceId],
+    queryKey: ['mosque-event-rsvps', locationId],
     queryFn: async () => {
       const ids = (events ?? []).map((e: any) => e.id);
       if (ids.length === 0) return { my: {}, counts: {} };
 
-      // Aggregate counts come from a security-definer RPC (no participant rows exposed)
-      const [{ data: countRows }, { data: mine }] = await Promise.all([
+      const uid = await ensureAnonSession();
+
+      // Aggregate counts come from a security-definer RPC (no participant rows exposed).
+      // Own RSVPs are readable only through the verified auth.uid() ownership policy.
+      const [{ data: countRows }, mineRes] = await Promise.all([
         (supabase as any).rpc('get_event_rsvp_counts', { p_event_ids: ids }),
-        supabase
-          .from('mosque_event_rsvps')
-          .select('event_id, status')
-          .in('event_id', ids),
+        uid
+          ? supabase.from('mosque_event_rsvps').select('event_id, status').in('event_id', ids)
+          : Promise.resolve({ data: [] as any[] }),
       ]);
 
       const counts: Record<string, { yes: number; maybe: number; no: number }> = {};
@@ -73,12 +75,13 @@ export const MosqueEvents: React.FC<MosqueEventsProps> = ({ locationId }) => {
       });
 
       const my: Record<string, string> = {};
-      (mine ?? []).forEach((r: any) => { my[r.event_id] = r.status; });
+      ((mineRes as any).data ?? []).forEach((r: any) => { my[r.event_id] = r.status; });
 
       return { my, counts };
     },
     enabled: !!events && events.length > 0,
   });
+
 
 
   const { upcoming, past } = useMemo(() => {
