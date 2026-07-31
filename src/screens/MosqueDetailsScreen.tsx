@@ -582,7 +582,7 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
         </div>
 
         {/* Donate */}
-        <MosqueDonate mosqueName={location.mosque_name} info={location as any} />
+        <MosqueDonate mosqueName={location.mosque_name} locationId={location.id} info={location as any} />
 
         {/* Events & Announcements */}
         <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm">
