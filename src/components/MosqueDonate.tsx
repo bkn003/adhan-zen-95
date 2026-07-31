@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { HandCoins, Copy, Check, X, Smartphone, Building2, QrCode, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+
 
 interface DonationInfo {
   donation_enabled?: boolean | null;
