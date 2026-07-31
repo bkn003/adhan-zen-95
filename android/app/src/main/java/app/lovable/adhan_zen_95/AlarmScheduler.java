@@ -26,10 +26,32 @@ public class AlarmScheduler {
     private static final String PREFS = "AdhanNativePrefs";
     private static final String KEY_TODAY_PRAYERS = "today_prayers";
     private static final String KEY_ALARM_IDS = "scheduled_alarm_ids";
+    static final String KEY_NOTIF_TOGGLES = "notif_toggles";
 
     public static SharedPreferences prefs(Context ctx) {
         return ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
+
+    /**
+     * Per-prayer notification toggles set from JS.
+     * Shape: {"adhan":{"fajr":true,...},"iqamah":{...},"ramadan":true}
+     * Defaults to enabled when nothing is stored.
+     */
+    public static boolean isPhaseEnabled(Context ctx, String type, String phase) {
+        String raw = prefs(ctx).getString(KEY_NOTIF_TOGGLES, null);
+        if (raw == null || type == null || type.isEmpty()) return true;
+        try {
+            JSONObject root = new JSONObject(raw);
+            JSONObject group = root.optJSONObject(phase);
+            if (group == null) return true;
+            String key = type.toLowerCase(Locale.US);
+            if (!group.has(key)) return true;
+            return group.optBoolean(key, true);
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
 
     /** Parses "HH:mm" or "hh:mm AM/PM" -> Calendar today (or tomorrow if already passed and rollForward=true). */
     public static Calendar parseTime(String time, Calendar base, boolean rollForward) {
