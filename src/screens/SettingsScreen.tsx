@@ -470,6 +470,16 @@ export const SettingsScreen = () => {
         </div>
       </SettingsCard>
 
+      {/* Per-prayer notification toggles */}
+      <SettingsCard title="Per-prayer alerts" icon={Bell} gradient="from-emerald-50/50 to-white">
+        <PrayerNotificationToggles />
+      </SettingsCard>
+
+      {/* Background sync */}
+      <SettingsCard title="Background sync" icon={Clock} gradient="from-blue-50/50 to-white">
+        <SyncStatusCard />
+      </SettingsCard>
+
       {/* Smart Notifications */}
       <SettingsCard title="Smart Reminders" icon={Bell} gradient="from-sky-50/50 to-white">
         <WeatherReminderToggle />
