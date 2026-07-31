@@ -290,7 +290,12 @@ serve(async (req) => {
         .eq("location_id", location_id)
         .maybeSingle();
 
+      if (!existingAdmin?.username && !(await verifySuperToken(superToken))) {
+        return json({ error: "Super admin authentication required" }, 401);
+      }
+
       if (existingAdmin?.username) {
+
         // Credentials already exist, need old credentials to change
         const { old_username, old_password } = data || {};
         if (!old_username || !old_password) {
