@@ -451,6 +451,20 @@ export const SettingsScreen = () => {
             <ChevronRight className="w-4 h-4" />
           </button>
           <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate-quran'))}
+            className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">📖 Quran Reader</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate-compare'))}
+            className="w-full py-2.5 px-3 bg-gradient-to-r from-indigo-600 to-sky-600 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">🔀 Compare Mosque Times</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
             onClick={() => window.dispatchEvent(new CustomEvent('navigate-zakat'))}
             className="w-full py-2.5 px-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
           >
