@@ -14,6 +14,8 @@ import { SuperAdminPanel } from '@/screens/SuperAdminPanel';
 import { ZakatScreen } from '@/screens/ZakatScreen';
 import { TasbeehScreen } from '@/screens/TasbeehScreen';
 import { SyncChangesScreen } from '@/screens/SyncChangesScreen';
+import { QuranScreen } from '@/screens/QuranScreen';
+import { MosqueCompareScreen } from '@/screens/MosqueCompareScreen';
 import { useEventReminders } from '@/components/MosqueEvents';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { useAdaptiveTimezone } from '@/hooks/useAdaptiveTimezone';
@@ -39,6 +41,8 @@ const Index = () => {
   const [showZakat, setShowZakat] = useState(false);
   const [showTasbeeh, setShowTasbeeh] = useState(false);
   const [showSyncChanges, setShowSyncChanges] = useState(false);
+  const [showQuran, setShowQuran] = useState(false);
+  const [showCompare, setShowCompare] = useState(false);
 
   // Enable realtime sync for locations & prayer_times
   useRealtimeSync();
@@ -54,17 +58,23 @@ const Index = () => {
     const zakatHandler = () => setShowZakat(true);
     const tasbeehHandler = () => setShowTasbeeh(true);
     const syncHandler = () => setShowSyncChanges(true);
+    const quranHandler = () => setShowQuran(true);
+    const compareHandler = () => setShowCompare(true);
     window.addEventListener('navigate-admin', handler);
     window.addEventListener('navigate-super-admin', superHandler);
     window.addEventListener('navigate-zakat', zakatHandler);
     window.addEventListener('navigate-tasbeeh', tasbeehHandler);
     window.addEventListener('navigate-sync-changes', syncHandler);
+    window.addEventListener('navigate-quran', quranHandler);
+    window.addEventListener('navigate-compare', compareHandler);
     return () => {
       window.removeEventListener('navigate-admin', handler);
       window.removeEventListener('navigate-super-admin', superHandler);
       window.removeEventListener('navigate-zakat', zakatHandler);
       window.removeEventListener('navigate-tasbeeh', tasbeehHandler);
       window.removeEventListener('navigate-sync-changes', syncHandler);
+      window.removeEventListener('navigate-quran', quranHandler);
+      window.removeEventListener('navigate-compare', compareHandler);
     };
   }, []);
 
@@ -83,7 +93,11 @@ const Index = () => {
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       e.preventDefault();
-      if (showSyncChanges) {
+      if (showCompare) {
+        setShowCompare(false);
+      } else if (showQuran) {
+        setShowQuran(false);
+      } else if (showSyncChanges) {
         setShowSyncChanges(false);
       } else if (showTasbeeh) {
         setShowTasbeeh(false);
@@ -106,7 +120,7 @@ const Index = () => {
     window.history.pushState(null, '', window.location.href);
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [showSyncChanges, showTasbeeh, showZakat, showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
+  }, [showCompare, showQuran, showSyncChanges, showTasbeeh, showZakat, showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
 
   // Persist current screen
   useEffect(() => {
@@ -195,6 +209,12 @@ const Index = () => {
   };
 
   const renderScreen = () => {
+    if (showQuran) {
+      return <QuranScreen onBack={() => setShowQuran(false)} />;
+    }
+    if (showCompare) {
+      return <MosqueCompareScreen onBack={() => setShowCompare(false)} />;
+    }
     if (showTasbeeh) {
       return <TasbeehScreen onBack={() => setShowTasbeeh(false)} />;
     }
