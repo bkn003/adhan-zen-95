@@ -31,6 +31,46 @@ const toMinutes = (t?: string) => {
 
 const fmt = (t?: string) => (t ? formatTo12Hour(t) : '—');
 
+const dbRange = (day: number) => {
+  if (day <= 5) return '1-5';
+  if (day <= 11) return '6-11';
+  if (day <= 17) return '12-17';
+  if (day <= 24) return '18-24';
+  return '25-31';
+};
+
+const trim = (t?: string | null) => (t ? String(t).slice(0, 5) : undefined);
+
+/** Fallback for mosques whose CDN JSON isn't generated yet. */
+async function fetchFromSupabase(locationId: string, date: Date): Promise<StaticPrayerTime | null> {
+  try {
+    const { data } = await supabase
+      .from('prayer_times')
+      .select('*')
+      .eq('location_id', locationId)
+      .eq('month', format(date, 'LLLL'))
+      .ilike('date_range', `${dbRange(date.getDate())}%`)
+      .limit(1);
+    const r = data?.[0];
+    if (!r) return null;
+    return {
+      date: format(date, 'yyyy-MM-dd'),
+      fajr: trim(r.fajr_adhan),
+      fajr_iqamah: trim(r.fajr_iqamah),
+      dhuhr: trim(r.dhuhr_adhan),
+      dhuhr_iqamah: trim(r.dhuhr_iqamah),
+      asr: trim(r.asr_adhan),
+      asr_iqamah: trim(r.asr_iqamah),
+      maghrib: trim(r.maghrib_adhan),
+      maghrib_iqamah: trim(r.maghrib_iqamah),
+      isha: trim(r.isha_adhan),
+      isha_iqamah: trim(r.isha_iqamah),
+    } as unknown as StaticPrayerTime;
+  } catch {
+    return null;
+  }
+}
+
 export const MosqueCompareScreen: React.FC<MosqueCompareScreenProps> = ({ onBack }) => {
   const { data: locations = [], isLoading } = useLocations();
   const [selected, setSelected] = useState<string[]>(() => {
