@@ -63,19 +63,25 @@ export const MosqueCompareScreen: React.FC<MosqueCompareScreenProps> = ({ onBack
           }
           const slug = createLocationSlug(loc.mosque_name);
           const month = getMonthString(today);
+          let row: StaticPrayerTime | null = null;
           try {
             const all = await fetchStaticPrayerTimes(slug, month);
-            next[id] = getPrayerTimesForDate(all, today);
+            row = getPrayerTimesForDate(all, today);
           } catch {
-            // Offline / CDN miss: fall back to the app's localStorage cache
+            row = null;
+          }
+          if (!row) {
+            // CDN miss: reuse the app's localStorage cache, then Supabase
             try {
               const raw = localStorage.getItem(`pt:${slug}:${month}`);
               const cached = raw ? (JSON.parse(raw).times as StaticPrayerTime[]) : null;
-              next[id] = cached ? getPrayerTimesForDate(cached, today) : null;
+              row = cached ? getPrayerTimesForDate(cached, today) : null;
             } catch {
-              next[id] = null;
+              row = null;
             }
           }
+          if (!row) row = await fetchFromSupabase(id, today);
+          next[id] = row;
         })
       );
       if (!cancelled) {
