@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, Play, Pause, Bookmark, BookmarkCheck, Search, Loader2,
-  SkipBack, SkipForward, Repeat, X, CloudCheck,
+  SkipBack, SkipForward, Repeat, X, CheckCircle2,
 } from 'lucide-react';
 import { useQuranBookmarks } from '@/hooks/useQuranBookmarks';
 
@@ -254,7 +254,7 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
               <h2 className="text-sm font-bold">Bookmarks</h2>
               {synced && (
                 <span className="text-[10px] text-emerald-600 flex items-center gap-1">
-                  <CloudCheck className="w-3 h-3" /> Saved
+                  <CheckCircle2 className="w-3 h-3" /> Saved
                 </span>
               )}
             </div>
