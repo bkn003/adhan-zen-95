@@ -357,6 +357,17 @@ export const HomeScreen = ({
         <LocationSelector selectedLocation={selectedLocation} onLocationChange={handleLocationChange} />
       </div>
 
+      {/* One-tap UPI donation shortcut for the currently selected mosque */}
+      {selectedLocation && (
+        <MosqueDonate
+          key={selectedLocation.id}
+          mosqueName={selectedLocation.mosque_name}
+          locationId={selectedLocation.id}
+          variant="compact"
+        />
+      )}
+
+
       {/* Hijri Date */}
       <HijriDate selectedDate={selectedDate} />
 
