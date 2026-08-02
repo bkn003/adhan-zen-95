@@ -8,6 +8,8 @@ import { ForbiddenTimes } from '@/components/ForbiddenTimes';
 import { SaharToggle } from '@/components/SaharToggle';
 import { NextPrayerCard } from '@/components/NextPrayerCard';
 import { SpecialPrayers } from '@/components/SpecialPrayers';
+import { MosqueDonate } from '@/components/MosqueDonate';
+
 import { PrayerAlarmOverlay } from '@/components/PrayerAlarmOverlay';
 import { useLocations } from '@/hooks/useLocations';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
