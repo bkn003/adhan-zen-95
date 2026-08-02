@@ -581,6 +581,7 @@ export type Database = {
           language: string | null
           prayer_tracker: Json | null
           preferred_location_id: string | null
+          quran_bookmarks: Json
           theme: string | null
           updated_at: string | null
           user_id: string
@@ -592,6 +593,7 @@ export type Database = {
           language?: string | null
           prayer_tracker?: Json | null
           preferred_location_id?: string | null
+          quran_bookmarks?: Json
           theme?: string | null
           updated_at?: string | null
           user_id: string
@@ -603,6 +605,7 @@ export type Database = {
           language?: string | null
           prayer_tracker?: Json | null
           preferred_location_id?: string | null
+          quran_bookmarks?: Json
           theme?: string | null
           updated_at?: string | null
           user_id?: string

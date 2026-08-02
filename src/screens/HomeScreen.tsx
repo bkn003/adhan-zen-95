@@ -8,6 +8,8 @@ import { ForbiddenTimes } from '@/components/ForbiddenTimes';
 import { SaharToggle } from '@/components/SaharToggle';
 import { NextPrayerCard } from '@/components/NextPrayerCard';
 import { SpecialPrayers } from '@/components/SpecialPrayers';
+import { MosqueDonate } from '@/components/MosqueDonate';
+
 import { PrayerAlarmOverlay } from '@/components/PrayerAlarmOverlay';
 import { useLocations } from '@/hooks/useLocations';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
@@ -356,6 +358,17 @@ export const HomeScreen = ({
       <div className="bg-white rounded-xl px-2 py-1.5 border border-green-100 shadow-sm">
         <LocationSelector selectedLocation={selectedLocation} onLocationChange={handleLocationChange} />
       </div>
+
+      {/* One-tap UPI donation shortcut for the currently selected mosque */}
+      {selectedLocation && (
+        <MosqueDonate
+          key={selectedLocation.id}
+          mosqueName={selectedLocation.mosque_name}
+          locationId={selectedLocation.id}
+          variant="compact"
+        />
+      )}
+
 
       {/* Hijri Date */}
       <HijriDate selectedDate={selectedDate} />
