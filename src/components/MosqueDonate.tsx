@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { HandCoins, Copy, Check, X, Smartphone, Building2, QrCode, Share2 } from 'lucide-react';
+import { HandCoins, Copy, Check, X, Smartphone, Building2, QrCode, Share2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -17,9 +17,20 @@ interface DonationInfo {
 interface Props {
   mosqueName: string;
   locationId: string;
-  info: DonationInfo | null | undefined;
+  info?: DonationInfo | null;
+  /** 'full' = big CTA button (mosque page), 'compact' = slim home-screen shortcut */
+  variant?: 'full' | 'compact';
 }
 
+const isMobile = () =>
+  typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+const UPI_APPS: { label: string; scheme: string; color: string }[] = [
+  { label: 'Google Pay', scheme: 'tez://upi/pay', color: 'from-blue-500 to-sky-500' },
+  { label: 'PhonePe', scheme: 'phonepe://pay', color: 'from-violet-600 to-purple-600' },
+  { label: 'Paytm', scheme: 'paytmmp://pay', color: 'from-sky-600 to-blue-700' },
+  { label: 'BHIM / Other', scheme: 'upi://pay', color: 'from-emerald-500 to-teal-600' },
+];
 
 const CopyRow: React.FC<{ label: string; value: string }> = ({ label, value }) => {
   const [copied, setCopied] = useState(false);
@@ -47,18 +58,20 @@ const CopyRow: React.FC<{ label: string; value: string }> = ({ label, value }) =
   );
 };
 
-export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: baseInfo }) => {
+export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: baseInfo, variant = 'full' }) => {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState<number | ''>('');
   const [details, setDetails] = useState<DonationInfo | null>(null);
 
-  const enabled = !!baseInfo?.donation_enabled;
-
-  // Banking details are not publicly readable; fetch them for this mosque only,
-  // via a security-definer RPC that returns data only when donations are enabled.
+  // Banking details are not publicly readable; the security-definer RPC returns
+  // a row only when donations are enabled for that mosque — so it also tells us
+  // whether the donate shortcut should appear at all.
   useEffect(() => {
-    if (!enabled || !locationId) return;
+    if (!locationId) return;
     let cancelled = false;
+    setDetails(null);
+    setAmount('');
+    setOpen(false);
     (async () => {
       const { data } = await (supabase as any).rpc('get_mosque_donation_details', {
         p_location_id: locationId,
@@ -66,26 +79,35 @@ export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: ba
       if (!cancelled) setDetails(Array.isArray(data) ? (data[0] ?? null) : (data ?? null));
     })();
     return () => { cancelled = true; };
-  }, [enabled, locationId]);
+  }, [locationId]);
 
   const info: DonationInfo = { ...(baseInfo ?? {}), ...(details ?? {}) };
+  const enabled = !!(details?.donation_enabled ?? baseInfo?.donation_enabled);
 
   if (!enabled) return null;
   const hasUpi = !!info.donation_upi_id;
   const hasBank = !!(info.donation_account_number && info.donation_ifsc);
   if (!hasUpi && !hasBank) return null;
 
-
-  const upiLink = () => {
-    if (!info.donation_upi_id) return '';
+  const upiParams = () => {
     const p = new URLSearchParams({
-      pa: info.donation_upi_id,
+      pa: info.donation_upi_id || '',
       pn: info.donation_account_holder || mosqueName,
       cu: 'INR',
       tn: `Donation to ${mosqueName}`,
     });
     if (amount && Number(amount) > 0) p.set('am', String(amount));
-    return `upi://pay?${p.toString()}`;
+    return p.toString();
+  };
+
+  const upiLink = (scheme = 'upi://pay') => (info.donation_upi_id ? `${scheme}?${upiParams()}` : '');
+
+  const payWith = (scheme: string) => {
+    const link = upiLink(scheme);
+    if (!link) return;
+    window.location.href = link;
+    // If no UPI app handles the scheme, nothing happens — hint the user.
+    setTimeout(() => toast.info('No UPI app opened? Copy the UPI ID and pay manually.'), 2500);
   };
 
   const qrSrc = () => {
@@ -103,15 +125,31 @@ export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: ba
     toast.success('Donation details copied');
   };
 
+  const mobile = isMobile();
+
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white rounded-2xl py-3 px-4 font-bold text-sm shadow-lg flex items-center justify-center gap-2 active:scale-[0.98] transition"
-      >
-        <HandCoins className="w-5 h-5" />
-        Donate to {mosqueName.length > 20 ? 'this Mosque' : mosqueName}
-      </button>
+      {variant === 'compact' ? (
+        <button
+          onClick={() => setOpen(true)}
+          className="w-full bg-gradient-to-r from-amber-500 to-rose-500 text-white rounded-xl px-3 py-2 shadow-sm flex items-center gap-2 active:scale-[0.99] transition"
+        >
+          <HandCoins className="w-4 h-4 shrink-0" />
+          <span className="min-w-0 flex-1 text-left leading-tight">
+            <span className="block text-[11px] font-bold">Donate {hasUpi ? '· UPI 1-tap' : ''}</span>
+            <span className="block text-[10px] opacity-90 truncate">{mosqueName}</span>
+          </span>
+          <ExternalLink className="w-3.5 h-3.5 opacity-80 shrink-0" />
+        </button>
+      ) : (
+        <button
+          onClick={() => setOpen(true)}
+          className="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white rounded-2xl py-3 px-4 font-bold text-sm shadow-lg flex items-center justify-center gap-2 active:scale-[0.98] transition"
+        >
+          <HandCoins className="w-5 h-5" />
+          Donate to {mosqueName.length > 20 ? 'this Mosque' : mosqueName}
+        </button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)}>
@@ -146,17 +184,6 @@ export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: ba
                     <h3 className="text-sm font-bold text-gray-800">Pay via UPI</h3>
                   </div>
 
-                  <div className="flex flex-col items-center bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-4 border border-emerald-100">
-                    <img
-                      src={qrSrc()}
-                      alt="UPI QR"
-                      className="w-44 h-44 rounded-xl bg-white p-2 shadow"
-                    />
-                    <p className="text-[11px] text-gray-500 mt-2 flex items-center gap-1">
-                      <QrCode className="w-3 h-3" /> Scan with any UPI app
-                    </p>
-                  </div>
-
                   <div className="grid grid-cols-4 gap-1.5">
                     {[51, 101, 501, 1001].map(a => (
                       <button
@@ -178,12 +205,32 @@ export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: ba
                     className="w-full text-sm px-3 py-2 rounded-xl border border-gray-200 focus:border-emerald-400 outline-none"
                   />
 
-                  <a
-                    href={upiLink()}
-                    className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl py-3 font-bold text-sm shadow"
-                  >
-                    <Smartphone className="w-4 h-4" /> Open UPI App {amount ? `· ₹${amount}` : ''}
-                  </a>
+                  {/* Deep links straight into the installed UPI apps */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {UPI_APPS.map(app => (
+                      <button
+                        key={app.label}
+                        onClick={() => payWith(app.scheme)}
+                        className={`bg-gradient-to-r ${app.color} text-white rounded-xl py-2.5 text-xs font-bold shadow flex items-center justify-center gap-1.5 active:scale-[0.98]`}
+                      >
+                        <Smartphone className="w-3.5 h-3.5" /> {app.label}
+                      </button>
+                    ))}
+                  </div>
+                  {amount ? (
+                    <p className="text-[10px] text-center text-gray-500">Paying ₹{amount} to {info.donation_upi_id}</p>
+                  ) : (
+                    <p className="text-[10px] text-center text-gray-400">Amount is optional — you can also enter it in your UPI app</p>
+                  )}
+
+                  {!mobile && (
+                    <div className="flex flex-col items-center bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-4 border border-emerald-100">
+                      <img src={qrSrc()} alt="UPI QR" className="w-44 h-44 rounded-xl bg-white p-2 shadow" />
+                      <p className="text-[11px] text-gray-500 mt-2 flex items-center gap-1">
+                        <QrCode className="w-3 h-3" /> Scan with any UPI app
+                      </p>
+                    </div>
+                  )}
 
                   <CopyRow label="UPI ID" value={info.donation_upi_id!} />
                 </div>
