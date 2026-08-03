@@ -551,6 +551,15 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         <EventsAdmin locationId={locationId!} username={username} password={password} />
       </CollapsibleSection>
 
+      {/* Reviews moderation */}
+      <CollapsibleSection
+        title="Reviews & Moderation"
+        expanded={expandedSection === 'reviews'}
+        onToggle={() => setExpandedSection(expandedSection === 'reviews' ? null : 'reviews')}
+      >
+        <ReviewsAdmin locationId={locationId!} username={username} password={password} />
+      </CollapsibleSection>
+
       {/* Donations */}
       <CollapsibleSection
         title="Donations (UPI / Bank)"
@@ -559,6 +568,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       >
         <DonationAdmin locationId={locationId!} location={mosque} username={username} password={password} />
       </CollapsibleSection>
+
     </div>
   );
 };
