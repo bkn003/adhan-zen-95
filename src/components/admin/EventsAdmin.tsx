@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2, Edit2, Save, X, Calendar } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, Calendar , Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Props {
@@ -70,6 +70,26 @@ export const EventsAdmin: React.FC<Props> = ({ locationId, username, password })
       qc.invalidateQueries({ queryKey: ['mosque-events', locationId] });
     } catch (e: any) {
       toast.error(e.message || 'Save failed');
+    }
+  };
+
+  const sendPush = async (e: any) => {
+    if (!confirm(`Send a push notification about "${e.title}" to followers?`)) return;
+    try {
+      const { data, error } = await supabase.functions.invoke('mosque-admin', {
+        body: {
+          action: 'send_announcement_push',
+          username,
+          password,
+          location_id: locationId,
+          data: { title: e.title, body: e.body || e.title, announcement_id: e.id },
+        },
+      });
+      if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message);
+      const sent = (data as any)?.sent ?? 0;
+      toast.success(sent ? `Push sent to ${sent} device(s)` : 'No registered devices yet');
+    } catch (err: any) {
+      toast.error(err.message || 'Push failed');
     }
   };
 
@@ -206,6 +226,13 @@ export const EventsAdmin: React.FC<Props> = ({ locationId, username, password })
                   className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => sendPush(e)}
+                  title="Send push to followers"
+                  className="p-1.5 bg-amber-50 text-amber-600 rounded-lg"
+                >
+                  <Send className="w-3.5 h-3.5" />
                 </button>
                 <button onClick={() => remove(e.id)} className="p-1.5 bg-rose-50 text-rose-600 rounded-lg">
                   <Trash2 className="w-3.5 h-3.5" />
