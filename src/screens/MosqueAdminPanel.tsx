@@ -11,6 +11,7 @@ import { useCustomFilters, useLocationFilters, useSetLocationFilters } from '@/h
 import { useSignedPhotoUrls, invalidateSignedPhotoUrl } from '@/utils/signedPhotoUrls';
 import { EventsAdmin } from '@/components/admin/EventsAdmin';
 import { DonationAdmin } from '@/components/admin/DonationAdmin';
+import { ReviewsAdmin } from '@/components/admin/ReviewsAdmin';
 
 /**
  * Returns the last day of a given month name (1-indexed).
