@@ -11,6 +11,8 @@ public class NotifChannels {
     public static final String CHANNEL_ADHAN = "adhan_channel";
     public static final String CHANNEL_CHANGES = "prayer_changes_channel";
     public static final String CHANNEL_SYNC = "prayer_sync_channel";
+    public static final String CHANNEL_ANNOUNCEMENTS = "mosque_announcements";
+
 
     public static void ensure(Context ctx) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
