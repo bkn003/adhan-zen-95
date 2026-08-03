@@ -60,5 +60,18 @@ public class NotifChannels {
             ch.setDescription("Silent background prayer-time refresh status");
             nm.createNotificationChannel(ch);
         }
+
+        if (nm.getNotificationChannel(CHANNEL_ANNOUNCEMENTS) == null) {
+            NotificationChannel ch = new NotificationChannel(
+                    CHANNEL_ANNOUNCEMENTS,
+                    "Mosque Announcements",
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+            ch.setDescription("Announcements pushed by mosques you follow");
+            ch.enableLights(true);
+            ch.enableVibration(true);
+            nm.createNotificationChannel(ch);
+        }
     }
 }
+
