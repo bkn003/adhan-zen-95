@@ -130,25 +130,67 @@ export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: ba
   return (
     <>
       {variant === 'compact' ? (
-        <button
-          onClick={() => setOpen(true)}
-          className="w-full bg-gradient-to-r from-amber-500 to-rose-500 text-white rounded-xl px-3 py-2 shadow-sm flex items-center gap-2 active:scale-[0.99] transition"
-        >
-          <HandCoins className="w-4 h-4 shrink-0" />
-          <span className="min-w-0 flex-1 text-left leading-tight">
-            <span className="block text-[11px] font-bold">Donate {hasUpi ? '· UPI 1-tap' : ''}</span>
-            <span className="block text-[10px] opacity-90 truncate">{mosqueName}</span>
-          </span>
-          <ExternalLink className="w-3.5 h-3.5 opacity-80 shrink-0" />
-        </button>
+        <div className="rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 p-2.5 shadow-md text-white">
+          <button onClick={() => setOpen(true)} className="w-full flex items-center gap-2 active:scale-[0.99] transition">
+            <span className="p-1.5 bg-white/20 rounded-xl shrink-0"><HandCoins className="w-4 h-4" /></span>
+            <span className="min-w-0 flex-1 text-left leading-tight">
+              <span className="block text-[12px] font-extrabold">Support this mosque</span>
+              <span className="block text-[10px] opacity-90 truncate">{mosqueName}</span>
+            </span>
+            <ExternalLink className="w-3.5 h-3.5 opacity-90 shrink-0" />
+          </button>
+          {hasUpi && (
+            <div className="grid grid-cols-3 gap-1.5 mt-2">
+              {UPI_APPS.slice(0, 3).map((app) => (
+                <button
+                  key={app.label}
+                  onClick={() => payWith(app.scheme)}
+                  className="bg-white/95 text-gray-800 rounded-xl py-1.5 text-[10px] font-bold shadow-sm active:scale-[0.97]"
+                >
+                  {app.label.replace(' Pay', 'Pay')}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       ) : (
-        <button
-          onClick={() => setOpen(true)}
-          className="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white rounded-2xl py-3 px-4 font-bold text-sm shadow-lg flex items-center justify-center gap-2 active:scale-[0.98] transition"
-        >
-          <HandCoins className="w-5 h-5" />
-          Donate to {mosqueName.length > 20 ? 'this Mosque' : mosqueName}
-        </button>
+        <div className="rounded-3xl bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 p-4 shadow-xl text-white space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="p-2.5 bg-white/20 rounded-2xl shrink-0"><HandCoins className="w-6 h-6" /></span>
+            <div className="min-w-0">
+              <p className="text-sm font-extrabold leading-tight">Donate to this mosque</p>
+              <p className="text-[11px] opacity-90 truncate">{mosqueName}</p>
+            </div>
+          </div>
+          {hasUpi ? (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                {UPI_APPS.map((app) => (
+                  <button
+                    key={app.label}
+                    onClick={() => payWith(app.scheme)}
+                    className="bg-white/95 text-gray-800 rounded-xl py-2.5 text-xs font-bold shadow flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                  >
+                    <Smartphone className="w-3.5 h-3.5" /> {app.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setOpen(true)}
+                className="w-full bg-black/25 rounded-xl py-2 text-xs font-bold active:scale-[0.99]"
+              >
+                Choose amount, QR &amp; bank details
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setOpen(true)}
+              className="w-full bg-white/95 text-gray-800 rounded-xl py-2.5 text-xs font-bold active:scale-[0.99]"
+            >
+              View bank transfer details
+            </button>
+          )}
+        </div>
       )}
 
       {open && (
