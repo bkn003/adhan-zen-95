@@ -16,11 +16,14 @@ import { TasbeehScreen } from '@/screens/TasbeehScreen';
 import { SyncChangesScreen } from '@/screens/SyncChangesScreen';
 import { QuranScreen } from '@/screens/QuranScreen';
 import { MosqueCompareScreen } from '@/screens/MosqueCompareScreen';
+import { NotificationSettingsScreen } from '@/screens/NotificationSettingsScreen';
+import { PrivacyScreen } from '@/screens/PrivacyScreen';
 import { useEventReminders } from '@/components/MosqueEvents';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { useAdaptiveTimezone } from '@/hooks/useAdaptiveTimezone';
 import { configureAndroidBackgroundSync } from '@/native/backgroundSync';
 import { startAutoSync } from '@/native/syncEngine';
+import { initPushNotifications } from '@/native/pushRegistration';
 import { supabase } from '@/integrations/supabase/client';
 import type { Screen } from '@/types/navigation.types';
 import type { Location } from '@/types/prayer.types';
@@ -43,6 +46,8 @@ const Index = () => {
   const [showSyncChanges, setShowSyncChanges] = useState(false);
   const [showQuran, setShowQuran] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
+  const [showNotifSettings, setShowNotifSettings] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   // Enable realtime sync for locations & prayer_times
   useRealtimeSync();
@@ -50,6 +55,10 @@ const Index = () => {
   useAdaptiveTimezone();
   // Background event reminder notifications
   useEventReminders();
+  // Register/refresh the FCM device token for mosque announcements
+  useEffect(() => {
+    initPushNotifications();
+  }, []);
 
   // Listen for admin panel navigation event
   useEffect(() => {
@@ -60,6 +69,8 @@ const Index = () => {
     const syncHandler = () => setShowSyncChanges(true);
     const quranHandler = () => setShowQuran(true);
     const compareHandler = () => setShowCompare(true);
+    const notifHandler = () => setShowNotifSettings(true);
+    const privacyHandler = () => setShowPrivacy(true);
     window.addEventListener('navigate-admin', handler);
     window.addEventListener('navigate-super-admin', superHandler);
     window.addEventListener('navigate-zakat', zakatHandler);
@@ -67,6 +78,8 @@ const Index = () => {
     window.addEventListener('navigate-sync-changes', syncHandler);
     window.addEventListener('navigate-quran', quranHandler);
     window.addEventListener('navigate-compare', compareHandler);
+    window.addEventListener('navigate-notifications', notifHandler);
+    window.addEventListener('navigate-privacy', privacyHandler);
     return () => {
       window.removeEventListener('navigate-admin', handler);
       window.removeEventListener('navigate-super-admin', superHandler);
@@ -75,6 +88,8 @@ const Index = () => {
       window.removeEventListener('navigate-sync-changes', syncHandler);
       window.removeEventListener('navigate-quran', quranHandler);
       window.removeEventListener('navigate-compare', compareHandler);
+      window.removeEventListener('navigate-notifications', notifHandler);
+      window.removeEventListener('navigate-privacy', privacyHandler);
     };
   }, []);
 
@@ -93,7 +108,11 @@ const Index = () => {
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       e.preventDefault();
-      if (showCompare) {
+      if (showPrivacy) {
+        setShowPrivacy(false);
+      } else if (showNotifSettings) {
+        setShowNotifSettings(false);
+      } else if (showCompare) {
         setShowCompare(false);
       } else if (showQuran) {
         setShowQuran(false);
@@ -120,7 +139,7 @@ const Index = () => {
     window.history.pushState(null, '', window.location.href);
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [showCompare, showQuran, showSyncChanges, showTasbeeh, showZakat, showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
+  }, [showPrivacy, showNotifSettings, showCompare, showQuran, showSyncChanges, showTasbeeh, showZakat, showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
 
   // Persist current screen
   useEffect(() => {
@@ -214,6 +233,14 @@ const Index = () => {
     }
     if (showCompare) {
       return <MosqueCompareScreen onBack={() => setShowCompare(false)} />;
+    }
+
+    if (showNotifSettings) {
+      return <NotificationSettingsScreen onBack={() => setShowNotifSettings(false)} />;
+    }
+
+    if (showPrivacy) {
+      return <PrivacyScreen onBack={() => setShowPrivacy(false)} />;
     }
     if (showTasbeeh) {
       return <TasbeehScreen onBack={() => setShowTasbeeh(false)} />;

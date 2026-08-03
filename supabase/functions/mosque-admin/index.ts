@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendFcm } from "../_shared/fcm.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -781,6 +782,101 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+
+
+    // ---- Mosque -> follower push announcements (FCM) ----
+    if (action === "send_announcement_push") {
+      const ok = await verifyAdmin();
+      if (!ok) return json({ error: "Unauthorized" }, 403);
+
+      const { title, body: message, announcement_id } = (data || {}) as any;
+      if (!title || !message) return json({ error: "title and body are required" }, 400);
+
+      // Followers who opted in for this mosque
+      const { data: follows } = await supabase
+        .from("mosque_follows")
+        .select("user_id")
+        .eq("location_id", location_id)
+        .eq("announcements", true);
+
+      const userIds = (follows ?? []).map((f: any) => f.user_id);
+
+      // Plus anyone whose device is set to this mosque (My Mohalla) as a fallback
+      let query = supabase
+        .from("push_tokens")
+        .select("expo_push_token, user_id")
+        .eq("disabled", false);
+      query = userIds.length
+        ? query.or(`user_id.in.(${userIds.join(",")}),location_id.eq.${location_id}`)
+        : query.eq("location_id", location_id);
+
+      const { data: tokenRows, error: tokenErr } = await query;
+      if (tokenErr) return json({ error: tokenErr.message }, 500);
+
+      const tokens = Array.from(
+        new Set((tokenRows ?? []).map((t: any) => t.expo_push_token).filter(Boolean)),
+      ) as string[];
+      if (tokens.length === 0) return json({ success: true, sent: 0, note: "No registered devices" });
+
+      try {
+        const res = await sendFcm(tokens, title, message, {
+          type: "announcement",
+          location_id: String(location_id),
+          announcement_id: String(announcement_id ?? ""),
+        });
+
+        // Cleanup: disable tokens FCM reported as gone
+        if (res.invalidTokens.length) {
+          await supabase
+            .from("push_tokens")
+            .update({ disabled: true })
+            .in("expo_push_token", res.invalidTokens);
+        }
+        return json({ success: true, sent: res.sent, cleaned: res.invalidTokens.length, errors: res.errors });
+      } catch (e) {
+        return json({ error: e instanceof Error ? e.message : "FCM send failed" }, 500);
+      }
+    }
+
+    // ---- Review moderation ----
+    if (action === "list_reviews") {
+      const ok = await verifyAdmin();
+      if (!ok) return json({ error: "Unauthorized" }, 403);
+      const { data: rows, error } = await supabase
+        .from("mosque_reviews")
+        .select("id, rating, comment, created_at, is_hidden, report_count")
+        .eq("location_id", location_id)
+        .order("report_count", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) return json({ error: error.message }, 500);
+      return json({ reviews: rows ?? [] });
+    }
+
+    if (action === "moderate_review") {
+      const ok = await verifyAdmin();
+      if (!ok) return json({ error: "Unauthorized" }, 403);
+      const { id, hidden, remove } = (data || {}) as any;
+      if (!id) return json({ error: "Review id required" }, 400);
+
+      if (remove) {
+        const { error } = await supabase
+          .from("mosque_reviews")
+          .delete()
+          .eq("id", id)
+          .eq("location_id", location_id);
+        if (error) return json({ error: error.message }, 500);
+        return json({ success: true, deleted: true });
+      }
+
+      const { error } = await supabase
+        .from("mosque_reviews")
+        .update({ is_hidden: !!hidden })
+        .eq("id", id)
+        .eq("location_id", location_id);
+      if (error) return json({ error: error.message }, 500);
+      return json({ success: true, hidden: !!hidden });
+    }
 
     return new Response(
       JSON.stringify({ error: "Unknown action" }),

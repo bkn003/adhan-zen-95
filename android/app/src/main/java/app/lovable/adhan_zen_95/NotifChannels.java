@@ -11,6 +11,8 @@ public class NotifChannels {
     public static final String CHANNEL_ADHAN = "adhan_channel";
     public static final String CHANNEL_CHANGES = "prayer_changes_channel";
     public static final String CHANNEL_SYNC = "prayer_sync_channel";
+    public static final String CHANNEL_ANNOUNCEMENTS = "mosque_announcements";
+
 
     public static void ensure(Context ctx) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
@@ -58,5 +60,18 @@ public class NotifChannels {
             ch.setDescription("Silent background prayer-time refresh status");
             nm.createNotificationChannel(ch);
         }
+
+        if (nm.getNotificationChannel(CHANNEL_ANNOUNCEMENTS) == null) {
+            NotificationChannel ch = new NotificationChannel(
+                    CHANNEL_ANNOUNCEMENTS,
+                    "Mosque Announcements",
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+            ch.setDescription("Announcements pushed by mosques you follow");
+            ch.enableLights(true);
+            ch.enableVibration(true);
+            nm.createNotificationChannel(ch);
+        }
     }
 }
+

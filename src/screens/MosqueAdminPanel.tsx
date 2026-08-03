@@ -11,6 +11,7 @@ import { useCustomFilters, useLocationFilters, useSetLocationFilters } from '@/h
 import { useSignedPhotoUrls, invalidateSignedPhotoUrl } from '@/utils/signedPhotoUrls';
 import { EventsAdmin } from '@/components/admin/EventsAdmin';
 import { DonationAdmin } from '@/components/admin/DonationAdmin';
+import { ReviewsAdmin } from '@/components/admin/ReviewsAdmin';
 
 /**
  * Returns the last day of a given month name (1-indexed).
@@ -551,6 +552,15 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         <EventsAdmin locationId={locationId!} username={username} password={password} />
       </CollapsibleSection>
 
+      {/* Reviews moderation */}
+      <CollapsibleSection
+        title="Reviews & Moderation"
+        expanded={expandedSection === 'reviews'}
+        onToggle={() => setExpandedSection(expandedSection === 'reviews' ? null : 'reviews')}
+      >
+        <ReviewsAdmin locationId={locationId!} username={username} password={password} />
+      </CollapsibleSection>
+
       {/* Donations */}
       <CollapsibleSection
         title="Donations (UPI / Bank)"
@@ -559,6 +569,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       >
         <DonationAdmin locationId={locationId!} location={mosque} username={username} password={password} />
       </CollapsibleSection>
+
     </div>
   );
 };

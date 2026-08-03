@@ -343,6 +343,41 @@ export type Database = {
           },
         ]
       }
+      mosque_follows: {
+        Row: {
+          announcements: boolean
+          created_at: string
+          id: string
+          location_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          announcements?: boolean
+          created_at?: string
+          id?: string
+          location_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          announcements?: boolean
+          created_at?: string
+          id?: string
+          location_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mosque_follows_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mosque_photos: {
         Row: {
           caption: string | null
@@ -381,14 +416,48 @@ export type Database = {
           },
         ]
       }
+      mosque_review_reports: {
+        Row: {
+          created_at: string
+          id: string
+          reason: string | null
+          review_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason?: string | null
+          review_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason?: string | null
+          review_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mosque_review_reports_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "mosque_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mosque_reviews: {
         Row: {
           comment: string | null
           created_at: string | null
           device_id: string
           id: string
+          is_hidden: boolean
           location_id: string
           rating: number
+          report_count: number
           user_id: string | null
         }
         Insert: {
@@ -396,8 +465,10 @@ export type Database = {
           created_at?: string | null
           device_id: string
           id?: string
+          is_hidden?: boolean
           location_id: string
           rating: number
+          report_count?: number
           user_id?: string | null
         }
         Update: {
@@ -405,8 +476,10 @@ export type Database = {
           created_at?: string | null
           device_id?: string
           id?: string
+          is_hidden?: boolean
           location_id?: string
           rating?: number
+          report_count?: number
           user_id?: string | null
         }
         Relationships: [
@@ -536,30 +609,39 @@ export type Database = {
         Row: {
           created_at: string | null
           device_id: string
+          disabled: boolean
           expo_push_token: string
           id: string
+          last_seen_at: string
           location_id: string | null
           platform: string | null
+          provider: string
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
           created_at?: string | null
           device_id: string
+          disabled?: boolean
           expo_push_token: string
           id?: string
+          last_seen_at?: string
           location_id?: string | null
           platform?: string | null
+          provider?: string
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
           created_at?: string | null
           device_id?: string
+          disabled?: boolean
           expo_push_token?: string
           id?: string
+          last_seen_at?: string
           location_id?: string | null
           platform?: string | null
+          provider?: string
           updated_at?: string | null
           user_id?: string | null
         }
@@ -644,6 +726,10 @@ export type Database = {
           donation_notes: string
           donation_upi_id: string
         }[]
+      }
+      report_mosque_review: {
+        Args: { p_reason?: string; p_review_id: string }
+        Returns: boolean
       }
       set_mosque_admin_credentials: {
         Args: { p_location_id: string; p_password: string; p_username: string }
