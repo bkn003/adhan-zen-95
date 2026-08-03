@@ -15,6 +15,7 @@ import { AdhanSoundSelector } from '@/components/AdhanSoundSelector';
 import { VibrationSelector } from '@/components/VibrationSelector';
 import { SyncStatusCard } from '@/components/SyncStatusCard';
 import { PrayerNotificationToggles } from '@/components/PrayerNotificationToggles';
+import { Link } from 'react-router-dom';
 
 const SettingsCard = ({
   children,
@@ -471,13 +472,27 @@ export const SettingsScreen = () => {
             <span className="flex items-center gap-2">💰 Zakat Calculator</span>
             <ChevronRight className="w-4 h-4" />
           </button>
-          <a
-            href="/widget"
+          <Link
+            to="/widget"
             className="w-full py-2.5 px-3 bg-slate-900 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
           >
             <span className="flex items-center gap-2">📲 Open Next-Prayer Widget</span>
             <ChevronRight className="w-4 h-4" />
-          </a>
+          </Link>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate-notifications'))}
+            className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">📣 Mosque Announcements &amp; Quiet Hours</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate-privacy'))}
+            className="w-full py-2.5 px-3 bg-gradient-to-r from-slate-800 to-slate-600 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">🛡️ Privacy &amp; Data Controls</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
           <p className="text-[11px] text-gray-500 px-1">
             Tip: Install the app, then long-press its icon for quick Widget / Qibla / Tracker shortcuts.
           </p>
