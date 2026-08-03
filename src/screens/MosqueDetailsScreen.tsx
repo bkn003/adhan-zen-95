@@ -9,6 +9,7 @@ import { useRamadanContext } from '@/contexts/RamadanContext';
 import { useSignedPhotoUrls } from '@/utils/signedPhotoUrls';
 import { MosqueEvents } from '@/components/MosqueEvents';
 import { MosqueDonate } from '@/components/MosqueDonate';
+import { MosqueReviews } from '@/components/MosqueReviews';
 
 interface MosqueDetailsScreenProps {
   locationId: string;
@@ -591,6 +592,9 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
           </h2>
           <MosqueEvents locationId={location.id} />
         </div>
+
+        {/* Reviews */}
+        <MosqueReviews locationId={location.id} />
 
 
 

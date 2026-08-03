@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getWeather, describeWeather, contextualTip } from '@/utils/weather';
+import { inQuietHours } from '@/utils/quietHours';
 
 interface NotificationState {
   permission: NotificationPermission;
@@ -78,6 +79,7 @@ export const useNotifications = () => {
     // 15-minute pre-prayer reminder with weather context
     if (timeUntilPre > 0) {
       setTimeout(async () => {
+        if (inQuietHours()) return;
         const body = await buildBody(`Prayer in 15 minutes — Adhan at ${adhanTime}`);
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.ready.then((reg) =>
@@ -96,6 +98,7 @@ export const useNotifications = () => {
 
     // Schedule main adhan notification
     setTimeout(async () => {
+      if (inQuietHours()) return;
       const body = await buildBody(`Adhan: ${adhanTime} | Iqamah: ${iqamahTime}`);
       if ('serviceWorker' in navigator && 'Notification' in window) {
         navigator.serviceWorker.ready.then(registration => {
