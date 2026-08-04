@@ -15,7 +15,7 @@ const corsHeaders = {
  * visitor — including users without a session — without widening database
  * grants. It only ever returns rows where the mosque enabled donations.
  */
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
