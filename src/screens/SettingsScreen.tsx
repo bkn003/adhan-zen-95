@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Volume2, Clock, Moon, Bell, ChevronRight, Settings as SettingsIcon, VolumeX, Sunrise, Sun, Sunset, Home, Globe } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { getWeather, describeWeather, contextualTip } from '@/utils/weather';
 import { LANGUAGE_LABELS } from '@/i18n/translations';
 import type { Language } from '@/i18n/translations';
 import { LocationSelector } from '@/components/LocationSelector';
