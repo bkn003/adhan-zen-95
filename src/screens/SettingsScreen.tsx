@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Volume2, Clock, Moon, Bell, ChevronRight, Settings as SettingsIcon, VolumeX, Sunrise, Sun, Sunset, Home, Globe } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { getWeather, describeWeather, contextualTip } from '@/utils/weather';
 import { LANGUAGE_LABELS } from '@/i18n/translations';
 import type { Language } from '@/i18n/translations';
 import { LocationSelector } from '@/components/LocationSelector';
@@ -267,6 +268,9 @@ export const SettingsScreen = () => {
 
       {/* Location Settings */}
       <SettingsCard title={t('location')} icon={MapPin} gradient="from-blue-50/50 to-white">
+        <p className="text-xs text-gray-500 mb-2">
+          The mosque you are currently viewing — its timings are shown on the home screen and used for adhan alarms.
+        </p>
         <LocationSelector selectedLocation={selectedLocation} onLocationChange={handleLocationChange} />
       </SettingsCard>
 
@@ -274,6 +278,10 @@ export const SettingsScreen = () => {
       <SettingsCard title={t('myMohalla')} icon={Home} gradient="from-emerald-50/50 to-white">
         <div className="space-y-2">
           <p className="text-xs text-gray-500">{t('setHomeMosque')}</p>
+          <p className="text-xs text-gray-400">
+            Your home mosque. It stays fixed even when you switch the viewing location above, and you get a
+            notification whenever its prayer timings change.
+          </p>
           <LocationSelector
             selectedLocation={mohallaLocation}
             onLocationChange={(location: Location) => {
@@ -288,6 +296,7 @@ export const SettingsScreen = () => {
           )}
         </div>
       </SettingsCard>
+
 
       {/* DND Permission Prompt */}
       {showDndPermissionPrompt && (
@@ -527,28 +536,95 @@ export const SettingsScreen = () => {
 
 const WeatherReminderToggle: React.FC = () => {
   const [on, setOn] = useState(() => localStorage.getItem('weatherReminders') === 'true');
+  const [weather, setWeather] = useState<string | null>(null);
+  const [tip, setTip] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  const refresh = React.useCallback(async () => {
+    setChecking(true);
+    try {
+      const raw = localStorage.getItem('selectedLocationData');
+      const loc = raw ? JSON.parse(raw) : null;
+      if (!loc?.latitude || !loc?.longitude) {
+        setWeather('Select a mosque to enable weather tips');
+        setTip(null);
+        return;
+      }
+      const snap = await getWeather(Number(loc.latitude), Number(loc.longitude));
+      if (!snap) {
+        setWeather('Weather service unreachable');
+        setTip(null);
+        return;
+      }
+      setWeather(describeWeather(snap));
+      setTip(contextualTip(snap, 'Asr'));
+    } finally {
+      setChecking(false);
+    }
+  }, []);
+
+  useEffect(() => { if (on) void refresh(); }, [on, refresh]);
+
+  const testReminder = async () => {
+    if (typeof Notification === 'undefined') return;
+    let perm = Notification.permission;
+    if (perm === 'default') perm = await Notification.requestPermission();
+    if (perm !== 'granted') return;
+    new Notification('Asr soon', {
+      body: `Prayer in 15 minutes${weather ? `\n${weather}` : ''}${tip ? `\n${tip}` : ''}`,
+      icon: '/app-icon-192.png',
+      tag: 'weather-test',
+    });
+  };
+
   return (
-    <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100">
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        <div className="p-1.5 bg-sky-50 rounded-lg shrink-0">🌦️</div>
-        <div className="min-w-0">
-          <span className="text-sm font-medium text-gray-700 block truncate">
-            Weather-aware reminders
-          </span>
-          <p className="text-xs text-gray-500 truncate">
-            15-min before prayer + weather tip (rain / heat / cold).
-          </p>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="p-1.5 bg-sky-50 rounded-lg shrink-0">🌦️</div>
+          <div className="min-w-0">
+            <span className="text-sm font-medium text-gray-700 block truncate">
+              Weather-aware reminders
+            </span>
+            <p className="text-xs text-gray-500">
+              15-min before prayer + weather tip (rain / heat / cold).
+            </p>
+          </div>
         </div>
+        <Switch
+          checked={on}
+          onCheckedChange={(v) => {
+            setOn(v);
+            localStorage.setItem('weatherReminders', String(v));
+          }}
+          className="data-[state=checked]:bg-sky-500 shrink-0 ml-2"
+        />
       </div>
-      <Switch
-        checked={on}
-        onCheckedChange={(v) => {
-          setOn(v);
-          localStorage.setItem('weatherReminders', String(v));
-        }}
-        className="data-[state=checked]:bg-sky-500 shrink-0 ml-2"
-      />
+
+      {on && (
+        <div className="p-3 bg-sky-50/70 rounded-xl border border-sky-100 space-y-2">
+          <p className="text-xs font-semibold text-sky-800">
+            {checking ? 'Checking weather…' : weather ?? 'No weather data yet'}
+          </p>
+          {tip && <p className="text-xs text-sky-700">{tip}</p>}
+          <div className="flex gap-2">
+            <button
+              onClick={() => void refresh()}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-white border border-sky-200 text-sky-700"
+            >
+              Refresh
+            </button>
+            <button
+              onClick={() => void testReminder()}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg bg-sky-500 text-white"
+            >
+              Send test reminder
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
 
