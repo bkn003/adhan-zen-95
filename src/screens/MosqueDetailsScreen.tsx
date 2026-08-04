@@ -343,6 +343,12 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
               <span>Share</span>
             </Button>
           </div>
+
+          {/* Donate — kept directly under the action buttons so the UPI
+              one-tap shortcut is visible without scrolling the page. */}
+          <div className="mt-3">
+            <MosqueDonate mosqueName={location.mosque_name} locationId={location.id} info={location as any} variant="compact" />
+          </div>
         </div>
 
         {/* Today's Prayer Times */}

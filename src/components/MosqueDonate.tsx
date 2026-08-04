@@ -63,9 +63,9 @@ export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: ba
   const [amount, setAmount] = useState<number | ''>('');
   const [details, setDetails] = useState<DonationInfo | null>(null);
 
-  // Banking details are not publicly readable; the security-definer RPC returns
-  // a row only when donations are enabled for that mosque — so it also tells us
-  // whether the donate shortcut should appear at all.
+  // Banking details are not publicly readable. Signed-in visitors can use the
+  // security-definer RPC; everyone else (no session yet) falls back to the
+  // public `mosque-donation` edge function so the donate shortcut still shows.
   useEffect(() => {
     if (!locationId) return;
     let cancelled = false;
@@ -73,10 +73,24 @@ export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: ba
     setAmount('');
     setOpen(false);
     (async () => {
-      const { data } = await (supabase as any).rpc('get_mosque_donation_details', {
-        p_location_id: locationId,
-      });
-      if (!cancelled) setDetails(Array.isArray(data) ? (data[0] ?? null) : (data ?? null));
+      let row: DonationInfo | null = null;
+      try {
+        const { data, error } = await (supabase as any).rpc('get_mosque_donation_details', {
+          p_location_id: locationId,
+        });
+        if (!error) row = Array.isArray(data) ? (data[0] ?? null) : (data ?? null);
+      } catch { /* fall through to the public endpoint */ }
+
+      if (!row) {
+        try {
+          const { data } = await supabase.functions.invoke('mosque-donation', {
+            body: { location_id: locationId },
+          });
+          row = (data as any)?.donation ?? null;
+        } catch { /* offline / blocked */ }
+      }
+
+      if (!cancelled) setDetails(row);
     })();
     return () => { cancelled = true; };
   }, [locationId]);
