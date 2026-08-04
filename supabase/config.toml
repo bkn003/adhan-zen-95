@@ -5,3 +5,5 @@ verify_jwt = false
 
 [functions.mosque-photos]
 verify_jwt = false
+[functions.mosque-donation]
+verify_jwt = false
