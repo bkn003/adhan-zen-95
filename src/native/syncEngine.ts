@@ -1,5 +1,6 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { createLocationSlug, getMonthString, fetchStaticPrayerTimes, getPrayerTimesForDate, type StaticPrayerTime } from '@/utils/staticPrayerTimes';
+import { loadEntriesForWindow, findLocationIdByName } from '@/utils/prayerTimesSource';
 import { loadPrayerNotificationPrefs, isEnabled } from '@/native/prayerNotificationPrefs';
 
 export interface SyncChange {
@@ -229,7 +230,7 @@ function parseTimeOn(day: Date, time: string): Date | null {
 
 let running = false;
 
-export async function runPrayerSync(mosqueName?: string): Promise<SyncState> {
+export async function runPrayerSync(mosqueName?: string, locationId?: string | null): Promise<SyncState> {
   const name = mosqueName || localStorage.getItem(K.mosque) || '';
   if (!name) return getSyncState();
   if (running) return getSyncState();
@@ -243,11 +244,19 @@ export async function runPrayerSync(mosqueName?: string): Promise<SyncState> {
 
   setState({ status: 'syncing', mosqueName: name, error: null });
   try {
-    const slug = createLocationSlug(name);
-    const month = getMonthString(new Date());
-    const entries = await fetchStaticPrayerTimes(slug, month);
+    let locId = locationId ?? localStorage.getItem(K.locationId);
+    if (!locId) {
+      locId = await findLocationIdByName(name);
+      if (locId) localStorage.setItem(K.locationId, locId);
+    }
 
-    const next = buildWindow(entries, 7);
+    // Static JSON first, then cache, then the Supabase table — mosques without a
+    // generated JSON export used to fail here with "Sync failed".
+    // A 10-day window always spans the next weekly date-range switch.
+    const entries = await loadEntriesForWindow(name, locId, 10);
+    if (!entries.length) throw new Error('No prayer times published for this mosque yet');
+
+    const next = buildWindow(entries, 10);
     let prev: Record<string, Record<string, string>> = {};
     try { prev = JSON.parse(localStorage.getItem(K.snapshot) || '{}'); } catch { /* noop */ }
     const changes = diffWindows(prev, next);
@@ -261,6 +270,8 @@ export async function runPrayerSync(mosqueName?: string): Promise<SyncState> {
         await scheduleLocalNotifications(entries);
       }
     }
+
+    if (changes.length) notifyChanges(name, changes);
 
     setState({
       status: 'success',
@@ -277,16 +288,29 @@ export async function runPrayerSync(mosqueName?: string): Promise<SyncState> {
   return getSyncState();
 }
 
-/** Start automatic syncing: on launch, on resume/online, and every 6 hours. */
-export function startAutoSync(mosqueName: string) {
-  setState({ mosqueName });
-  void runPrayerSync(mosqueName);
+/** Surface weekly timing changes even if the user never opens the sync screen. */
+function notifyChanges(name: string, changes: SyncChange[]) {
+  try {
+    const head = changes.slice(0, 3).map(c => `${c.label}: ${c.from} → ${c.to}`).join(', ');
+    const body = `${head}${changes.length > 3 ? ` +${changes.length - 3} more` : ''}`;
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      new Notification(`🕌 ${name} — prayer times updated`, { body, tag: 'prayer-change' });
+    }
+  } catch { /* noop */ }
+}
 
-  const onVisible = () => { if (document.visibilityState === 'visible') void runPrayerSync(mosqueName); };
-  const onOnline = () => void runPrayerSync(mosqueName);
+/** Start automatic syncing: on launch, on resume/online, and every 6 hours. */
+export function startAutoSync(mosqueName: string, locationId?: string | null) {
+  setState({ mosqueName });
+  if (locationId) localStorage.setItem(K.locationId, locationId);
+  const run = () => void runPrayerSync(mosqueName, locationId ?? null);
+  run();
+
+  const onVisible = () => { if (document.visibilityState === 'visible') run(); };
+  const onOnline = () => run();
   document.addEventListener('visibilitychange', onVisible);
   window.addEventListener('online', onOnline);
-  const iv = window.setInterval(() => void runPrayerSync(mosqueName), 6 * 60 * 60 * 1000);
+  const iv = window.setInterval(run, 6 * 60 * 60 * 1000);
 
   return () => {
     document.removeEventListener('visibilitychange', onVisible);
@@ -294,3 +318,4 @@ export function startAutoSync(mosqueName: string) {
     clearInterval(iv);
   };
 }
+
