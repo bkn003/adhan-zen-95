@@ -29,6 +29,7 @@ const K = {
   snapshot: 'sync:snapshot',
   mosque: 'sync:mosque',
   error: 'sync:error',
+  locationId: 'sync:locationId',
 };
 
 const TRACKED: Array<[keyof StaticPrayerTime | string, string]> = [

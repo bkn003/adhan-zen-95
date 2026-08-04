@@ -186,7 +186,7 @@ const Index = () => {
         if (!cancelled && data?.mosque_name) {
           await configureAndroidBackgroundSync(data.mosque_name);
           // Cross-platform (web + iOS) sync loop: fetch, diff, pre-schedule alerts
-          stopAutoSync = startAutoSync(data.mosque_name);
+          stopAutoSync = startAutoSync(data.mosque_name, selectedLocationId);
         }
       } catch (e) {
         console.warn('background sync configure failed', e);
