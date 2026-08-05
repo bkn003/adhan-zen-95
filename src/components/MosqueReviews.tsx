@@ -57,8 +57,11 @@ export const MosqueReviews: React.FC<{ locationId: string }> = ({ locationId }) 
   }, [locationId]);
 
   const submit = async () => {
+    // Trust: only real (non-anonymous) accounts may publish a review.
+    if (!requireAuth('Sign in to publish a review — verified accounts keep ratings trustworthy.')) return;
     if (!rating) return toast.error('Pick a star rating first');
     setSubmitting(true);
+
     const { data: auth } = await supabase.auth.getUser();
     const userId = auth?.user?.id;
     if (!userId) {
