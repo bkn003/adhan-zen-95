@@ -79,12 +79,18 @@ export async function cleanupPushTokens() {
 /** Keep the stored mosque in sync so the sender can target followers. */
 export async function syncPushLocation(locationId?: string | null) {
   const token = localStorage.getItem(LS_TOKEN);
-  if (!token || !locationId) return;
+  if (!token) return;
+  const patch: Record<string, unknown> = {
+    last_seen_at: new Date().toISOString(),
+    mohalla_location_id: localStorage.getItem('myMohallaId') || null,
+  };
+  if (locationId) patch.location_id = locationId;
   await supabase
     .from('push_tokens')
-    .update({ location_id: locationId, last_seen_at: new Date().toISOString() } as never)
+    .update(patch as never)
     .eq('expo_push_token', token);
 }
+
 
 let initialised = false;
 
