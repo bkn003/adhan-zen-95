@@ -561,6 +561,73 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       {/* ==================== SETTINGS TAB (Hijri + Ramadan) ==================== */}
       {activeTab === 'settings' && (
         <div className="space-y-3">
+          {/* App support / developer donations */}
+          <div className="bg-gray-800/60 backdrop-blur-sm rounded-2xl p-4 border border-gray-700/40">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center"><Heart className="w-5 h-5 text-indigo-400" /></div>
+              <div>
+                <p className="text-sm font-bold text-white">App Support Donations</p>
+                <p className="text-[10px] text-gray-500">Shown on home + every mosque page with a disclaimer</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-3 bg-gray-700/30 rounded-xl">
+                <span className="text-sm text-gray-300">{appDonation.enabled ? 'Visible to users' : 'Hidden'}</span>
+                <button
+                  onClick={() => setAppDonation((p) => ({ ...p, enabled: !p.enabled }))}
+                  className={`w-12 h-7 rounded-full transition-colors ${appDonation.enabled ? 'bg-indigo-500' : 'bg-gray-600'}`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-1 ${appDonation.enabled ? 'translate-x-5' : ''}`} />
+                </button>
+              </div>
+              <input
+                value={appDonation.upi}
+                onChange={(e) => setAppDonation((p) => ({ ...p, upi: e.target.value }))}
+                placeholder="UPI ID (e.g. name@okaxis)"
+                className="w-full text-sm px-3 py-2.5 rounded-xl bg-gray-700/30 border border-gray-600/40 text-white placeholder-gray-500 outline-none focus:border-indigo-400"
+              />
+              <input
+                value={appDonation.payee}
+                onChange={(e) => setAppDonation((p) => ({ ...p, payee: e.target.value }))}
+                placeholder="Payee name shown in UPI apps"
+                className="w-full text-sm px-3 py-2.5 rounded-xl bg-gray-700/30 border border-gray-600/40 text-white placeholder-gray-500 outline-none focus:border-indigo-400"
+              />
+              <textarea
+                value={appDonation.note}
+                onChange={(e) => setAppDonation((p) => ({ ...p, note: e.target.value }))}
+                rows={3}
+                placeholder="Message shown to users (why support is needed)"
+                className="w-full text-sm px-3 py-2.5 rounded-xl bg-gray-700/30 border border-gray-600/40 text-white placeholder-gray-500 outline-none focus:border-indigo-400"
+              />
+              <button
+                onClick={saveAppDonation}
+                disabled={savingAppDonation}
+                className="w-full py-2.5 rounded-xl bg-indigo-500 text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                <Save className="w-4 h-4" /> {savingAppDonation ? 'Saving…' : 'Save app support settings'}
+              </button>
+            </div>
+          </div>
+
+          {/* Weekly prayer-time change watcher */}
+          <div className="bg-gray-800/60 backdrop-blur-sm rounded-2xl p-4 border border-gray-700/40">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-sky-500/20 rounded-xl flex items-center justify-center"><Clock className="w-5 h-5 text-sky-400" /></div>
+              <div>
+                <p className="text-sm font-bold text-white">Prayer Time Change Alerts</p>
+                <p className="text-[10px] text-gray-500">Detects changes per date range and pushes old → new times</p>
+              </div>
+            </div>
+            <button
+              onClick={runChangeWatch}
+              disabled={runningWatch}
+              className="w-full py-2.5 rounded-xl bg-sky-500 text-white text-sm font-bold disabled:opacity-60"
+            >
+              {runningWatch ? 'Checking all mosques…' : 'Run change check now'}
+            </button>
+          </div>
+
+
           {/* Ramadan Mode */}
           <div className="bg-gray-800/60 backdrop-blur-sm rounded-2xl p-4 border border-gray-700/40">
             <div className="flex items-center gap-3 mb-3">
