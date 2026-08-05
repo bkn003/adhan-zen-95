@@ -1,9 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, RefreshCw, CalendarClock, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, RefreshCw, CalendarClock, CheckCircle2, History, Bell } from 'lucide-react';
 import { getSyncState, subscribeSyncState, runPrayerSync, formatRelative, type SyncState } from '@/native/syncEngine';
+import { supabase } from '@/integrations/supabase/client';
+import { formatTo12Hour } from '@/utils/timeFormat';
 
 interface Props {
   onBack: () => void;
+}
+
+interface ServerChange {
+  id: string;
+  location_id: string;
+  month: string;
+  date_range: string;
+  label: string;
+  old_value: string | null;
+  new_value: string | null;
+  detected_at: string;
 }
 
 const prettyDate = (iso: string) => {
@@ -12,15 +25,52 @@ const prettyDate = (iso: string) => {
   return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 };
 
+/** Weekly change history recorded server-side for my mosque + my mohalla. */
+const useServerChanges = () => {
+  const [rows, setRows] = useState<ServerChange[]>([]);
+
+  useEffect(() => {
+    const ids = [
+      localStorage.getItem('selectedLocationId'),
+      localStorage.getItem('myMohallaId'),
+    ].filter(Boolean) as string[];
+    if (!ids.length) return;
+
+    let cancelled = false;
+    (async () => {
+      const since = new Date(Date.now() - 60 * 24 * 3600 * 1000).toISOString();
+      const { data } = await supabase
+        .from('prayer_time_changes')
+        .select('id, location_id, month, date_range, label, old_value, new_value, detected_at')
+        .in('location_id', [...new Set(ids)])
+        .gte('detected_at', since)
+        .order('detected_at', { ascending: false })
+        .limit(120);
+      if (!cancelled) setRows((data as ServerChange[]) ?? []);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  return rows;
+};
+
 export const SyncChangesScreen: React.FC<Props> = ({ onBack }) => {
   const [state, setState] = useState<SyncState>(() => getSyncState());
   useEffect(() => subscribeSyncState(setState), []);
+  const serverChanges = useServerChanges();
+
+  const serverGrouped = serverChanges.reduce<Record<string, ServerChange[]>>((acc, c) => {
+    const k = `${c.date_range} ${c.month}`;
+    (acc[k] ||= []).push(c);
+    return acc;
+  }, {});
 
   const grouped = state.changes.reduce<Record<string, SyncState['changes']>>((acc, c) => {
     (acc[c.date] ||= []).push(c);
     return acc;
   }, {});
   const dates = Object.keys(grouped).sort();
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-24">
