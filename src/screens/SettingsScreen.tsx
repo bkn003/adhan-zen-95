@@ -287,6 +287,7 @@ export const SettingsScreen = () => {
             onLocationChange={(location: Location) => {
               setMohallaLocation(location);
               localStorage.setItem('myMohallaId', location.id);
+              void syncPushLocation(localStorage.getItem('selectedLocationId'));
             }}
           />
           {mohallaLocation && (
@@ -296,6 +297,38 @@ export const SettingsScreen = () => {
           )}
         </div>
       </SettingsCard>
+
+      {/* Account — verified sign-in keeps reviews, RSVPs and alerts trustworthy */}
+      <SettingsCard title="Account" icon={ShieldCheck} gradient="from-indigo-50/50 to-white">
+        {isSignedIn ? (
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500">Signed in as</p>
+            <p className="text-sm font-bold text-gray-800 truncate">
+              {profile?.display_name || user?.email}
+            </p>
+            <button
+              onClick={() => void signOut()}
+              className="w-full py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold active:bg-gray-200"
+            >
+              Sign out
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500">
+              Prayer times stay free to browse. Sign in to post reviews, RSVP to events and sync your
+              bookmarks and prayer tracker across devices.
+            </p>
+            <button
+              onClick={() => openAuth('Sign in to unlock reviews, RSVPs and cross-device sync.')}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-sky-600 text-white text-sm font-bold"
+            >
+              Sign in / Create account
+            </button>
+          </div>
+        )}
+      </SettingsCard>
+
 
 
       {/* DND Permission Prompt */}
