@@ -9,6 +9,8 @@ import { SaharToggle } from '@/components/SaharToggle';
 import { NextPrayerCard } from '@/components/NextPrayerCard';
 import { SpecialPrayers } from '@/components/SpecialPrayers';
 import { MosqueDonate } from '@/components/MosqueDonate';
+import { AppSupportCard } from '@/components/AppSupportCard';
+
 
 import { PrayerAlarmOverlay } from '@/components/PrayerAlarmOverlay';
 import { useLocations } from '@/hooks/useLocations';
@@ -454,6 +456,10 @@ export const HomeScreen = ({
 
       {/* Forbidden Times */}
       <ForbiddenTimes forbiddenTimes={finalForbiddenTimes} />
+
+      {/* Support app development (separate from mosque donations) */}
+      <AppSupportCard variant="compact" />
+
 
       {/* Ramadan Toggle */}
       <RamadanToggle isRamadan={isRamadan} onToggle={toggleRamadan} onResetAuto={resetAutoRamadan} autoOverride={autoRamadanOverride} isRamadanMonth={hijriDate?.monthNumber === 9} />

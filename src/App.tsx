@@ -6,11 +6,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { RamadanProvider } from "@/contexts/RamadanContext";
 import { LanguageProvider } from "@/i18n/LanguageContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthSheet } from "@/components/AuthSheet";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Widget from "./pages/Widget";
+import ResetPassword from "./pages/ResetPassword";
 import { MandatoryPermissionsScreen } from "./components/MandatoryPermissionsScreen";
 import { Capacitor } from '@capacitor/core';
+
 
 const queryClient = new QueryClient();
 
@@ -53,9 +57,11 @@ const AppContent = () => {
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <AuthSheet />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/widget" element={<Widget />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
@@ -66,14 +72,17 @@ const AppContent = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <RamadanProvider>
-      <LanguageProvider>
-        <TooltipProvider>
-          <AppContent />
-        </TooltipProvider>
-      </LanguageProvider>
-    </RamadanProvider>
+    <AuthProvider>
+      <RamadanProvider>
+        <LanguageProvider>
+          <TooltipProvider>
+            <AppContent />
+          </TooltipProvider>
+        </LanguageProvider>
+      </RamadanProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
 export default App;
+

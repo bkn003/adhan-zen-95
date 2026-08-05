@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Star, Flag, Send, Loader2, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+
 
 interface Review {
   id: string;
@@ -32,6 +34,8 @@ const Stars: React.FC<{ value: number; onChange?: (n: number) => void; size?: st
 );
 
 export const MosqueReviews: React.FC<{ locationId: string }> = ({ locationId }) => {
+  const { requireAuth } = useAuth();
+
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState(0);
@@ -57,8 +61,11 @@ export const MosqueReviews: React.FC<{ locationId: string }> = ({ locationId }) 
   }, [locationId]);
 
   const submit = async () => {
+    // Trust: only real (non-anonymous) accounts may publish a review.
+    if (!requireAuth('Sign in to publish a review — verified accounts keep ratings trustworthy.')) return;
     if (!rating) return toast.error('Pick a star rating first');
     setSubmitting(true);
+
     const { data: auth } = await supabase.auth.getUser();
     const userId = auth?.user?.id;
     if (!userId) {

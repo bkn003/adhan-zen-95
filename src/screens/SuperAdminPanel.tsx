@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Shield, Eye, EyeOff, Save, Trash2, Plus, Search, Pause, Play, Settings, LayoutGrid, Tag, BarChart3, X, Check, ToggleLeft, ToggleRight, Moon, Calendar, Clock } from 'lucide-react';
+import { ArrowLeft, Shield, Eye, EyeOff, Save, Trash2, Plus, Search, Pause, Play, Settings, LayoutGrid, Tag, BarChart3, X, Check, ToggleLeft, ToggleRight, Moon, Calendar, Clock, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocations } from '@/hooks/useLocations';
 import { useAllCustomFilters, useManageFilter, type CustomFilter } from '@/hooks/useCustomFilters';
@@ -100,6 +100,75 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
   const [wizardRangeIndex, setWizardRangeIndex] = useState(0);
   const [wizardPrayerTimes, setWizardPrayerTimes] = useState<Record<string, Record<string, string>>>({});
   const [savingPrayerTimes, setSavingPrayerTimes] = useState(false);
+
+  // App-support (developer donation) configuration + weekly change watcher
+  const [appDonation, setAppDonation] = useState({ enabled: false, upi: '', payee: 'Adhan Zen', note: '' });
+  const [savingAppDonation, setSavingAppDonation] = useState(false);
+  const [runningWatch, setRunningWatch] = useState(false);
+
+  const callSuper = React.useCallback(async (action: string, payload: Record<string, unknown> = {}) => {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ super_token: getSuperToken(), action, ...payload }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error || 'Request failed');
+    return data;
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    callSuper('super_get_app_settings')
+      .then((d) => {
+        const map = Object.fromEntries(((d.settings || []) as { key: string; value: string }[]).map((r) => [r.key, r.value]));
+        setAppDonation({
+          enabled: map['app_donation_enabled'] === 'true',
+          upi: map['app_donation_upi_id'] || '',
+          payee: map['app_donation_payee'] || 'Adhan Zen',
+          note: map['app_donation_note'] || '',
+        });
+      })
+      .catch(() => { /* first run has no settings yet */ });
+  }, [isAuthenticated, callSuper]);
+
+  const saveAppDonation = async () => {
+    if (appDonation.enabled && !appDonation.upi.trim()) {
+      toast.error('Add a UPI ID before enabling app support');
+      return;
+    }
+    setSavingAppDonation(true);
+    try {
+      await callSuper('super_set_app_settings', {
+        data: {
+          app_donation_enabled: String(appDonation.enabled),
+          app_donation_upi_id: appDonation.upi.trim(),
+          app_donation_payee: appDonation.payee.trim() || 'Adhan Zen',
+          app_donation_note: appDonation.note.trim(),
+        },
+      });
+      toast.success('App support settings saved');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSavingAppDonation(false);
+    }
+  };
+
+  const runChangeWatch = async () => {
+    setRunningWatch(true);
+    try {
+      const d = await callSuper('super_run_change_watch');
+      const r = d?.result || {};
+      toast.success(`Checked ${r.rows ?? 0} schedules · ${r.changes ?? 0} change(s) · ${r.pushed ?? 0} alert(s) sent`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Watcher failed');
+    } finally {
+      setRunningWatch(false);
+    }
+  };
+
+
 
   // Server-side super admin auth
   const handleSuperLogin = async () => {
@@ -492,6 +561,73 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       {/* ==================== SETTINGS TAB (Hijri + Ramadan) ==================== */}
       {activeTab === 'settings' && (
         <div className="space-y-3">
+          {/* App support / developer donations */}
+          <div className="bg-gray-800/60 backdrop-blur-sm rounded-2xl p-4 border border-gray-700/40">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center"><Heart className="w-5 h-5 text-indigo-400" /></div>
+              <div>
+                <p className="text-sm font-bold text-white">App Support Donations</p>
+                <p className="text-[10px] text-gray-500">Shown on home + every mosque page with a disclaimer</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-3 bg-gray-700/30 rounded-xl">
+                <span className="text-sm text-gray-300">{appDonation.enabled ? 'Visible to users' : 'Hidden'}</span>
+                <button
+                  onClick={() => setAppDonation((p) => ({ ...p, enabled: !p.enabled }))}
+                  className={`w-12 h-7 rounded-full transition-colors ${appDonation.enabled ? 'bg-indigo-500' : 'bg-gray-600'}`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-1 ${appDonation.enabled ? 'translate-x-5' : ''}`} />
+                </button>
+              </div>
+              <input
+                value={appDonation.upi}
+                onChange={(e) => setAppDonation((p) => ({ ...p, upi: e.target.value }))}
+                placeholder="UPI ID (e.g. name@okaxis)"
+                className="w-full text-sm px-3 py-2.5 rounded-xl bg-gray-700/30 border border-gray-600/40 text-white placeholder-gray-500 outline-none focus:border-indigo-400"
+              />
+              <input
+                value={appDonation.payee}
+                onChange={(e) => setAppDonation((p) => ({ ...p, payee: e.target.value }))}
+                placeholder="Payee name shown in UPI apps"
+                className="w-full text-sm px-3 py-2.5 rounded-xl bg-gray-700/30 border border-gray-600/40 text-white placeholder-gray-500 outline-none focus:border-indigo-400"
+              />
+              <textarea
+                value={appDonation.note}
+                onChange={(e) => setAppDonation((p) => ({ ...p, note: e.target.value }))}
+                rows={3}
+                placeholder="Message shown to users (why support is needed)"
+                className="w-full text-sm px-3 py-2.5 rounded-xl bg-gray-700/30 border border-gray-600/40 text-white placeholder-gray-500 outline-none focus:border-indigo-400"
+              />
+              <button
+                onClick={saveAppDonation}
+                disabled={savingAppDonation}
+                className="w-full py-2.5 rounded-xl bg-indigo-500 text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                <Save className="w-4 h-4" /> {savingAppDonation ? 'Saving…' : 'Save app support settings'}
+              </button>
+            </div>
+          </div>
+
+          {/* Weekly prayer-time change watcher */}
+          <div className="bg-gray-800/60 backdrop-blur-sm rounded-2xl p-4 border border-gray-700/40">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-sky-500/20 rounded-xl flex items-center justify-center"><Clock className="w-5 h-5 text-sky-400" /></div>
+              <div>
+                <p className="text-sm font-bold text-white">Prayer Time Change Alerts</p>
+                <p className="text-[10px] text-gray-500">Detects changes per date range and pushes old → new times</p>
+              </div>
+            </div>
+            <button
+              onClick={runChangeWatch}
+              disabled={runningWatch}
+              className="w-full py-2.5 rounded-xl bg-sky-500 text-white text-sm font-bold disabled:opacity-60"
+            >
+              {runningWatch ? 'Checking all mosques…' : 'Run change check now'}
+            </button>
+          </div>
+
+
           {/* Ramadan Mode */}
           <div className="bg-gray-800/60 backdrop-blur-sm rounded-2xl p-4 border border-gray-700/40">
             <div className="flex items-center gap-3 mb-3">

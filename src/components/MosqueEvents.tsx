@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Calendar, Clock, MapPin, Check, HelpCircle, X, Users, Bell, ChevronDown, ChevronUp } from 'lucide-react';
 import { getDeviceId } from '@/utils/deviceId';
 import { ensureAnonSession } from '@/utils/anonAuth';
+import { useAuth } from '@/contexts/AuthContext';
+
 
 import { toast } from 'sonner';
 
@@ -36,6 +38,8 @@ interface MosqueEventsProps {
 
 export const MosqueEvents: React.FC<MosqueEventsProps> = ({ locationId }) => {
   const deviceId = getDeviceId();
+  const { requireAuth } = useAuth();
+
   const queryClient = useQueryClient();
   const [showPast, setShowPast] = useState(false);
 
@@ -100,8 +104,11 @@ export const MosqueEvents: React.FC<MosqueEventsProps> = ({ locationId }) => {
   }, [events]);
 
   const rsvp = async (eventId: string, status: 'yes' | 'maybe' | 'no') => {
+    // Trust: RSVPs count only from verified accounts.
+    if (!requireAuth('Sign in to RSVP so mosques get a reliable headcount.')) return;
     const current = rsvps?.my?.[eventId];
     try {
+
       const uid = await ensureAnonSession();
       if (!uid) {
         toast.error('Could not save RSVP');
