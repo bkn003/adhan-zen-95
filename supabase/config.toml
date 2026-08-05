@@ -7,3 +7,7 @@ verify_jwt = false
 verify_jwt = false
 [functions.mosque-donation]
 verify_jwt = false
+
+[functions.prayer-change-watch]
+verify_jwt = false
+
