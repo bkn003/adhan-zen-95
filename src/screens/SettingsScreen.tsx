@@ -100,7 +100,9 @@ const PrayerDndToggle = ({
 );
 
 export const SettingsScreen = () => {
+  const { isSignedIn, user, profile, signOut, openAuth } = useAuth();
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+
   const [mohallaLocation, setMohallaLocation] = useState<Location | null>(null);
   const [adhanVolume, setAdhanVolume] = useState(50);
   const [prayerAlarmEnabled, setPrayerAlarmEnabled] = useState(false);
