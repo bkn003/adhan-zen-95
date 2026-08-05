@@ -57,9 +57,11 @@ const AppContent = () => {
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <AuthSheet />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/widget" element={<Widget />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
@@ -70,14 +72,17 @@ const AppContent = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <RamadanProvider>
-      <LanguageProvider>
-        <TooltipProvider>
-          <AppContent />
-        </TooltipProvider>
-      </LanguageProvider>
-    </RamadanProvider>
+    <AuthProvider>
+      <RamadanProvider>
+        <LanguageProvider>
+          <TooltipProvider>
+            <AppContent />
+          </TooltipProvider>
+        </LanguageProvider>
+      </RamadanProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
 export default App;
+
