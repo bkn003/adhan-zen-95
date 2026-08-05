@@ -101,6 +101,75 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
   const [wizardPrayerTimes, setWizardPrayerTimes] = useState<Record<string, Record<string, string>>>({});
   const [savingPrayerTimes, setSavingPrayerTimes] = useState(false);
 
+  // App-support (developer donation) configuration + weekly change watcher
+  const [appDonation, setAppDonation] = useState({ enabled: false, upi: '', payee: 'Adhan Zen', note: '' });
+  const [savingAppDonation, setSavingAppDonation] = useState(false);
+  const [runningWatch, setRunningWatch] = useState(false);
+
+  const callSuper = React.useCallback(async (action: string, payload: Record<string, unknown> = {}) => {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ super_token: getSuperToken(), action, ...payload }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error || 'Request failed');
+    return data;
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    callSuper('super_get_app_settings')
+      .then((d) => {
+        const map = Object.fromEntries(((d.settings || []) as { key: string; value: string }[]).map((r) => [r.key, r.value]));
+        setAppDonation({
+          enabled: map['app_donation_enabled'] === 'true',
+          upi: map['app_donation_upi_id'] || '',
+          payee: map['app_donation_payee'] || 'Adhan Zen',
+          note: map['app_donation_note'] || '',
+        });
+      })
+      .catch(() => { /* first run has no settings yet */ });
+  }, [isAuthenticated, callSuper]);
+
+  const saveAppDonation = async () => {
+    if (appDonation.enabled && !appDonation.upi.trim()) {
+      toast.error('Add a UPI ID before enabling app support');
+      return;
+    }
+    setSavingAppDonation(true);
+    try {
+      await callSuper('super_set_app_settings', {
+        data: {
+          app_donation_enabled: String(appDonation.enabled),
+          app_donation_upi_id: appDonation.upi.trim(),
+          app_donation_payee: appDonation.payee.trim() || 'Adhan Zen',
+          app_donation_note: appDonation.note.trim(),
+        },
+      });
+      toast.success('App support settings saved');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSavingAppDonation(false);
+    }
+  };
+
+  const runChangeWatch = async () => {
+    setRunningWatch(true);
+    try {
+      const d = await callSuper('super_run_change_watch');
+      const r = d?.result || {};
+      toast.success(`Checked ${r.rows ?? 0} schedules · ${r.changes ?? 0} change(s) · ${r.pushed ?? 0} alert(s) sent`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Watcher failed');
+    } finally {
+      setRunningWatch(false);
+    }
+  };
+
+
+
   // Server-side super admin auth
   const handleSuperLogin = async () => {
     setAuthLoading(true);
