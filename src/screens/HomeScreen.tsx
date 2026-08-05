@@ -455,6 +455,10 @@ export const HomeScreen = ({
       {/* Forbidden Times */}
       <ForbiddenTimes forbiddenTimes={finalForbiddenTimes} />
 
+      {/* Support app development (separate from mosque donations) */}
+      <AppSupportCard variant="compact" />
+
+
       {/* Ramadan Toggle */}
       <RamadanToggle isRamadan={isRamadan} onToggle={toggleRamadan} onResetAuto={resetAutoRamadan} autoOverride={autoRamadanOverride} isRamadanMonth={hijriDate?.monthNumber === 9} />
     </div>
