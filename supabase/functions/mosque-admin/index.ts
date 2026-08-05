@@ -41,7 +41,11 @@ serve(async (req) => {
       "super_delete_mosque",
       "super_manage_filter",
       "list_all_filters",
+      "super_get_app_settings",
+      "super_set_app_settings",
+      "super_run_change_watch",
     ]);
+
 
     const b64url = (bytes: Uint8Array) =>
       btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
