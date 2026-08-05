@@ -36,6 +36,8 @@ interface MosqueEventsProps {
 
 export const MosqueEvents: React.FC<MosqueEventsProps> = ({ locationId }) => {
   const deviceId = getDeviceId();
+  const { requireAuth } = useAuth();
+
   const queryClient = useQueryClient();
   const [showPast, setShowPast] = useState(false);
 
