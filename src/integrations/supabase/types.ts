@@ -492,6 +492,91 @@ export type Database = {
           },
         ]
       }
+      prayer_time_changes: {
+        Row: {
+          created_at: string
+          date_range: string
+          detected_at: string
+          field: string
+          id: string
+          label: string
+          location_id: string
+          month: string
+          new_value: string | null
+          old_value: string | null
+        }
+        Insert: {
+          created_at?: string
+          date_range: string
+          detected_at?: string
+          field: string
+          id?: string
+          label: string
+          location_id: string
+          month: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Update: {
+          created_at?: string
+          date_range?: string
+          detected_at?: string
+          field?: string
+          id?: string
+          label?: string
+          location_id?: string
+          month?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prayer_time_changes_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prayer_time_snapshots: {
+        Row: {
+          created_at: string
+          date_range: string
+          id: string
+          location_id: string
+          month: string
+          updated_at: string
+          values: Json
+        }
+        Insert: {
+          created_at?: string
+          date_range: string
+          id?: string
+          location_id: string
+          month: string
+          updated_at?: string
+          values?: Json
+        }
+        Update: {
+          created_at?: string
+          date_range?: string
+          id?: string
+          location_id?: string
+          month?: string
+          updated_at?: string
+          values?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prayer_time_snapshots_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prayer_times: {
         Row: {
           asr_adhan: string | null
@@ -605,6 +690,30 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       push_tokens: {
         Row: {
           created_at: string | null
@@ -614,6 +723,7 @@ export type Database = {
           id: string
           last_seen_at: string
           location_id: string | null
+          mohalla_location_id: string | null
           platform: string | null
           provider: string
           updated_at: string | null
@@ -627,6 +737,7 @@ export type Database = {
           id?: string
           last_seen_at?: string
           location_id?: string | null
+          mohalla_location_id?: string | null
           platform?: string | null
           provider?: string
           updated_at?: string | null
@@ -640,6 +751,7 @@ export type Database = {
           id?: string
           last_seen_at?: string
           location_id?: string | null
+          mohalla_location_id?: string | null
           platform?: string | null
           provider?: string
           updated_at?: string | null
@@ -649,6 +761,13 @@ export type Database = {
           {
             foreignKeyName: "push_tokens_location_id_fkey"
             columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_tokens_mohalla_location_id_fkey"
+            columns: ["mohalla_location_id"]
             isOneToOne: false
             referencedRelation: "locations"
             referencedColumns: ["id"]
@@ -725,6 +844,12 @@ export type Database = {
           donation_ifsc: string
           donation_notes: string
           donation_upi_id: string
+        }[]
+      }
+      get_verified_mosque_ids: {
+        Args: never
+        Returns: {
+          location_id: string
         }[]
       }
       report_mosque_review: {
