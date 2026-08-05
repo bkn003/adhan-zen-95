@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Volume2, Clock, Moon, Bell, ChevronRight, Settings as SettingsIcon, VolumeX, Sunrise, Sun, Sunset, Home, Globe } from 'lucide-react';
+import { MapPin, Volume2, Clock, Moon, Bell, ChevronRight, Settings as SettingsIcon, VolumeX, Sunrise, Sun, Sunset, Home, Globe, ShieldCheck } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { syncPushLocation } from '@/native/pushRegistration';
+
 import { useLanguage } from '@/i18n/LanguageContext';
 import { getWeather, describeWeather, contextualTip } from '@/utils/weather';
 import { LANGUAGE_LABELS } from '@/i18n/translations';
