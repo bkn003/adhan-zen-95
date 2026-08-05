@@ -100,8 +100,11 @@ export const MosqueEvents: React.FC<MosqueEventsProps> = ({ locationId }) => {
   }, [events]);
 
   const rsvp = async (eventId: string, status: 'yes' | 'maybe' | 'no') => {
+    // Trust: RSVPs count only from verified accounts.
+    if (!requireAuth('Sign in to RSVP so mosques get a reliable headcount.')) return;
     const current = rsvps?.my?.[eventId];
     try {
+
       const uid = await ensureAnonSession();
       if (!uid) {
         toast.error('Could not save RSVP');
