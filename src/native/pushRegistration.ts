@@ -41,6 +41,8 @@ async function upsertToken(token: string) {
     disabled: false,
     last_seen_at: new Date().toISOString(),
     location_id: localStorage.getItem('selectedLocationId') || null,
+    mohalla_location_id: localStorage.getItem('myMohallaId') || null,
+
     updated_at: new Date().toISOString(),
   } as never;
 
