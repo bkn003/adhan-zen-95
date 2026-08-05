@@ -101,11 +101,62 @@ serve(async (req) => {
     }
 
 
+    // Super admin: read the app-support (donation) configuration
+    if (action === "super_get_app_settings") {
+      const { data: rows, error } = await supabase
+        .from("app_settings")
+        .select("key, value")
+        .like("key", "app_donation_%");
+      if (error) return json({ error: error.message }, 500);
+      return json({ settings: rows || [] });
+    }
+
+    // Super admin: write the app-support (donation) configuration
+    if (action === "super_set_app_settings") {
+      const entries = (data ?? {}) as Record<string, unknown>;
+      const allowed = new Set([
+        "app_donation_enabled",
+        "app_donation_upi_id",
+        "app_donation_payee",
+        "app_donation_note",
+      ]);
+      const rows = Object.entries(entries)
+        .filter(([k]) => allowed.has(k))
+        .map(([key, value]) => ({
+          key,
+          value: String(value ?? "").slice(0, 500),
+          updated_at: new Date().toISOString(),
+        }));
+      if (!rows.length) return json({ error: "No valid settings provided" }, 400);
+      const { error } = await supabase.from("app_settings").upsert(rows, { onConflict: "key" });
+      if (error) return json({ error: error.message }, 500);
+      return json({ success: true, saved: rows.length });
+    }
+
+    // Super admin: trigger the weekly prayer-time change watcher on demand
+    if (action === "super_run_change_watch") {
+      const res = await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/functions/v1/prayer-change-watch`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-watch-key": Deno.env.get("WARM_CACHE_KEY") ?? "",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({}),
+        },
+      );
+      const out = await res.json().catch(() => ({}));
+      return json({ success: res.ok, result: out }, res.ok ? 200 : 500);
+    }
+
     // Super admin: list which locations have admin credentials (returns location_id -> username)
     if (action === "super_list_admins") {
       const { data: admins, error } = await supabase
         .from("mosque_admins")
         .select("location_id, username");
+
 
       if (error) {
         return new Response(
