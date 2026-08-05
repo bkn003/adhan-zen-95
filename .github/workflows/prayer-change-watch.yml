@@ -1,0 +1,46 @@
+name: Prayer Time Change Watcher
+
+on:
+  schedule:
+    # Every day at 00:30 IST (19:00 UTC) — catches the weekly date-range switch
+    # (1-5, 6-11, 12-17, 18-23, 24-month end) and any admin edit in between.
+    - cron: '0 19 * * *'
+  workflow_dispatch:
+
+jobs:
+  watch-changes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate secrets
+        run: |
+          missing=""
+          if [ -z "${{ secrets.SUPABASE_URL }}" ]; then missing="$missing SUPABASE_URL"; fi
+          if [ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]; then missing="$missing SUPABASE_SERVICE_ROLE_KEY"; fi
+          if [ -z "${{ secrets.WARM_CACHE_KEY }}" ]; then missing="$missing WARM_CACHE_KEY"; fi
+          if [ -n "$missing" ]; then
+            echo "❌ Missing GitHub Secrets:$missing"
+            echo "Add them under: Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+          echo "✅ All secrets present"
+
+      - name: Detect prayer-time changes and push alerts
+        run: |
+          echo "🔎 Calling prayer-change-watch edge function..."
+          HTTP_CODE=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
+            -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/prayer-change-watch" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "x-watch-key: ${{ secrets.WARM_CACHE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+
+          echo "HTTP Status: $HTTP_CODE"
+          cat /tmp/response.txt
+          echo ""
+
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            echo "❌ Change watch failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+          echo "✅ Change watch completed"
