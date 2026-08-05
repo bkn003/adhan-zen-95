@@ -94,15 +94,50 @@ export const SyncChangesScreen: React.FC<Props> = ({ onBack }) => {
       </div>
 
       <div className="p-4 space-y-4">
-        {dates.length === 0 && (
+        {dates.length === 0 && Object.keys(serverGrouped).length === 0 && (
           <div className="text-center py-16">
             <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
             <p className="text-sm font-semibold text-gray-800">No changes detected</p>
             <p className="text-xs text-gray-500 mt-1 px-8">
-              The last sync found the same timings for the next 7 days. You'll be notified here whenever your mosque updates a time.
+              The last sync found the same timings for the coming days. You'll be notified here whenever your mosque updates a time.
             </p>
           </div>
         )}
+
+        {/* Weekly schedule changes recorded on the server (also pushed as alerts) */}
+        {Object.keys(serverGrouped).length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <History className="w-4 h-4 text-indigo-600" />
+              <h2 className="text-sm font-bold text-gray-800">Weekly schedule changes</h2>
+              <span className="ml-auto text-[10px] text-gray-500 flex items-center gap-1">
+                <Bell className="w-3 h-3" /> alerts sent
+              </span>
+            </div>
+            {Object.entries(serverGrouped).map(([range, list]) => (
+              <div key={range} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-50 to-white border-b border-gray-100">
+                  <CalendarClock className="w-4 h-4 text-indigo-600" />
+                  <span className="text-sm font-bold text-gray-800">{range}</span>
+                  <span className="ml-auto text-[11px] text-gray-500">{list.length} change(s)</span>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {list.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between px-4 py-3">
+                      <span className="text-sm text-gray-700 truncate mr-2">{c.label}</span>
+                      <span className="shrink-0 flex items-center gap-2 text-sm font-semibold">
+                        <span className="text-gray-400 line-through">{formatTo12Hour(c.old_value || '')}</span>
+                        <span className="text-gray-300">→</span>
+                        <span className="text-emerald-600">{formatTo12Hour(c.new_value || '')}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
 
         {dates.map((date) => (
           <div key={date} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
