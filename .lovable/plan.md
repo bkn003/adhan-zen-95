@@ -1,63 +1,52 @@
-## Scope
+# World-class upgrade: change alerts, accounts, app donations
 
-Verify the existing Qaza/tracker screen covers your ask, then build the three genuinely missing features.
+## Is this a real app?
 
-## 1. Prayer Tracker (verify existing)
+It is a real, working product, not a demo: live prayer data with CDN caching and offline fallback, per-mosque admin panels, super admin, private photo storage with signed URLs, reviews with moderation, events/RSVP, UPI donations per mosque, Quran reader, Qibla, Zakat, tracker, native Android alarms and background sync. What is missing for "world class" is trust and retention plumbing: real user accounts, reliable server-side change notifications, and a sustainability path. That is what this plan adds.
 
-The `QazaScreen` already ships qada counter, daily prayed checklist with history calendar, and per-prayer counts. I will:
-- Add a **streak counter** (consecutive days with all 5 prayed) at the top of the Tracker tab.
-- Ensure a **missed-prayer log** view (dates + which prayers missed) derived from existing history.
-- Keep it tied to selected mosque via `currentLocationId` for per-mosque tracking.
+## 1. Weekly prayer-time change notifications (PWA + Android)
 
-No schema changes — data stays in `localStorage` (already the pattern).
+Prayer times switch on fixed ranges (1-5, 6-11, 12-17, 18-23, 24-month end). Users must be told when the new range differs from the previous one, with both old and new times.
 
-## 2. Zakat Calculator (new)
+Two layers, so alerts arrive whether or not the app is open:
 
-New screen `src/screens/ZakatScreen.tsx` accessible from Settings → Tools.
+- Server watcher (works with the app closed): a scheduled function keeps a snapshot of each mosque's published times per range. When a range's values change, it stores a change record and pushes an FCM notification to every device linked to that mosque as selected mosque or My Mohalla.
+- Client diff (instant, offline-friendly): the existing sync engine already diffs a 10-day window. It gets extended to also diff the *range* level and to run for both the selected mosque and My Mohalla, then raise a local/web notification and log the change.
 
-Inputs:
-- Cash, bank balance, gold (grams), silver (grams), business assets, liabilities
-- Metal prices (gold/silver per gram) auto-fetched from a free API (metals.live / fallback manual)
-- Configurable Nisab basis (gold 87.48g or silver 612.36g), 2.5% rate
+Notification content: mosque name, affected date range, and one line per changed prayer, e.g. `Fajr Iqamah 5:20 AM -> 5:15 AM`. Tapping opens the "Recent time changes" screen, which is extended to group changes by date range and show a history list instead of only the last sync.
 
-Output:
-- Line-by-line breakdown card
-- Total zakatable wealth, Nisab threshold, whether liable, zakat due
-- **Export** as printable PDF (via `window.print`) and copy-to-clipboard summary
+## 2. Trust: accounts and gated actions (hybrid)
 
-No backend needed — pure client calc + fetch.
+- Sign in with Google and with email + password. Password reset page included.
+- Browsing prayer times stays open (important for a public utility and for SEO).
+- Requires an account: reviews and reports, event RSVP, following mosques, notification settings, prayer tracker, Quran bookmarks, mosque admin, super admin.
+- Anonymous sessions are replaced by real accounts where data is user-owned; a profiles table stores display name and avatar so reviews and RSVPs show a real identity instead of a device id.
+- Visible trust signals: verified-mosque badge on mosques with an active admin, "last updated by mosque admin" timestamp on prayer cards, and a dismissible sign-in prompt on personalised surfaces.
 
-## 3. Home-Screen Widget / Quick Access (new)
+## 3. Donations to support app development (super admin)
 
-True OS widgets need native modules. I will ship the PWA-equivalent that works today:
-- New route `/widget` rendering a compact big-countdown next prayer view (dark, glanceable)
-- Add manifest **shortcuts** for "Next Prayer", "Qibla", "Tracker" so long-pressing the installed app icon on Android jumps directly in
-- Big "Add to Home Screen" hint in Settings explaining the shortcut
+- Super admin panel gets an "App support" section: UPI ID, payee name, optional note, suggested amounts, enable/disable toggle.
+- A card appears on the home page and inside every mosque page, visually distinct from the mosque's own donation card so nobody confuses the two.
+- One-tap UPI deep links (GPay / PhonePe / Paytm / any UPI app) plus a QR fallback, same mechanism as mosque donations.
+- Disclaimer shown on the card and in a details sheet: contributions support app development and hosting, they are voluntary, non-refundable, not a charitable/zakat donation, not tax-deductible, and unrelated to any mosque's own funds.
 
-## 4. Smart Notifications with Weather (enhance)
+## 4. Further features for world-class standard (proposed, not in this build)
 
-Extend `usePrayerChangeNotifier` / prayer reminder path:
-- Free `open-meteo.com` API (no key) using `currentLocation` lat/lng
-- 15-min pre-prayer notification body includes: temp, condition, and a contextual tip
-  - Rain → "Carry an umbrella"
-  - >35°C → "Stay hydrated before Zuhr"
-  - Cold + Fajr → "Wear warm clothes"
-- Cached 30 min in `localStorage` to avoid rate limits
-- New setting toggle in `SettingsScreen`: "Weather-aware reminders"
+Ranked by impact: iOS build and App Store release; mosque admin web dashboard with bulk CSV import of yearly timings; Jamaat live status ("Iqamah in 5 min"); Islamic calendar with Ramadan/Eid countdowns and fasting tracker; audio adhan with muezzin choice per prayer; family/group sharing; Arabic and Urdu with full RTL; accessibility pass (screen reader, large text); analytics dashboard for mosque admins; verified-mosque approval workflow.
 
-## Technical Notes
+## 5. Costs and value (indicative, INR)
 
-- Zakat metal price API: `https://api.metals.dev/v1/latest` free tier, fallback to user-editable input
-- Weather API: `https://api.open-meteo.com/v1/forecast?...&current=temperature_2m,weather_code`
-- Widget route excluded from bottom nav / auth
-- All new strings routed through `getLocalizedText`
+- Building this from scratch with an Indian agency/freelance team: roughly 8-15 lakh for a comparable PWA + Android app with admin panels, or 20-35 lakh with a studio and iOS included. Solo developer over 4-6 months: 3-6 lakh equivalent in time.
+- Running cost at state scale (a few thousand mosques, 50k-200k monthly users): mostly free tier plus 3-8k/month for database, storage bandwidth and push at the upper end.
+- Selling a single-state deployment: typically 2-6 lakh as a one-time license to a trust or federation, or 15-40k/month as a managed SaaS with support. A per-mosque model (100-300/month) usually earns more over time than a one-time sale.
 
-## Files Touched
+These are market estimates, not a quote.
 
-- `src/screens/QazaScreen.tsx` (streak + missed log)
-- `src/screens/ZakatScreen.tsx` (new)
-- `src/screens/WidgetScreen.tsx` (new) + route in `App.tsx`
-- `public/manifest.webmanifest` (shortcuts)
-- `src/utils/weather.ts` (new)
-- `src/hooks/usePrayerReminders.ts` (weather integration)
-- `src/screens/SettingsScreen.tsx` (Zakat link + weather toggle + install hint)
+## Technical notes
+
+- New table `prayer_time_snapshots` (location_id, month, date_range, values jsonb) and `prayer_time_changes` (location_id, date_range, field, old_value, new_value, detected_at) with owner-safe grants and RLS; changes readable by authenticated users, writes only from the service role.
+- New scheduled edge function `prayer-change-watch` compares snapshots to current rows and calls the existing `_shared/fcm.ts` sender; cron via pg_cron + pg_net.
+- `push_tokens` gains a reason/scope so a device can receive alerts for both selected mosque and mohalla.
+- `src/native/syncEngine.ts` extended to diff by date range and to sync two mosques; `SyncChangesScreen.tsx` becomes a grouped history view.
+- Auth: Supabase Google provider (configured in the Supabase dashboard) + email/password, `profiles` table with signup trigger, `/reset-password` route, and an `AuthProvider` guarding gated actions.
+- App donation config stored in `app_settings` (public read of non-sensitive keys, service-role writes) and rendered by a new `AppSupportCard` component reusing the UPI deep-link helpers.
