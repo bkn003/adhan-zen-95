@@ -32,6 +32,8 @@ const Stars: React.FC<{ value: number; onChange?: (n: number) => void; size?: st
 );
 
 export const MosqueReviews: React.FC<{ locationId: string }> = ({ locationId }) => {
+  const { requireAuth } = useAuth();
+
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState(0);
