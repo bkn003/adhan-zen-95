@@ -591,6 +591,10 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
         {/* Donate */}
         <MosqueDonate mosqueName={location.mosque_name} locationId={location.id} info={location as any} />
 
+        {/* Support app development — visually distinct from mosque donations */}
+        <AppSupportCard variant="full" />
+
+
         {/* Events & Announcements */}
         <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm">
           <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 mb-3">
