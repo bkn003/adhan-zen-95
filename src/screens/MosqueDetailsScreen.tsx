@@ -9,6 +9,8 @@ import { useRamadanContext } from '@/contexts/RamadanContext';
 import { useSignedPhotoUrls } from '@/utils/signedPhotoUrls';
 import { MosqueEvents } from '@/components/MosqueEvents';
 import { MosqueDonate } from '@/components/MosqueDonate';
+import { AppSupportCard } from '@/components/AppSupportCard';
+
 import { MosqueReviews } from '@/components/MosqueReviews';
 
 interface MosqueDetailsScreenProps {
