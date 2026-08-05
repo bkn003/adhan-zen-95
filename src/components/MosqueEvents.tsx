@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Calendar, Clock, MapPin, Check, HelpCircle, X, Users, Bell, ChevronDown, ChevronUp } from 'lucide-react';
 import { getDeviceId } from '@/utils/deviceId';
 import { ensureAnonSession } from '@/utils/anonAuth';
+import { useAuth } from '@/contexts/AuthContext';
+
 
 import { toast } from 'sonner';
 
