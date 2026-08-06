@@ -492,6 +492,59 @@ export type Database = {
           },
         ]
       }
+      mosque_timing_audit: {
+        Row: {
+          actor_role: string
+          changes: Json
+          created_at: string
+          date_range: string | null
+          editor_label: string
+          id: string
+          location_id: string
+          month: string | null
+          prayer_time_id: string | null
+          rolled_back_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actor_role?: string
+          changes?: Json
+          created_at?: string
+          date_range?: string | null
+          editor_label?: string
+          id?: string
+          location_id: string
+          month?: string | null
+          prayer_time_id?: string | null
+          rolled_back_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actor_role?: string
+          changes?: Json
+          created_at?: string
+          date_range?: string | null
+          editor_label?: string
+          id?: string
+          location_id?: string
+          month?: string | null
+          prayer_time_id?: string | null
+          rolled_back_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mosque_timing_audit_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prayer_time_changes: {
         Row: {
           created_at: string
