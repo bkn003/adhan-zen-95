@@ -12,6 +12,8 @@ import { useSignedPhotoUrls, invalidateSignedPhotoUrl } from '@/utils/signedPhot
 import { EventsAdmin } from '@/components/admin/EventsAdmin';
 import { DonationAdmin } from '@/components/admin/DonationAdmin';
 import { ReviewsAdmin } from '@/components/admin/ReviewsAdmin';
+import { AuditTrail } from '@/components/admin/AuditTrail';
+
 
 /**
  * Returns the last day of a given month name (1-indexed).
