@@ -295,6 +295,19 @@ serve(async (req) => {
         ptFields[key] = (value === "" || value === undefined) ? null : value;
       }
 
+      let beforeRow: Record<string, any> | null = null;
+      if (ptId) {
+        const { data: existing } = await supabase
+          .from("prayer_times")
+          .select("*")
+          .eq("id", ptId)
+          .eq("location_id", location_id)
+          .maybeSingle();
+        beforeRow = existing ?? null;
+      }
+
+      let savedId = ptId as string | undefined;
+
       if (ptId) {
         // Update existing
         const { error } = await supabase
@@ -311,9 +324,11 @@ serve(async (req) => {
         }
       } else {
         // Insert new
-        const { error } = await supabase
+        const { data: inserted, error } = await supabase
           .from("prayer_times")
-          .insert({ ...ptFields, location_id });
+          .insert({ ...ptFields, location_id })
+          .select("id")
+          .maybeSingle();
 
         if (error) {
           return new Response(
@@ -321,6 +336,34 @@ serve(async (req) => {
             { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
+        savedId = inserted?.id;
+      }
+
+      // ---- Audit trail: record field-level before/after diffs ----
+      try {
+        const changes = Object.entries(ptFields)
+          .filter(([k]) => !["id", "location_id", "created_at", "month", "date_range"].includes(k))
+          .map(([field, newValue]) => ({
+            field,
+            old_value: beforeRow ? (beforeRow[field] ?? null) : null,
+            new_value: newValue ?? null,
+          }))
+          .filter((c) => String(c.old_value ?? "") !== String(c.new_value ?? ""));
+
+        if (changes.length > 0) {
+          await supabase.from("mosque_timing_audit").insert({
+            location_id,
+            prayer_time_id: savedId ?? null,
+            month: ptFields.month ?? beforeRow?.month ?? null,
+            date_range: ptFields.date_range ?? beforeRow?.date_range ?? null,
+            editor_label: username,
+            actor_role: "mosque_admin",
+            changes,
+            status: beforeRow ? "applied" : "created",
+          });
+        }
+      } catch (_e) {
+        /* auditing must never block the update */
       }
 
       return new Response(
@@ -328,6 +371,72 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    if (action === "rollback_timing_audit") {
+      if (!username || !password || !location_id || !data?.audit_id) {
+        return new Response(
+          JSON.stringify({ error: "Authentication required" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: verifiedId } = await supabase.rpc("verify_mosque_admin", {
+        p_username: username,
+        p_password: password,
+      });
+
+      if (!verifiedId || verifiedId !== location_id) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: entry } = await supabase
+        .from("mosque_timing_audit")
+        .select("*")
+        .eq("id", data.audit_id)
+        .eq("location_id", location_id)
+        .maybeSingle();
+
+      if (!entry || entry.status === "rolled_back" || !entry.prayer_time_id) {
+        return new Response(
+          JSON.stringify({ error: "This change cannot be rolled back." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const revert: Record<string, any> = {};
+      for (const c of (entry.changes as any[]) || []) {
+        revert[c.field] = c.old_value ?? null;
+      }
+
+      if (Object.keys(revert).length > 0) {
+        const { error: revertError } = await supabase
+          .from("prayer_times")
+          .update(revert)
+          .eq("id", entry.prayer_time_id)
+          .eq("location_id", location_id);
+
+        if (revertError) {
+          return new Response(
+            JSON.stringify({ error: revertError.message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      await supabase
+        .from("mosque_timing_audit")
+        .update({ status: "rolled_back", rolled_back_at: new Date().toISOString() })
+        .eq("id", entry.id);
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
 
     if (action === "set_credentials") {
       // This should only be used initially or by super admin
