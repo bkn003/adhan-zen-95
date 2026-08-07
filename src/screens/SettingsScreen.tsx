@@ -534,6 +534,13 @@ export const SettingsScreen = () => {
             <ChevronRight className="w-4 h-4" />
           </button>
           <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate-transparency'))}
+            className="w-full py-2.5 px-3 bg-gradient-to-r from-teal-700 to-emerald-700 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">✅ Accuracy &amp; Transparency</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
             onClick={() => window.dispatchEvent(new CustomEvent('navigate-privacy'))}
             className="w-full py-2.5 px-3 bg-gradient-to-r from-slate-800 to-slate-600 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
           >

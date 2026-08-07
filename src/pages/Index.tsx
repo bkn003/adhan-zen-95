@@ -14,6 +14,7 @@ import { SuperAdminPanel } from '@/screens/SuperAdminPanel';
 import { ZakatScreen } from '@/screens/ZakatScreen';
 import { TasbeehScreen } from '@/screens/TasbeehScreen';
 import { SyncChangesScreen } from '@/screens/SyncChangesScreen';
+import { TransparencyScreen } from '@/screens/TransparencyScreen';
 import { QuranScreen } from '@/screens/QuranScreen';
 import { MosqueCompareScreen } from '@/screens/MosqueCompareScreen';
 import { NotificationSettingsScreen } from '@/screens/NotificationSettingsScreen';
@@ -48,6 +49,7 @@ const Index = () => {
   const [showCompare, setShowCompare] = useState(false);
   const [showNotifSettings, setShowNotifSettings] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showTransparency, setShowTransparency] = useState(false);
 
   // Enable realtime sync for locations & prayer_times
   useRealtimeSync();
@@ -71,6 +73,7 @@ const Index = () => {
     const compareHandler = () => setShowCompare(true);
     const notifHandler = () => setShowNotifSettings(true);
     const privacyHandler = () => setShowPrivacy(true);
+    const transparencyHandler = () => setShowTransparency(true);
     window.addEventListener('navigate-admin', handler);
     window.addEventListener('navigate-super-admin', superHandler);
     window.addEventListener('navigate-zakat', zakatHandler);
@@ -80,6 +83,7 @@ const Index = () => {
     window.addEventListener('navigate-compare', compareHandler);
     window.addEventListener('navigate-notifications', notifHandler);
     window.addEventListener('navigate-privacy', privacyHandler);
+    window.addEventListener('navigate-transparency', transparencyHandler);
     return () => {
       window.removeEventListener('navigate-admin', handler);
       window.removeEventListener('navigate-super-admin', superHandler);
@@ -90,6 +94,7 @@ const Index = () => {
       window.removeEventListener('navigate-compare', compareHandler);
       window.removeEventListener('navigate-notifications', notifHandler);
       window.removeEventListener('navigate-privacy', privacyHandler);
+      window.removeEventListener('navigate-transparency', transparencyHandler);
     };
   }, []);
 
@@ -108,7 +113,9 @@ const Index = () => {
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       e.preventDefault();
-      if (showPrivacy) {
+      if (showTransparency) {
+        setShowTransparency(false);
+      } else if (showPrivacy) {
         setShowPrivacy(false);
       } else if (showNotifSettings) {
         setShowNotifSettings(false);
@@ -139,7 +146,7 @@ const Index = () => {
     window.history.pushState(null, '', window.location.href);
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [showPrivacy, showNotifSettings, showCompare, showQuran, showSyncChanges, showTasbeeh, showZakat, showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
+  }, [showTransparency, showPrivacy, showNotifSettings, showCompare, showQuran, showSyncChanges, showTasbeeh, showZakat, showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
 
   // Persist current screen
   useEffect(() => {
@@ -239,6 +246,9 @@ const Index = () => {
       return <NotificationSettingsScreen onBack={() => setShowNotifSettings(false)} />;
     }
 
+    if (showTransparency) {
+      return <TransparencyScreen onBack={() => setShowTransparency(false)} />;
+    }
     if (showPrivacy) {
       return <PrivacyScreen onBack={() => setShowPrivacy(false)} />;
     }
