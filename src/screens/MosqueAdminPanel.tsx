@@ -12,6 +12,8 @@ import { useSignedPhotoUrls, invalidateSignedPhotoUrl } from '@/utils/signedPhot
 import { EventsAdmin } from '@/components/admin/EventsAdmin';
 import { DonationAdmin } from '@/components/admin/DonationAdmin';
 import { ReviewsAdmin } from '@/components/admin/ReviewsAdmin';
+import { AuditTrail } from '@/components/admin/AuditTrail';
+
 
 /**
  * Returns the last day of a given month name (1-indexed).
@@ -570,7 +572,17 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         <DonationAdmin locationId={locationId!} location={mosque} username={username} password={password} />
       </CollapsibleSection>
 
+      {/* Timing edit history / audit trail */}
+      <CollapsibleSection
+        title="Edit History & Rollback"
+        expanded={expandedSection === 'audit'}
+        onToggle={() => setExpandedSection(expandedSection === 'audit' ? null : 'audit')}
+      >
+        <AuditTrail locationId={locationId!} credentials={{ username, password }} />
+      </CollapsibleSection>
+
     </div>
+
   );
 };
 
