@@ -570,7 +570,17 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         <DonationAdmin locationId={locationId!} location={mosque} username={username} password={password} />
       </CollapsibleSection>
 
+      {/* Timing edit history / audit trail */}
+      <CollapsibleSection
+        title="Edit History & Rollback"
+        expanded={expandedSection === 'audit'}
+        onToggle={() => setExpandedSection(expandedSection === 'audit' ? null : 'audit')}
+      >
+        <AuditTrail locationId={locationId!} credentials={{ username, password }} />
+      </CollapsibleSection>
+
     </div>
+
   );
 };
 
