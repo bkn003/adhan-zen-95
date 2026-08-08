@@ -18,11 +18,10 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const SUPER_ADMIN_PASSWORD = Deno.env.get("SUPER_ADMIN_PASSWORD");
+    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 
     const body = await req.json();
     const { action, username, password, location_id, data } = body;
-    const superToken: string | undefined = body?.super_token;
 
     const json = (payload: unknown, status = 200) =>
       new Response(JSON.stringify(payload), {
@@ -30,7 +29,38 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
 
-    // ---- Super admin session tokens (HMAC-signed, 2h expiry, stateless) ----
+    // ---- Caller identity comes from the real Supabase session JWT ----
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const jwt = authHeader.replace(/^Bearer\s+/i, "").trim();
+    let caller: { id: string; email: string } | null = null;
+    if (jwt && jwt !== ANON_KEY) {
+      const { data: userData } = await supabase.auth.getUser(jwt);
+      const u = userData?.user as (typeof userData extends never ? never : any) | undefined;
+      if (u && !u.is_anonymous) caller = { id: u.id, email: u.email ?? "" };
+    }
+
+    let isSuper = false;
+    let adminLocationIds: string[] = [];
+    if (caller) {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", caller.id);
+      isSuper = (roles ?? []).some((r: any) => r.role === "super_admin");
+
+      const { data: assigns } = await supabase
+        .from("mosque_admin_users")
+        .select("location_id")
+        .eq("user_id", caller.id)
+        .eq("is_paused", false);
+      adminLocationIds = (assigns ?? []).map((a: any) => a.location_id as string);
+    }
+
+    /** Mosque-scoped authorization: the mosque's own admin, or any super admin. */
+    const canManage = (loc?: string | null) =>
+      !!caller && !!loc && (isSuper || adminLocationIds.includes(loc));
+
+    // ---- Super admin actions ----
     const SUPER_ACTIONS = new Set([
       "super_list_admins",
       "super_add_prayer_times",
@@ -46,59 +76,22 @@ serve(async (req) => {
       "super_run_change_watch",
     ]);
 
-
-    const b64url = (bytes: Uint8Array) =>
-      btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-
-    const sign = async (payload: string) => {
-      const key = await crypto.subtle.importKey(
-        "raw",
-        new TextEncoder().encode(SUPER_ADMIN_PASSWORD!),
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["sign"],
-      );
-      const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
-      return b64url(new Uint8Array(sig));
-    };
-
-    const issueSuperToken = async () => {
-      const payload = `super.${Date.now() + 2 * 60 * 60 * 1000}`;
-      return `${payload}.${await sign(payload)}`;
-    };
-
-    const verifySuperToken = async (token?: string) => {
-      if (!token) return false;
-      const parts = token.split(".");
-      if (parts.length !== 3 || parts[0] !== "super") return false;
-      const expiry = Number(parts[1]);
-      if (!Number.isFinite(expiry) || expiry < Date.now()) return false;
-      const expected = await sign(`${parts[0]}.${parts[1]}`);
-      if (expected.length !== parts[2].length) return false;
-      let diff = 0;
-      for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ parts[2].charCodeAt(i);
-      return diff === 0;
-    };
-
-    // Fail closed if the super admin password secret is not configured
-    if (
-      (SUPER_ACTIONS.has(action) || action === "super_admin_login") && !SUPER_ADMIN_PASSWORD
-    ) {
-      return json({ error: "Super admin is not configured on this server" }, 500);
-    }
-
-    // Every privileged super admin action must present a valid session token
-    if (SUPER_ACTIONS.has(action) && !(await verifySuperToken(superToken))) {
+    if (SUPER_ACTIONS.has(action) && !isSuper) {
       return json({ error: "Super admin authentication required" }, 401);
     }
 
-    // Server-side super admin authentication
-    if (action === "super_admin_login") {
-      if (typeof password !== "string" || password !== SUPER_ADMIN_PASSWORD) {
-        return json({ error: "Invalid super admin password" }, 401);
-      }
-      return json({ success: true, super_token: await issueSuperToken() });
+    // Who am I? Used by both panels right after signing in.
+    if (action === "admin_whoami") {
+      if (!caller) return json({ error: "Sign in required" }, 401);
+      return json({
+        user_id: caller.id,
+        email: caller.email,
+        is_super_admin: isSuper,
+        location_ids: adminLocationIds,
+        location_id: adminLocationIds[0] ?? null,
+      });
     }
+
 
 
     // Super admin: read the app-support (donation) configuration
