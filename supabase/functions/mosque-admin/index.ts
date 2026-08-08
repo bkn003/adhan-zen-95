@@ -144,25 +144,29 @@ serve(async (req) => {
       return json({ success: res.ok, result: out }, res.ok ? 200 : 500);
     }
 
-    // Super admin: list which locations have admin credentials (returns location_id -> username)
+    // Super admin: list mosque admin accounts (location_id -> account email)
     if (action === "super_list_admins") {
-      const { data: admins, error } = await supabase
-        .from("mosque_admins")
-        .select("location_id, username");
+      const { data: assigns, error } = await supabase
+        .from("mosque_admin_users")
+        .select("location_id, user_id, is_paused");
+      if (error) return json({ error: error.message }, 500);
 
-
-      if (error) {
-        return new Response(
-          JSON.stringify({ error: error.message }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      const emails = new Map<string, string>();
+      for (let page = 1; page <= 10; page++) {
+        const { data: list } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
+        (list?.users ?? []).forEach((u: any) => emails.set(u.id, u.email ?? ""));
+        if (!list?.users?.length || list.users.length < 200) break;
       }
 
-      return new Response(
-        JSON.stringify({ admins: admins || [] }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const admins = (assigns ?? []).map((a: any) => ({
+        location_id: a.location_id,
+        user_id: a.user_id,
+        is_paused: a.is_paused,
+        username: emails.get(a.user_id) ?? "",
+      }));
+      return json({ admins });
     }
+
 
     // Super admin: add prayer times for a mosque (used during mosque creation wizard)
     if (action === "super_add_prayer_times") {
