@@ -510,7 +510,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         expanded={expandedSection === 'photos'}
         onToggle={() => setExpandedSection(expandedSection === 'photos' ? null : 'photos')}
       >
-        <PhotoManager locationId={locationId!} username={username} password={password} />
+        <PhotoManager locationId={locationId!} />
       </CollapsibleSection>
 
       {/* Events & Announcements */}
@@ -519,7 +519,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         expanded={expandedSection === 'events'}
         onToggle={() => setExpandedSection(expandedSection === 'events' ? null : 'events')}
       >
-        <EventsAdmin locationId={locationId!} username={username} password={password} />
+        <EventsAdmin locationId={locationId!} />
       </CollapsibleSection>
 
       {/* Reviews moderation */}
@@ -528,7 +528,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         expanded={expandedSection === 'reviews'}
         onToggle={() => setExpandedSection(expandedSection === 'reviews' ? null : 'reviews')}
       >
-        <ReviewsAdmin locationId={locationId!} username={username} password={password} />
+        <ReviewsAdmin locationId={locationId!} />
       </CollapsibleSection>
 
       {/* Donations */}
@@ -537,7 +537,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         expanded={expandedSection === 'donations'}
         onToggle={() => setExpandedSection(expandedSection === 'donations' ? null : 'donations')}
       >
-        <DonationAdmin locationId={locationId!} location={mosque} username={username} password={password} />
+        <DonationAdmin locationId={locationId!} location={mosque} />
       </CollapsibleSection>
 
       {/* Timing edit history / audit trail */}
@@ -738,7 +738,7 @@ const PrayerTimeEditor = ({ prayerTime, onSave, onCancel }: {
 };
 
 // Amenities & Filters Section - dynamic filter toggles from custom_filters table
-const AmenitiesFiltersSection = ({ locationId, username, password }: { locationId: string; username: string; password: string }) => {
+const AmenitiesFiltersSection = ({ locationId }: { locationId: string }) => {
   const { data: filters, isLoading: filtersLoading } = useCustomFilters();
   const { data: activeFilterIds, isLoading: locationFiltersLoading } = useLocationFilters(locationId);
   const setLocationFilters = useSetLocationFilters();
@@ -768,8 +768,6 @@ const AmenitiesFiltersSection = ({ locationId, username, password }: { locationI
       await setLocationFilters.mutateAsync({
         locationId,
         filterIds: newIds,
-        username,
-        password,
       });
       toast.success(isActive ? 'Filter removed' : 'Filter added');
     } catch (err: any) {
@@ -823,7 +821,7 @@ const AmenitiesFiltersSection = ({ locationId, username, password }: { locationI
 
 const SUPABASE_URL_PHOTOS = "https://lhufqnokmdqkvzcxqwkl.supabase.co";
 
-const PhotoManager = ({ locationId, username, password }: { locationId: string; username: string; password: string }) => {
+const PhotoManager = ({ locationId }: { locationId: string }) => {
   const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
 
@@ -898,13 +896,12 @@ const PhotoManager = ({ locationId, username, password }: { locationId: string; 
         const compressed = await compressImage(file);
         const formData = new FormData();
         formData.append('action', 'upload');
-        formData.append('username', username);
-        formData.append('password', password);
         formData.append('location_id', locationId);
         formData.append('photo', compressed, 'photo.jpg');
 
         const res = await fetch(`${SUPABASE_URL_PHOTOS}/functions/v1/mosque-photos`, {
           method: 'POST',
+          headers: await authHeaders(false),
           body: formData,
         });
         const data = await res.json();
@@ -924,13 +921,12 @@ const PhotoManager = ({ locationId, username, password }: { locationId: string; 
     try {
       const formData = new FormData();
       formData.append('action', 'delete');
-      formData.append('username', username);
-      formData.append('password', password);
       formData.append('location_id', locationId);
       formData.append('photo_id', photoId);
 
       const res = await fetch(`${SUPABASE_URL_PHOTOS}/functions/v1/mosque-photos`, {
         method: 'POST',
+        headers: await authHeaders(false),
         body: formData,
       });
       const data = await res.json();
