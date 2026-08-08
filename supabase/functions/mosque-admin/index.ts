@@ -387,107 +387,102 @@ serve(async (req) => {
     }
 
 
+    /** Look up an auth user by email (case-insensitive). */
+    const findUserByEmail = async (email: string) => {
+      const target = email.trim().toLowerCase();
+      for (let page = 1; page <= 10; page++) {
+        const { data: list } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
+        const found = (list?.users ?? []).find((u: any) => (u.email ?? "").toLowerCase() === target);
+        if (found) return found;
+        if (!list?.users?.length || list.users.length < 200) break;
+      }
+      return null;
+    };
+
+    // Mosque admin changes their own password (real Supabase account)
     if (action === "set_credentials") {
-      // This should only be used initially or by super admin
-      // For now, allow setting if no credentials exist yet
-      if (!location_id || !username || !password) {
-        return new Response(
-          JSON.stringify({ error: "Missing fields" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // Check if credentials already exist
-      const { data: existingAdmin } = await supabase
-        .from("mosque_admins")
-        .select("username")
-        .eq("location_id", location_id)
-        .maybeSingle();
-
-      if (!existingAdmin?.username && !(await verifySuperToken(superToken))) {
-        return json({ error: "Super admin authentication required" }, 401);
-      }
-
-      if (existingAdmin?.username) {
-
-        // Credentials already exist, need old credentials to change
-        const { old_username, old_password } = data || {};
-        if (!old_username || !old_password) {
-          return new Response(
-            JSON.stringify({ error: "Existing credentials required to change" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
+      if (!caller) return json({ error: "Sign in required" }, 401);
       if (!canManage(location_id)) return json({ error: "Unauthorized" }, 403);
+      const newPassword = password || data?.password;
+      if (!newPassword || String(newPassword).length < 6) {
+        return json({ error: "Password must be at least 6 characters" }, 400);
       }
-
-      // Set new credentials
-      const { data: result } = await supabase.rpc("set_mosque_admin_credentials", {
-        p_location_id: location_id,
-        p_username: username,
-        p_password: password,
+      const { error } = await supabase.auth.admin.updateUserById(caller.id, {
+        password: String(newPassword),
       });
-
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (error) return json({ error: error.message }, 500);
+      return json({ success: true });
     }
 
+    // Super admin: create or update the mosque admin account (email + password)
     if (action === "super_set_credentials") {
-      if (!location_id || !data?.username || !data?.password) {
-        // Accept username/password from top-level or data
-        const u = username || data?.username;
-        const p = password || data?.password;
-        if (!location_id || !u || !p) {
-          return new Response(
-            JSON.stringify({ error: "Missing fields" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+      const email = String(username || data?.username || "").trim();
+      const pass = String(password || data?.password || "");
+      if (!location_id || !email || !pass) return json({ error: "Missing fields" }, 400);
+      if (!email.includes("@")) return json({ error: "Use a valid email address as the login" }, 400);
+      if (pass.length < 6) return json({ error: "Password must be at least 6 characters" }, 400);
+
+      let user = await findUserByEmail(email);
+      if (user) {
+        const { error } = await supabase.auth.admin.updateUserById(user.id, { password: pass });
+        if (error) return json({ error: error.message }, 500);
+      } else {
+        const { data: created, error } = await supabase.auth.admin.createUser({
+          email,
+          password: pass,
+          email_confirm: true,
+        });
+        if (error) return json({ error: error.message }, 500);
+        user = created.user;
       }
+      if (!user) return json({ error: "Could not create the admin account" }, 500);
 
-      const u = username || data?.username;
-      const p = password || data?.password;
+      // One admin account per mosque: replace any previous assignment
+      await supabase.from("mosque_admin_users").delete().eq("location_id", location_id);
+      const { error: assignErr } = await supabase
+        .from("mosque_admin_users")
+        .insert({ user_id: user.id, location_id });
+      if (assignErr) return json({ error: assignErr.message }, 500);
 
-      const { data: result } = await supabase.rpc("set_mosque_admin_credentials", {
-        p_location_id: location_id,
-        p_username: u,
-        p_password: p,
-      });
+      await supabase
+        .from("user_roles")
+        .upsert({ user_id: user.id, role: "mosque_admin" }, { onConflict: "user_id,role" });
 
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return json({ success: true, email, user_id: user.id });
     }
 
     if (action === "super_delete_credentials") {
-      if (!location_id) {
-        return new Response(
-          JSON.stringify({ error: "Missing location_id" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      if (!location_id) return json({ error: "Missing location_id" }, 400);
 
-      const { error } = await supabase
-        .from("mosque_admins")
-        .delete()
+      const { data: rows } = await supabase
+        .from("mosque_admin_users")
+        .select("user_id")
         .eq("location_id", location_id);
 
-      if (error) {
-        return new Response(
-          JSON.stringify({ error: error.message }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      const { error } = await supabase
+        .from("mosque_admin_users")
+        .delete()
+        .eq("location_id", location_id);
+      if (error) return json({ error: error.message }, 500);
+
+      // Drop the mosque_admin role when the account no longer manages any mosque
+      for (const row of rows ?? []) {
+        const { count } = await supabase
+          .from("mosque_admin_users")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", (row as any).user_id);
+        if (!count) {
+          await supabase
+            .from("user_roles")
+            .delete()
+            .eq("user_id", (row as any).user_id)
+            .eq("role", "mosque_admin");
+        }
       }
 
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return json({ success: true });
     }
+
 
     if (action === "super_add_mosque") {
       const mosqueData = data;
