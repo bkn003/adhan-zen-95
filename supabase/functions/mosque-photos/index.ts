@@ -72,16 +72,35 @@ serve(async (req) => {
     // --- Admin actions (multipart) ---
     const formData = await req.formData();
     const action = formData.get("action") as string;
-    const username = formData.get("username") as string;
-    const password = formData.get("password") as string;
     const locationId = formData.get("location_id") as string;
 
-    const { data: verifiedId } = await supabase.rpc("verify_mosque_admin", {
-      p_username: username,
-      p_password: password,
-    });
-    if (!verifiedId || verifiedId !== locationId) {
-      return json({ error: "Unauthorized" }, 403);
+    // Authorize from the real Supabase session JWT
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const jwt = authHeader.replace(/^Bearer\s+/i, "").trim();
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    let callerId: string | null = null;
+    if (jwt && jwt !== anonKey) {
+      const { data: userData } = await supabase.auth.getUser(jwt);
+      const u = userData?.user as any;
+      if (u && !u.is_anonymous) callerId = u.id;
+    }
+    if (!callerId) return json({ error: "Sign in required" }, 401);
+
+    const { data: roleRows } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", callerId);
+    const isSuper = (roleRows ?? []).some((r: any) => r.role === "super_admin");
+
+    if (!isSuper) {
+      const { data: assign } = await supabase
+        .from("mosque_admin_users")
+        .select("location_id")
+        .eq("user_id", callerId)
+        .eq("location_id", locationId)
+        .eq("is_paused", false)
+        .maybeSingle();
+      if (!assign) return json({ error: "Unauthorized" }, 403);
     }
 
     if (action === "upload") {
