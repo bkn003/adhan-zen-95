@@ -197,48 +197,24 @@ serve(async (req) => {
     }
 
     if (action === "login") {
-      // Verify credentials using the DB function
-      const { data: result, error } = await supabase.rpc("verify_mosque_admin", {
-        p_username: username,
-        p_password: password,
-      });
-
-      if (error || !result) {
-        return new Response(
-          JSON.stringify({ error: "Invalid username or password" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      // Real authentication happens client-side via Supabase; this only reports scope.
+      if (!caller) return json({ error: "Sign in required" }, 401);
+      if (!isSuper && adminLocationIds.length === 0) {
+        return json({ error: "This account is not linked to any mosque" }, 403);
       }
-
-      // Generate a simple session token
-      const token = crypto.randomUUID();
-
-      return new Response(
-        JSON.stringify({ location_id: result, token }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return json({ location_id: adminLocationIds[0] ?? null, is_super_admin: isSuper, email: caller.email });
     }
 
     if (action === "update_location") {
       // Verify the admin is logged in by re-checking credentials
-      if (!username || !password || !location_id) {
+      if (!location_id) {
         return new Response(
           JSON.stringify({ error: "Authentication required" }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const { data: verifiedId } = await supabase.rpc("verify_mosque_admin", {
-        p_username: username,
-        p_password: password,
-      });
-
-      if (!verifiedId || verifiedId !== location_id) {
-        return new Response(
-          JSON.stringify({ error: "Unauthorized" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      if (!canManage(location_id)) return json({ error: "Unauthorized" }, 403);
 
       // Update location data
       const { error: updateError } = await supabase
@@ -260,24 +236,14 @@ serve(async (req) => {
     }
 
     if (action === "update_prayer_times") {
-      if (!username || !password || !location_id) {
+      if (!location_id) {
         return new Response(
           JSON.stringify({ error: "Authentication required" }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const { data: verifiedId } = await supabase.rpc("verify_mosque_admin", {
-        p_username: username,
-        p_password: password,
-      });
-
-      if (!verifiedId || verifiedId !== location_id) {
-        return new Response(
-          JSON.stringify({ error: "Unauthorized" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      if (!canManage(location_id)) return json({ error: "Unauthorized" }, 403);
 
       // data should be { id, ...fields } for upsert
       const { id: ptId, ...rawFields } = data;
@@ -349,8 +315,8 @@ serve(async (req) => {
             prayer_time_id: savedId ?? null,
             month: ptFields.month ?? beforeRow?.month ?? null,
             date_range: ptFields.date_range ?? beforeRow?.date_range ?? null,
-            editor_label: username,
-            actor_role: "mosque_admin",
+            editor_label: caller?.email ?? "admin",
+            actor_role: isSuper ? "super_admin" : "mosque_admin",
             changes,
             status: beforeRow ? "applied" : "created",
           });
@@ -366,24 +332,14 @@ serve(async (req) => {
     }
 
     if (action === "rollback_timing_audit") {
-      if (!username || !password || !location_id || !data?.audit_id) {
+      if (!location_id || !data?.audit_id) {
         return new Response(
           JSON.stringify({ error: "Authentication required" }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const { data: verifiedId } = await supabase.rpc("verify_mosque_admin", {
-        p_username: username,
-        p_password: password,
-      });
-
-      if (!verifiedId || verifiedId !== location_id) {
-        return new Response(
-          JSON.stringify({ error: "Unauthorized" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      if (!canManage(location_id)) return json({ error: "Unauthorized" }, 403);
 
       const { data: entry } = await supabase
         .from("mosque_timing_audit")
@@ -463,17 +419,7 @@ serve(async (req) => {
           );
         }
 
-        const { data: verifiedId } = await supabase.rpc("verify_mosque_admin", {
-          p_username: old_username,
-          p_password: old_password,
-        });
-
-        if (!verifiedId || verifiedId !== location_id) {
-          return new Response(
-            JSON.stringify({ error: "Invalid current credentials" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+      if (!canManage(location_id)) return json({ error: "Unauthorized" }, 403);
       }
 
       // Set new credentials
@@ -834,24 +780,14 @@ serve(async (req) => {
 
     if (action === "set_location_filters") {
       // Admin: set filters for their mosque
-      if (!username || !password || !location_id) {
+      if (!location_id) {
         return new Response(
           JSON.stringify({ error: "Authentication required" }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const { data: verifiedId } = await supabase.rpc("verify_mosque_admin", {
-        p_username: username,
-        p_password: password,
-      });
-
-      if (!verifiedId || verifiedId !== location_id) {
-        return new Response(
-          JSON.stringify({ error: "Unauthorized" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      if (!canManage(location_id)) return json({ error: "Unauthorized" }, 403);
 
       // data.filter_ids is the full list of selected filter IDs
       const filterIds: string[] = data?.filter_ids || [];
@@ -895,14 +831,8 @@ serve(async (req) => {
     }
 
     // === Events / Announcements ===
-    const verifyAdmin = async (): Promise<string | null> => {
-      if (!username || !password || !location_id) return null;
-      const { data: verifiedId } = await supabase.rpc("verify_mosque_admin", {
-        p_username: username,
-        p_password: password,
-      });
-      return verifiedId && verifiedId === location_id ? verifiedId : null;
-    };
+    const verifyAdmin = async (): Promise<string | null> =>
+      canManage(location_id) ? (location_id as string) : null;
 
     if (action === "upsert_announcement") {
       const ok = await verifyAdmin();
