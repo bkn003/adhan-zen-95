@@ -9,7 +9,8 @@ import { TimePicker12h, formatTime12h } from '@/components/TimePicker12h';
 import { HijriAdjustment } from '@/components/HijriAdjustment';
 import { useRamadanContext } from '@/contexts/RamadanContext';
 
-import { getSuperToken, setSuperToken } from '@/utils/superSession';
+import { AdminAuthCard } from '@/components/admin/AdminAuthCard';
+import { authHeaders, fetchAdminScope, adminSignOut } from '@/utils/adminApi';
 
 const SUPABASE_URL = "https://lhufqnokmdqkvzcxqwkl.supabase.co";
 
@@ -44,9 +45,9 @@ function getMonthEndDay(monthName: string): number {
 }
 
 export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
-  const [superPassword, setSuperPassword] = useState('');
-  const [showSuperPass, setShowSuperPass] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [superEmail, setSuperEmail] = useState('');
   const [activeTab, setActiveTab] = useState<'mosques' | 'filters' | 'dashboard' | 'settings'>('dashboard');
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -71,8 +72,8 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ super_token: getSuperToken(), action: 'super_list_admins' }),
+        headers: await authHeaders(),
+        body: JSON.stringify({ action: 'super_list_admins' }),
       });
       const data = await res.json();
       if (res.ok && Array.isArray(data.admins)) {
@@ -109,8 +110,8 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
   const callSuper = React.useCallback(async (action: string, payload: Record<string, unknown> = {}) => {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ super_token: getSuperToken(), action, ...payload }),
+      headers: await authHeaders(),
+      body: JSON.stringify({ action, ...payload }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.error || 'Request failed');
@@ -170,38 +171,49 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
 
 
 
-  // Server-side super admin auth
-  const handleSuperLogin = async () => {
-    setAuthLoading(true);
-    try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ super_token: getSuperToken(), action: 'super_admin_login', password: superPassword }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Authentication failed');
-      setSuperToken(data.super_token || null);
+  /** Verifies the signed-in Supabase account really holds the super_admin role. */
+  const verifySession = React.useCallback(async () => {
+    const scope = await fetchAdminScope();
+    if (scope?.is_super_admin) {
+      setSuperEmail(scope.email);
       setIsAuthenticated(true);
-      toast.success('Super Admin authenticated');
-    } catch (err: any) {
-      toast.error(err.message || 'Invalid super admin password');
-    } finally {
-      setAuthLoading(false);
+      return true;
     }
+    setIsAuthenticated(false);
+    return false;
+  }, []);
+
+  useEffect(() => {
+    verifySession().finally(() => setCheckingSession(false));
+  }, [verifySession]);
+
+  const handleSignedIn = async () => {
+    const ok = await verifySession();
+    if (!ok) {
+      toast.error('This account does not have super admin access');
+      await adminSignOut();
+      return;
+    }
+    toast.success('Super Admin authenticated');
+  };
+
+  const handleSuperLogout = async () => {
+    await adminSignOut();
+    setIsAuthenticated(false);
+    setSuperEmail('');
+    toast.success('Signed out');
   };
 
   const handleSetCredentials = async (locationId: string) => {
     if (!newUsername || !newPassword) {
-      toast.error('Username and password are required');
+      toast.error('Email and password are required');
       return;
     }
     setLoading(true);
     try {
       const loc = locations?.find(l => l.id === locationId);
       const body: any = {
-        super_token: getSuperToken(),
-        action: loc?.admin_username ? 'super_set_credentials' : 'set_credentials',
+        action: 'super_set_credentials',
         location_id: locationId,
         username: newUsername,
         password: newPassword,
@@ -209,7 +221,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
 
       const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify(body),
       });
       const data = await res.json();
@@ -232,8 +244,8 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ super_token: getSuperToken(), action: 'super_delete_credentials', location_id: locationId }),
+        headers: await authHeaders(),
+        body: JSON.stringify({ action: 'super_delete_credentials', location_id: locationId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -251,8 +263,8 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ super_token: getSuperToken(), action: 'super_pause_mosque', location_id: location.id, data: { is_paused: !location.is_paused } }),
+        headers: await authHeaders(),
+        body: JSON.stringify({ action: 'super_pause_mosque', location_id: location.id, data: { is_paused: !location.is_paused } }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -275,8 +287,8 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ super_token: getSuperToken(), action: 'super_delete_mosque', location_id: location.id }),
+        headers: await authHeaders(),
+        body: JSON.stringify({ action: 'super_delete_mosque', location_id: location.id }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -299,9 +311,8 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({
-          super_token: getSuperToken(),
           action: 'super_add_mosque',
           data: {
             mosque_name: newMosque.mosque_name,
@@ -347,9 +358,8 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       const fields = wizardPrayerTimes[currentWizardRange] || {};
       const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({
-          super_token: getSuperToken(),
           action: 'super_add_prayer_times',
           location_id: newMosqueId,
           data: { month: wizardMonth, date_range: currentWizardRange, ...fields }
@@ -430,45 +440,27 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
   const totalFilters = allFilters?.length || 0;
 
   // Login screen
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-red-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-500" />
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-red-950 p-4 pb-28">
         <button onClick={onBack} className="p-2 mb-4">
           <ArrowLeft className="w-5 h-5 text-gray-400" />
         </button>
-        <div className="max-w-sm mx-auto mt-10">
-          <div className="bg-gray-800/80 backdrop-blur-xl rounded-3xl p-6 border border-gray-700/50 shadow-2xl">
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl mx-auto mb-3 flex items-center justify-center shadow-lg shadow-red-500/30">
-                <Shield className="w-8 h-8 text-white" />
-              </div>
-              <h2 className="text-xl font-bold text-white">Super Admin</h2>
-              <p className="text-xs text-gray-400 mt-1">Manage mosque admin credentials & controls</p>
-            </div>
-            <div className="space-y-3">
-              <div className="relative">
-                <input
-                  type={showSuperPass ? 'text' : 'password'}
-                  placeholder="Super Admin Password"
-                  value={superPassword}
-                  onChange={e => setSuperPassword(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleSuperLogin()}
-                  className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 pr-10"
-                />
-                <button type="button" onClick={() => setShowSuperPass(!showSuperPass)} className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {showSuperPass ? <EyeOff className="w-4 h-4 text-gray-400" /> : <Eye className="w-4 h-4 text-gray-400" />}
-                </button>
-              </div>
-              <Button
-                onClick={handleSuperLogin}
-                disabled={!superPassword || authLoading}
-                className="w-full bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white rounded-xl py-3 h-auto font-semibold shadow-lg shadow-red-500/25"
-              >
-                {authLoading ? 'Authenticating...' : 'Authenticate'}
-              </Button>
-            </div>
-          </div>
-        </div>
+        <AdminAuthCard
+          title="Super Admin"
+          subtitle="Sign in with your super admin account"
+          variant="dark"
+          allowSignUp
+          onSignedIn={handleSignedIn}
+        />
       </div>
     );
   }
@@ -489,7 +481,9 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       <div className="flex items-center justify-between">
         <button onClick={onBack} className="p-2"><ArrowLeft className="w-5 h-5 text-gray-400" /></button>
         <h2 className="text-sm font-bold text-white flex items-center gap-2"><Shield className="w-4 h-4 text-red-400" />Super Admin</h2>
-        <div className="w-9" />
+        <button onClick={handleSuperLogout} title={superEmail} className="p-2 bg-red-500/15 rounded-lg text-[10px] font-semibold text-red-300">
+          Sign out
+        </button>
       </div>
 
       {/* Tab Navigation */}

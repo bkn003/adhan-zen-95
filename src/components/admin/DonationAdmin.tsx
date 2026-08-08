@@ -7,8 +7,6 @@ import { useQueryClient } from '@tanstack/react-query';
 interface Props {
   locationId: string;
   location: any;
-  username: string;
-  password: string;
 }
 
 const FIELDS: { key: string; label: string; placeholder: string; textarea?: boolean }[] = [
@@ -20,7 +18,7 @@ const FIELDS: { key: string; label: string; placeholder: string; textarea?: bool
   { key: 'donation_notes', label: 'Notes to Donors (optional)', placeholder: 'Zakat / Sadaqah / Masjid renovation …', textarea: true },
 ];
 
-export const DonationAdmin: React.FC<Props> = ({ locationId, location, username, password }) => {
+export const DonationAdmin: React.FC<Props> = ({ locationId, location }) => {
   const qc = useQueryClient();
   const [form, setForm] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
@@ -37,7 +35,7 @@ export const DonationAdmin: React.FC<Props> = ({ locationId, location, username,
       const patch: any = { donation_enabled: !!form.donation_enabled };
       FIELDS.forEach(f => { patch[f.key] = form[f.key]?.toString().trim() || null; });
       const { data, error } = await supabase.functions.invoke('mosque-admin', {
-        body: { action: 'update_donation', username, password, location_id: locationId, data: patch },
+        body: { action: 'update_donation', location_id: locationId, data: patch },
       });
       if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message);
       toast.success('Donation info saved');

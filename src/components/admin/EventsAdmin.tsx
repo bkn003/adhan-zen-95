@@ -6,8 +6,6 @@ import { toast } from 'sonner';
 
 interface Props {
   locationId: string;
-  username: string;
-  password: string;
 }
 
 const CATEGORIES = ['announcement', 'event', 'lecture', 'fundraiser', 'eid'];
@@ -28,7 +26,7 @@ const empty: Form = { title: '', body: '', category: 'announcement', event_at: '
 const toInput = (iso?: string | null) => iso ? new Date(iso).toISOString().slice(0, 16) : '';
 const fromInput = (v: string) => v ? new Date(v).toISOString() : null;
 
-export const EventsAdmin: React.FC<Props> = ({ locationId, username, password }) => {
+export const EventsAdmin: React.FC<Props> = ({ locationId }) => {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Form | null>(null);
 
@@ -61,7 +59,7 @@ export const EventsAdmin: React.FC<Props> = ({ locationId, username, password })
     if (editing.id) fields.id = editing.id;
     try {
       const { data, error } = await supabase.functions.invoke('mosque-admin', {
-        body: { action: 'upsert_announcement', username, password, location_id: locationId, data: fields },
+        body: { action: 'upsert_announcement', location_id: locationId, data: fields },
       });
       if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message);
       toast.success(editing.id ? 'Event updated' : 'Event published');
@@ -79,8 +77,6 @@ export const EventsAdmin: React.FC<Props> = ({ locationId, username, password })
       const { data, error } = await supabase.functions.invoke('mosque-admin', {
         body: {
           action: 'send_announcement_push',
-          username,
-          password,
           location_id: locationId,
           data: { title: e.title, body: e.body || e.title, announcement_id: e.id },
         },
@@ -97,7 +93,7 @@ export const EventsAdmin: React.FC<Props> = ({ locationId, username, password })
     if (!confirm('Delete this event?')) return;
     try {
       const { data, error } = await supabase.functions.invoke('mosque-admin', {
-        body: { action: 'delete_announcement', username, password, location_id: locationId, data: { id } },
+        body: { action: 'delete_announcement', location_id: locationId, data: { id } },
       });
       if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message);
       toast.success('Deleted');

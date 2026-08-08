@@ -1,6 +1,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getSuperToken } from '@/utils/superSession';
+import { authHeaders } from '@/utils/adminApi';
 
 const SUPABASE_URL = "https://lhufqnokmdqkvzcxqwkl.supabase.co";
 
@@ -21,7 +21,7 @@ export const useCustomFilters = () => {
         queryFn: async (): Promise<CustomFilter[]> => {
             const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await authHeaders(),
                 body: JSON.stringify({ action: 'list_filters' }),
             });
             const data = await res.json();
@@ -39,8 +39,8 @@ export const useAllCustomFilters = () => {
         queryFn: async (): Promise<CustomFilter[]> => {
             const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'list_all_filters', super_token: getSuperToken() }),
+                headers: await authHeaders(),
+                body: JSON.stringify({ action: 'list_all_filters' }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
@@ -58,7 +58,7 @@ export const useLocationFilters = (locationId: string | undefined) => {
             if (!locationId) return [];
             const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await authHeaders(),
                 body: JSON.stringify({ action: 'get_location_filters', location_id: locationId }),
             });
             const data = await res.json();
@@ -77,7 +77,7 @@ export const useAllLocationFilters = () => {
         queryFn: async (): Promise<{ location_id: string; filter_id: string }[]> => {
             const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await authHeaders(),
                 body: JSON.stringify({ action: 'get_all_location_filters' }),
             });
             const data = await res.json();
@@ -95,21 +95,15 @@ export const useSetLocationFilters = () => {
         mutationFn: async ({
             locationId,
             filterIds,
-            username,
-            password,
         }: {
             locationId: string;
             filterIds: string[];
-            username: string;
-            password: string;
         }) => {
             const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await authHeaders(),
                 body: JSON.stringify({
                     action: 'set_location_filters',
-                    username,
-                    password,
                     location_id: locationId,
                     data: { filter_ids: filterIds },
                 }),
@@ -140,10 +134,9 @@ export const useManageFilter = () => {
         }) => {
             const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await authHeaders(),
                 body: JSON.stringify({
                     action: 'super_manage_filter',
-                    super_token: getSuperToken(),
                     data: {
                         sub_action: subAction,
                         filter_id: filterId,

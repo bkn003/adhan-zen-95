@@ -6,8 +6,6 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface Props {
   locationId: string;
-  username: string;
-  password: string;
 }
 
 interface AdminReview {
@@ -19,14 +17,14 @@ interface AdminReview {
   report_count: number;
 }
 
-export const ReviewsAdmin: React.FC<Props> = ({ locationId, username, password }) => {
+export const ReviewsAdmin: React.FC<Props> = ({ locationId }) => {
   const qc = useQueryClient();
 
   const { data: reviews, isLoading } = useQuery({
     queryKey: ['admin-mosque-reviews', locationId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('mosque-admin', {
-        body: { action: 'list_reviews', username, password, location_id: locationId },
+        body: { action: 'list_reviews', location_id: locationId },
       });
       if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message);
       return ((data as any)?.reviews ?? []) as AdminReview[];
@@ -39,8 +37,6 @@ export const ReviewsAdmin: React.FC<Props> = ({ locationId, username, password }
       const { data, error } = await supabase.functions.invoke('mosque-admin', {
         body: {
           action: 'moderate_review',
-          username,
-          password,
           location_id: locationId,
           data: { id, ...patch },
         },

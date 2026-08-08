@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { History, RotateCcw, ShieldCheck, Loader2, User } from 'lucide-react';
 import { toast } from 'sonner';
+import { authHeaders } from '@/utils/adminApi';
 import { supabase } from '@/integrations/supabase/client';
 import { PrayerTimeDiff } from '@/components/PrayerTimeDiff';
 
@@ -59,28 +60,26 @@ export const useTimingAudit = (locationId?: string | null, limit = 40) =>
 
 interface Props {
   locationId: string;
-  /** Pass admin credentials to enable the rollback action. */
-  credentials?: { username: string; password: string };
+  /** Enables the rollback action for signed-in admins. */
+  canRollback?: boolean;
   limit?: number;
 }
 
 /** Who changed which timing, when — with an optional one-tap rollback. */
-export const AuditTrail: React.FC<Props> = ({ locationId, credentials, limit = 40 }) => {
+export const AuditTrail: React.FC<Props> = ({ locationId, canRollback = false, limit = 40 }) => {
   const { data: entries = [], isLoading } = useTimingAudit(locationId, limit);
   const [busyId, setBusyId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const rollback = async (entry: AuditEntry) => {
-    if (!credentials) return;
+    if (!canRollback) return;
     setBusyId(entry.id);
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({
           action: 'rollback_timing_audit',
-          username: credentials.username,
-          password: credentials.password,
           location_id: locationId,
           data: { audit_id: entry.id },
         }),
@@ -159,7 +158,7 @@ export const AuditTrail: React.FC<Props> = ({ locationId, credentials, limit = 4
               ))}
             </div>
 
-            {credentials && !rolledBack && entry.prayer_time_id && (
+            {canRollback && !rolledBack && entry.prayer_time_id && (
               <button
                 onClick={() => rollback(entry)}
                 disabled={busyId === entry.id}

@@ -13,6 +13,8 @@ import { EventsAdmin } from '@/components/admin/EventsAdmin';
 import { DonationAdmin } from '@/components/admin/DonationAdmin';
 import { ReviewsAdmin } from '@/components/admin/ReviewsAdmin';
 import { AuditTrail } from '@/components/admin/AuditTrail';
+import { AdminAuthCard } from '@/components/admin/AdminAuthCard';
+import { authHeaders, fetchAdminScope, adminSignOut } from '@/utils/adminApi';
 
 
 /**
@@ -60,9 +62,9 @@ const monthNames = [
 ];
 
 export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -75,19 +77,24 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
 
   const { data: locations } = useLocations({ includePaused: true });
 
-  // Restore session
-  useEffect(() => {
-    const saved = localStorage.getItem('mosqueAdminSession');
-    if (saved) {
-      try {
-        const session = JSON.parse(saved);
-        setUsername(session.username);
-        setPassword(session.password);
-        setLocationId(session.locationId);
-        setIsLoggedIn(true);
-      } catch { }
+  /** Reads the signed-in account's admin scope from the server. */
+  const loadScope = React.useCallback(async () => {
+    const scope = await fetchAdminScope();
+    if (scope && (scope.location_id || scope.is_super_admin)) {
+      setAdminEmail(scope.email);
+      setLocationId(scope.location_id);
+      setIsLoggedIn(true);
+    } else {
+      setIsLoggedIn(false);
+      setLocationId(null);
     }
+    return scope;
   }, []);
+
+  // Restore an existing Supabase session
+  useEffect(() => {
+    loadScope().finally(() => setCheckingSession(false));
+  }, [loadScope]);
 
   const mosque = useMemo(() => locations?.find(l => l.id === locationId), [locations, locationId]);
 
@@ -111,49 +118,36 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
     enabled: !!locationId && isLoggedIn,
   });
 
-  const handleLogin = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'login', username, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || 'Login failed');
-        return;
-      }
-      setLocationId(data.location_id);
-      setIsLoggedIn(true);
-      localStorage.setItem('mosqueAdminSession', JSON.stringify({
-        username, password, locationId: data.location_id
-      }));
-      toast.success('Logged in successfully!');
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setLoading(false);
+  const handleSignedIn = async () => {
+    const scope = await loadScope();
+    if (!scope) {
+      toast.error('Could not verify this account');
+      return;
     }
+    if (!scope.location_id && !scope.is_super_admin) {
+      toast.error('This account is not linked to any mosque yet');
+      await adminSignOut();
+      return;
+    }
+    toast.success('Signed in');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await adminSignOut();
     setIsLoggedIn(false);
     setLocationId(null);
-    setUsername('');
-    setPassword('');
-    localStorage.removeItem('mosqueAdminSession');
-    toast.success('Logged out');
+    setAdminEmail('');
+    toast.success('Signed out');
   };
 
   const handleUpdateMosque = async (field: string, value: any) => {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({
           action: 'update_location',
-          username, password, location_id: locationId,
+          location_id: locationId,
           data: { [field]: value }
         }),
       });
@@ -194,10 +188,10 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({
           action: 'update_prayer_times',
-          username, password, location_id: locationId,
+          location_id: locationId,
           data: { id: ptId, ...fields }
         }),
       });
@@ -214,10 +208,10 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({
           action: 'update_prayer_times',
-          username, password, location_id: locationId,
+          location_id: locationId,
           data: { month: selectedMonth, date_range: newDateRange, ...fields }
         }),
       });
@@ -232,53 +226,27 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
     }
   };
 
-  // Login Screen
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/30 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600" />
+      </div>
+    );
+  }
+
+  // Login Screen — real Supabase authentication
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/30 p-4 pb-28">
         <button onClick={onBack} className="p-2 mb-4">
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
-        <div className="max-w-sm mx-auto mt-10">
-          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-lg">
-            <div className="text-center mb-6">
-              <div className="w-14 h-14 bg-emerald-100 rounded-2xl mx-auto mb-3 flex items-center justify-center">
-                <LogIn className="w-7 h-7 text-emerald-600" />
-              </div>
-              <h2 className="text-lg font-bold text-gray-800">Mosque Admin Login</h2>
-              <p className="text-xs text-gray-500 mt-1">Login to manage your mosque data</p>
-            </div>
-            <div className="space-y-3">
-              <input
-                type="text"
-                placeholder="Username"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-300"
-              />
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 pr-10 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-300"
-                  onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {showPassword ? <EyeOff className="w-4 h-4 text-gray-400" /> : <Eye className="w-4 h-4 text-gray-400" />}
-                </button>
-              </div>
-              <Button
-                onClick={handleLogin}
-                disabled={loading || !username || !password}
-                className="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl py-3 h-auto font-semibold"
-              >
-                {loading ? 'Logging in...' : 'Login'}
-              </Button>
-            </div>
-          </div>
-        </div>
+        <AdminAuthCard
+          title="Mosque Admin Login"
+          subtitle="Sign in with the account issued for your mosque"
+          variant="light"
+          onSignedIn={handleSignedIn}
+        />
       </div>
     );
   }
@@ -327,7 +295,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         expanded={expandedSection === 'filters'}
         onToggle={() => setExpandedSection(expandedSection === 'filters' ? null : 'filters')}
       >
-        <AmenitiesFiltersSection locationId={locationId} username={username} password={password} />
+        <AmenitiesFiltersSection locationId={locationId} />
       </CollapsibleSection>
 
       {/* Prayer Times Section */}
@@ -542,7 +510,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         expanded={expandedSection === 'photos'}
         onToggle={() => setExpandedSection(expandedSection === 'photos' ? null : 'photos')}
       >
-        <PhotoManager locationId={locationId!} username={username} password={password} />
+        <PhotoManager locationId={locationId!} />
       </CollapsibleSection>
 
       {/* Events & Announcements */}
@@ -551,7 +519,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         expanded={expandedSection === 'events'}
         onToggle={() => setExpandedSection(expandedSection === 'events' ? null : 'events')}
       >
-        <EventsAdmin locationId={locationId!} username={username} password={password} />
+        <EventsAdmin locationId={locationId!} />
       </CollapsibleSection>
 
       {/* Reviews moderation */}
@@ -560,7 +528,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         expanded={expandedSection === 'reviews'}
         onToggle={() => setExpandedSection(expandedSection === 'reviews' ? null : 'reviews')}
       >
-        <ReviewsAdmin locationId={locationId!} username={username} password={password} />
+        <ReviewsAdmin locationId={locationId!} />
       </CollapsibleSection>
 
       {/* Donations */}
@@ -569,7 +537,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         expanded={expandedSection === 'donations'}
         onToggle={() => setExpandedSection(expandedSection === 'donations' ? null : 'donations')}
       >
-        <DonationAdmin locationId={locationId!} location={mosque} username={username} password={password} />
+        <DonationAdmin locationId={locationId!} location={mosque} />
       </CollapsibleSection>
 
       {/* Timing edit history / audit trail */}
@@ -578,7 +546,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         expanded={expandedSection === 'audit'}
         onToggle={() => setExpandedSection(expandedSection === 'audit' ? null : 'audit')}
       >
-        <AuditTrail locationId={locationId!} credentials={{ username, password }} />
+        <AuditTrail locationId={locationId!} canRollback />
       </CollapsibleSection>
 
     </div>
@@ -770,7 +738,7 @@ const PrayerTimeEditor = ({ prayerTime, onSave, onCancel }: {
 };
 
 // Amenities & Filters Section - dynamic filter toggles from custom_filters table
-const AmenitiesFiltersSection = ({ locationId, username, password }: { locationId: string; username: string; password: string }) => {
+const AmenitiesFiltersSection = ({ locationId }: { locationId: string }) => {
   const { data: filters, isLoading: filtersLoading } = useCustomFilters();
   const { data: activeFilterIds, isLoading: locationFiltersLoading } = useLocationFilters(locationId);
   const setLocationFilters = useSetLocationFilters();
@@ -800,8 +768,6 @@ const AmenitiesFiltersSection = ({ locationId, username, password }: { locationI
       await setLocationFilters.mutateAsync({
         locationId,
         filterIds: newIds,
-        username,
-        password,
       });
       toast.success(isActive ? 'Filter removed' : 'Filter added');
     } catch (err: any) {
@@ -855,7 +821,7 @@ const AmenitiesFiltersSection = ({ locationId, username, password }: { locationI
 
 const SUPABASE_URL_PHOTOS = "https://lhufqnokmdqkvzcxqwkl.supabase.co";
 
-const PhotoManager = ({ locationId, username, password }: { locationId: string; username: string; password: string }) => {
+const PhotoManager = ({ locationId }: { locationId: string }) => {
   const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
 
@@ -930,13 +896,12 @@ const PhotoManager = ({ locationId, username, password }: { locationId: string; 
         const compressed = await compressImage(file);
         const formData = new FormData();
         formData.append('action', 'upload');
-        formData.append('username', username);
-        formData.append('password', password);
         formData.append('location_id', locationId);
         formData.append('photo', compressed, 'photo.jpg');
 
         const res = await fetch(`${SUPABASE_URL_PHOTOS}/functions/v1/mosque-photos`, {
           method: 'POST',
+          headers: await authHeaders(false),
           body: formData,
         });
         const data = await res.json();
@@ -956,13 +921,12 @@ const PhotoManager = ({ locationId, username, password }: { locationId: string; 
     try {
       const formData = new FormData();
       formData.append('action', 'delete');
-      formData.append('username', username);
-      formData.append('password', password);
       formData.append('location_id', locationId);
       formData.append('photo_id', photoId);
 
       const res = await fetch(`${SUPABASE_URL_PHOTOS}/functions/v1/mosque-photos`, {
         method: 'POST',
+        headers: await authHeaders(false),
         body: formData,
       });
       const data = await res.json();

@@ -18,11 +18,10 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const SUPER_ADMIN_PASSWORD = Deno.env.get("SUPER_ADMIN_PASSWORD");
+    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 
     const body = await req.json();
     const { action, username, password, location_id, data } = body;
-    const superToken: string | undefined = body?.super_token;
 
     const json = (payload: unknown, status = 200) =>
       new Response(JSON.stringify(payload), {
@@ -30,7 +29,38 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
 
-    // ---- Super admin session tokens (HMAC-signed, 2h expiry, stateless) ----
+    // ---- Caller identity comes from the real Supabase session JWT ----
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const jwt = authHeader.replace(/^Bearer\s+/i, "").trim();
+    let caller: { id: string; email: string } | null = null;
+    if (jwt && jwt !== ANON_KEY) {
+      const { data: userData } = await supabase.auth.getUser(jwt);
+      const u = userData?.user as (typeof userData extends never ? never : any) | undefined;
+      if (u && !u.is_anonymous) caller = { id: u.id, email: u.email ?? "" };
+    }
+
+    let isSuper = false;
+    let adminLocationIds: string[] = [];
+    if (caller) {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", caller.id);
+      isSuper = (roles ?? []).some((r: any) => r.role === "super_admin");
+
+      const { data: assigns } = await supabase
+        .from("mosque_admin_users")
+        .select("location_id")
+        .eq("user_id", caller.id)
+        .eq("is_paused", false);
+      adminLocationIds = (assigns ?? []).map((a: any) => a.location_id as string);
+    }
+
+    /** Mosque-scoped authorization: the mosque's own admin, or any super admin. */
+    const canManage = (loc?: string | null) =>
+      !!caller && !!loc && (isSuper || adminLocationIds.includes(loc));
+
+    // ---- Super admin actions ----
     const SUPER_ACTIONS = new Set([
       "super_list_admins",
       "super_add_prayer_times",
@@ -46,59 +76,22 @@ serve(async (req) => {
       "super_run_change_watch",
     ]);
 
-
-    const b64url = (bytes: Uint8Array) =>
-      btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-
-    const sign = async (payload: string) => {
-      const key = await crypto.subtle.importKey(
-        "raw",
-        new TextEncoder().encode(SUPER_ADMIN_PASSWORD!),
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["sign"],
-      );
-      const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
-      return b64url(new Uint8Array(sig));
-    };
-
-    const issueSuperToken = async () => {
-      const payload = `super.${Date.now() + 2 * 60 * 60 * 1000}`;
-      return `${payload}.${await sign(payload)}`;
-    };
-
-    const verifySuperToken = async (token?: string) => {
-      if (!token) return false;
-      const parts = token.split(".");
-      if (parts.length !== 3 || parts[0] !== "super") return false;
-      const expiry = Number(parts[1]);
-      if (!Number.isFinite(expiry) || expiry < Date.now()) return false;
-      const expected = await sign(`${parts[0]}.${parts[1]}`);
-      if (expected.length !== parts[2].length) return false;
-      let diff = 0;
-      for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ parts[2].charCodeAt(i);
-      return diff === 0;
-    };
-
-    // Fail closed if the super admin password secret is not configured
-    if (
-      (SUPER_ACTIONS.has(action) || action === "super_admin_login") && !SUPER_ADMIN_PASSWORD
-    ) {
-      return json({ error: "Super admin is not configured on this server" }, 500);
-    }
-
-    // Every privileged super admin action must present a valid session token
-    if (SUPER_ACTIONS.has(action) && !(await verifySuperToken(superToken))) {
+    if (SUPER_ACTIONS.has(action) && !isSuper) {
       return json({ error: "Super admin authentication required" }, 401);
     }
 
-    // Server-side super admin authentication
-    if (action === "super_admin_login") {
-      if (typeof password !== "string" || password !== SUPER_ADMIN_PASSWORD) {
-        return json({ error: "Invalid super admin password" }, 401);
-      }
-      return json({ success: true, super_token: await issueSuperToken() });
+    // Who am I? Used by both panels right after signing in.
+    if (action === "admin_whoami") {
+      if (!caller) return json({ error: "Sign in required" }, 401);
+      return json({
+        user_id: caller.id,
+        email: caller.email,
+        is_super_admin: isSuper,
+        location_ids: adminLocationIds,
+        location_id: adminLocationIds[0] ?? null,
+      });
     }
+
 
 
     // Super admin: read the app-support (donation) configuration
@@ -151,25 +144,29 @@ serve(async (req) => {
       return json({ success: res.ok, result: out }, res.ok ? 200 : 500);
     }
 
-    // Super admin: list which locations have admin credentials (returns location_id -> username)
+    // Super admin: list mosque admin accounts (location_id -> account email)
     if (action === "super_list_admins") {
-      const { data: admins, error } = await supabase
-        .from("mosque_admins")
-        .select("location_id, username");
+      const { data: assigns, error } = await supabase
+        .from("mosque_admin_users")
+        .select("location_id, user_id, is_paused");
+      if (error) return json({ error: error.message }, 500);
 
-
-      if (error) {
-        return new Response(
-          JSON.stringify({ error: error.message }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      const emails = new Map<string, string>();
+      for (let page = 1; page <= 10; page++) {
+        const { data: list } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
+        (list?.users ?? []).forEach((u: any) => emails.set(u.id, u.email ?? ""));
+        if (!list?.users?.length || list.users.length < 200) break;
       }
 
-      return new Response(
-        JSON.stringify({ admins: admins || [] }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      const admins = (assigns ?? []).map((a: any) => ({
+        location_id: a.location_id,
+        user_id: a.user_id,
+        is_paused: a.is_paused,
+        username: emails.get(a.user_id) ?? "",
+      }));
+      return json({ admins });
     }
+
 
     // Super admin: add prayer times for a mosque (used during mosque creation wizard)
     if (action === "super_add_prayer_times") {
@@ -204,48 +201,24 @@ serve(async (req) => {
     }
 
     if (action === "login") {
-      // Verify credentials using the DB function
-      const { data: result, error } = await supabase.rpc("verify_mosque_admin", {
-        p_username: username,
-        p_password: password,
-      });
-
-      if (error || !result) {
-        return new Response(
-          JSON.stringify({ error: "Invalid username or password" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      // Real authentication happens client-side via Supabase; this only reports scope.
+      if (!caller) return json({ error: "Sign in required" }, 401);
+      if (!isSuper && adminLocationIds.length === 0) {
+        return json({ error: "This account is not linked to any mosque" }, 403);
       }
-
-      // Generate a simple session token
-      const token = crypto.randomUUID();
-
-      return new Response(
-        JSON.stringify({ location_id: result, token }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return json({ location_id: adminLocationIds[0] ?? null, is_super_admin: isSuper, email: caller.email });
     }
 
     if (action === "update_location") {
       // Verify the admin is logged in by re-checking credentials
-      if (!username || !password || !location_id) {
+      if (!location_id) {
         return new Response(
           JSON.stringify({ error: "Authentication required" }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const { data: verifiedId } = await supabase.rpc("verify_mosque_admin", {
-        p_username: username,
-        p_password: password,
-      });
-
-      if (!verifiedId || verifiedId !== location_id) {
-        return new Response(
-          JSON.stringify({ error: "Unauthorized" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      if (!canManage(location_id)) return json({ error: "Unauthorized" }, 403);
 
       // Update location data
       const { error: updateError } = await supabase
@@ -267,24 +240,14 @@ serve(async (req) => {
     }
 
     if (action === "update_prayer_times") {
-      if (!username || !password || !location_id) {
+      if (!location_id) {
         return new Response(
           JSON.stringify({ error: "Authentication required" }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const { data: verifiedId } = await supabase.rpc("verify_mosque_admin", {
-        p_username: username,
-        p_password: password,
-      });
-
-      if (!verifiedId || verifiedId !== location_id) {
-        return new Response(
-          JSON.stringify({ error: "Unauthorized" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      if (!canManage(location_id)) return json({ error: "Unauthorized" }, 403);
 
       // data should be { id, ...fields } for upsert
       const { id: ptId, ...rawFields } = data;
@@ -356,8 +319,8 @@ serve(async (req) => {
             prayer_time_id: savedId ?? null,
             month: ptFields.month ?? beforeRow?.month ?? null,
             date_range: ptFields.date_range ?? beforeRow?.date_range ?? null,
-            editor_label: username,
-            actor_role: "mosque_admin",
+            editor_label: caller?.email ?? "admin",
+            actor_role: isSuper ? "super_admin" : "mosque_admin",
             changes,
             status: beforeRow ? "applied" : "created",
           });
@@ -373,24 +336,14 @@ serve(async (req) => {
     }
 
     if (action === "rollback_timing_audit") {
-      if (!username || !password || !location_id || !data?.audit_id) {
+      if (!location_id || !data?.audit_id) {
         return new Response(
           JSON.stringify({ error: "Authentication required" }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const { data: verifiedId } = await supabase.rpc("verify_mosque_admin", {
-        p_username: username,
-        p_password: password,
-      });
-
-      if (!verifiedId || verifiedId !== location_id) {
-        return new Response(
-          JSON.stringify({ error: "Unauthorized" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      if (!canManage(location_id)) return json({ error: "Unauthorized" }, 403);
 
       const { data: entry } = await supabase
         .from("mosque_timing_audit")
@@ -438,117 +391,102 @@ serve(async (req) => {
     }
 
 
+    /** Look up an auth user by email (case-insensitive). */
+    const findUserByEmail = async (email: string) => {
+      const target = email.trim().toLowerCase();
+      for (let page = 1; page <= 10; page++) {
+        const { data: list } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
+        const found = (list?.users ?? []).find((u: any) => (u.email ?? "").toLowerCase() === target);
+        if (found) return found;
+        if (!list?.users?.length || list.users.length < 200) break;
+      }
+      return null;
+    };
+
+    // Mosque admin changes their own password (real Supabase account)
     if (action === "set_credentials") {
-      // This should only be used initially or by super admin
-      // For now, allow setting if no credentials exist yet
-      if (!location_id || !username || !password) {
-        return new Response(
-          JSON.stringify({ error: "Missing fields" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (!caller) return json({ error: "Sign in required" }, 401);
+      if (!canManage(location_id)) return json({ error: "Unauthorized" }, 403);
+      const newPassword = password || data?.password;
+      if (!newPassword || String(newPassword).length < 6) {
+        return json({ error: "Password must be at least 6 characters" }, 400);
       }
-
-      // Check if credentials already exist
-      const { data: existingAdmin } = await supabase
-        .from("mosque_admins")
-        .select("username")
-        .eq("location_id", location_id)
-        .maybeSingle();
-
-      if (!existingAdmin?.username && !(await verifySuperToken(superToken))) {
-        return json({ error: "Super admin authentication required" }, 401);
-      }
-
-      if (existingAdmin?.username) {
-
-        // Credentials already exist, need old credentials to change
-        const { old_username, old_password } = data || {};
-        if (!old_username || !old_password) {
-          return new Response(
-            JSON.stringify({ error: "Existing credentials required to change" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const { data: verifiedId } = await supabase.rpc("verify_mosque_admin", {
-          p_username: old_username,
-          p_password: old_password,
-        });
-
-        if (!verifiedId || verifiedId !== location_id) {
-          return new Response(
-            JSON.stringify({ error: "Invalid current credentials" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-      }
-
-      // Set new credentials
-      const { data: result } = await supabase.rpc("set_mosque_admin_credentials", {
-        p_location_id: location_id,
-        p_username: username,
-        p_password: password,
+      const { error } = await supabase.auth.admin.updateUserById(caller.id, {
+        password: String(newPassword),
       });
-
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (error) return json({ error: error.message }, 500);
+      return json({ success: true });
     }
 
+    // Super admin: create or update the mosque admin account (email + password)
     if (action === "super_set_credentials") {
-      if (!location_id || !data?.username || !data?.password) {
-        // Accept username/password from top-level or data
-        const u = username || data?.username;
-        const p = password || data?.password;
-        if (!location_id || !u || !p) {
-          return new Response(
-            JSON.stringify({ error: "Missing fields" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+      const email = String(username || data?.username || "").trim();
+      const pass = String(password || data?.password || "");
+      if (!location_id || !email || !pass) return json({ error: "Missing fields" }, 400);
+      if (!email.includes("@")) return json({ error: "Use a valid email address as the login" }, 400);
+      if (pass.length < 6) return json({ error: "Password must be at least 6 characters" }, 400);
+
+      let user = await findUserByEmail(email);
+      if (user) {
+        const { error } = await supabase.auth.admin.updateUserById(user.id, { password: pass });
+        if (error) return json({ error: error.message }, 500);
+      } else {
+        const { data: created, error } = await supabase.auth.admin.createUser({
+          email,
+          password: pass,
+          email_confirm: true,
+        });
+        if (error) return json({ error: error.message }, 500);
+        user = created.user;
       }
+      if (!user) return json({ error: "Could not create the admin account" }, 500);
 
-      const u = username || data?.username;
-      const p = password || data?.password;
+      // One admin account per mosque: replace any previous assignment
+      await supabase.from("mosque_admin_users").delete().eq("location_id", location_id);
+      const { error: assignErr } = await supabase
+        .from("mosque_admin_users")
+        .insert({ user_id: user.id, location_id });
+      if (assignErr) return json({ error: assignErr.message }, 500);
 
-      const { data: result } = await supabase.rpc("set_mosque_admin_credentials", {
-        p_location_id: location_id,
-        p_username: u,
-        p_password: p,
-      });
+      await supabase
+        .from("user_roles")
+        .upsert({ user_id: user.id, role: "mosque_admin" }, { onConflict: "user_id,role" });
 
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return json({ success: true, email, user_id: user.id });
     }
 
     if (action === "super_delete_credentials") {
-      if (!location_id) {
-        return new Response(
-          JSON.stringify({ error: "Missing location_id" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      if (!location_id) return json({ error: "Missing location_id" }, 400);
 
-      const { error } = await supabase
-        .from("mosque_admins")
-        .delete()
+      const { data: rows } = await supabase
+        .from("mosque_admin_users")
+        .select("user_id")
         .eq("location_id", location_id);
 
-      if (error) {
-        return new Response(
-          JSON.stringify({ error: error.message }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      const { error } = await supabase
+        .from("mosque_admin_users")
+        .delete()
+        .eq("location_id", location_id);
+      if (error) return json({ error: error.message }, 500);
+
+      // Drop the mosque_admin role when the account no longer manages any mosque
+      for (const row of rows ?? []) {
+        const { count } = await supabase
+          .from("mosque_admin_users")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", (row as any).user_id);
+        if (!count) {
+          await supabase
+            .from("user_roles")
+            .delete()
+            .eq("user_id", (row as any).user_id)
+            .eq("role", "mosque_admin");
+        }
       }
 
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return json({ success: true });
     }
+
 
     if (action === "super_add_mosque") {
       const mosqueData = data;
@@ -841,24 +779,14 @@ serve(async (req) => {
 
     if (action === "set_location_filters") {
       // Admin: set filters for their mosque
-      if (!username || !password || !location_id) {
+      if (!location_id) {
         return new Response(
           JSON.stringify({ error: "Authentication required" }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const { data: verifiedId } = await supabase.rpc("verify_mosque_admin", {
-        p_username: username,
-        p_password: password,
-      });
-
-      if (!verifiedId || verifiedId !== location_id) {
-        return new Response(
-          JSON.stringify({ error: "Unauthorized" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      if (!canManage(location_id)) return json({ error: "Unauthorized" }, 403);
 
       // data.filter_ids is the full list of selected filter IDs
       const filterIds: string[] = data?.filter_ids || [];
@@ -902,14 +830,8 @@ serve(async (req) => {
     }
 
     // === Events / Announcements ===
-    const verifyAdmin = async (): Promise<string | null> => {
-      if (!username || !password || !location_id) return null;
-      const { data: verifiedId } = await supabase.rpc("verify_mosque_admin", {
-        p_username: username,
-        p_password: password,
-      });
-      return verifiedId && verifiedId === location_id ? verifiedId : null;
-    };
+    const verifyAdmin = async (): Promise<string | null> =>
+      canManage(location_id) ? (location_id as string) : null;
 
     if (action === "upsert_announcement") {
       const ok = await verifyAdmin();
