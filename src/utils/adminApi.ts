@@ -1,0 +1,74 @@
+import { supabase } from '@/integrations/supabase/client';
+
+const SUPABASE_URL = "https://lhufqnokmdqkvzcxqwkl.supabase.co";
+export const ADMIN_FN_URL = `${SUPABASE_URL}/functions/v1/mosque-admin`;
+export const PHOTOS_FN_URL = `${SUPABASE_URL}/functions/v1/mosque-photos`;
+
+/** Attaches the signed-in Supabase session so the edge function can authorize the caller. */
+export async function authHeaders(withJson = true): Promise<Record<string, string>> {
+  const { data } = await supabase.auth.getSession();
+  const headers: Record<string, string> = {};
+  if (withJson) headers['Content-Type'] = 'application/json';
+  if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
+  return headers;
+}
+
+/** POST an admin action, throwing a readable error on failure. */
+export async function adminCall<T = any>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
+  const res = await fetch(ADMIN_FN_URL, {
+    method: 'POST',
+    headers: await authHeaders(),
+    body: JSON.stringify({ action, ...payload }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as any)?.error || 'Request failed');
+  return data as T;
+}
+
+export interface AdminScope {
+  user_id: string;
+  email: string;
+  is_super_admin: boolean;
+  location_ids: string[];
+  location_id: string | null;
+}
+
+/** Reads the caller's admin scope (super admin flag + managed mosques). */
+export async function fetchAdminScope(): Promise<AdminScope | null> {
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) return null;
+  try {
+    return await adminCall<AdminScope>('admin_whoami');
+  } catch {
+    return null;
+  }
+}
+
+/** Anonymous sessions block credential sign-in, so drop them first. */
+async function clearAnonSession() {
+  const { data } = await supabase.auth.getUser();
+  if (data?.user && (data.user as { is_anonymous?: boolean }).is_anonymous) {
+    await supabase.auth.signOut();
+  }
+}
+
+export async function adminSignIn(email: string, password: string) {
+  await clearAnonSession();
+  const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+  if (error) throw error;
+}
+
+export async function adminSignUp(email: string, password: string) {
+  await clearAnonSession();
+  const { data, error } = await supabase.auth.signUp({
+    email: email.trim(),
+    password,
+    options: { emailRedirectTo: window.location.origin },
+  });
+  if (error) throw error;
+  return { needsConfirmation: !data.session };
+}
+
+export async function adminSignOut() {
+  await supabase.auth.signOut();
+}
