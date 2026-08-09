@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 
 import { toast } from 'sonner';
+import { showWebNotification } from '@/utils/webNotify';
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string; icon: string }> = {
   announcement: { bg: 'bg-blue-100', text: 'text-blue-700', icon: '📢' },
@@ -283,7 +284,7 @@ export function useEventReminders() {
         const diff = eventTs - now;
         if (diff <= 30 * 60 * 1000 && diff > -10 * 60 * 1000 && !shown.includes(e.id)) {
           if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('Upcoming event', { body: e.title, tag: `mosque-event-${e.id}` });
+            void showWebNotification('Upcoming event', { body: e.title, tag: `mosque-event-${e.id}` });
           }
           kept.push(e.id);
         }

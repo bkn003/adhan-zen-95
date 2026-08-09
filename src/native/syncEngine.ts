@@ -2,6 +2,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 import { createLocationSlug, getMonthString, fetchStaticPrayerTimes, getPrayerTimesForDate, type StaticPrayerTime } from '@/utils/staticPrayerTimes';
 import { loadEntriesForWindow, findLocationIdByName } from '@/utils/prayerTimesSource';
 import { loadPrayerNotificationPrefs, isEnabled } from '@/native/prayerNotificationPrefs';
+import { showWebNotification } from '@/utils/webNotify';
 
 export interface SyncChange {
   date: string;      // YYYY-MM-DD
@@ -295,7 +296,7 @@ function notifyChanges(name: string, changes: SyncChange[]) {
     const head = changes.slice(0, 3).map(c => `${c.label}: ${c.from} → ${c.to}`).join(', ');
     const body = `${head}${changes.length > 3 ? ` +${changes.length - 3} more` : ''}`;
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-      new Notification(`🕌 ${name} — prayer times updated`, { body, tag: 'prayer-change' });
+      void showWebNotification(`🕌 ${name} — prayer times updated`, { body, tag: 'prayer-change' });
     }
   } catch { /* noop */ }
 }

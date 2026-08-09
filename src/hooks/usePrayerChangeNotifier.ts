@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { formatTo12Hour } from '@/utils/timeFormat';
+import { showWebNotification } from '@/utils/webNotify';
 
 const STORED_KEY = 'myMohalla_lastPrayerTimes';
 
@@ -131,7 +132,7 @@ export const usePrayerChangeNotifier = (prayers: any[], mohallaId: string | null
               });
             }).catch(console.error);
           } else {
-            new Notification(title, { body, icon: '/app-icon-192.png' });
+            void showWebNotification(title, { body, icon: '/app-icon-192.png' });
           }
         }
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getWeather, describeWeather, contextualTip } from '@/utils/weather';
 import { inQuietHours } from '@/utils/quietHours';
+import { showWebNotification } from '@/utils/webNotify';
 
 interface NotificationState {
   permission: NotificationPermission;
@@ -91,7 +92,7 @@ export const useNotifications = () => {
             })
           );
         } else {
-          new Notification(`${prayerName} soon`, { body, icon: '/app-icon-192.png' });
+          void showWebNotification(`${prayerName} soon`, { body, icon: '/app-icon-192.png' });
         }
       }, timeUntilPre);
     }
@@ -113,7 +114,7 @@ export const useNotifications = () => {
         });
         playAdhanSound();
       } else {
-        new Notification(`${prayerName} Prayer Time`, { body, icon: '/app-icon-192.png' });
+        void showWebNotification(`${prayerName} Prayer Time`, { body, icon: '/app-icon-192.png' });
         playAdhanSound();
       }
     }, timeUntilAdhan);
