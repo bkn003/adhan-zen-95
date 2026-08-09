@@ -128,7 +128,37 @@ export const AuthSheet: React.FC = () => {
 
         <div className="p-4 space-y-3">
           {sent ? (
-            <div className="bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs rounded-xl p-3">{sent}</div>
+            <div className="space-y-2">
+              <div className="bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs rounded-xl p-3">{sent}</div>
+              <button
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    const { error } = await supabase.auth.resend({
+                      type: 'signup',
+                      email,
+                      options: { emailRedirectTo: window.location.origin },
+                    });
+                    if (error) throw error;
+                    toast.success('Confirmation email sent again');
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : 'Could not resend the email');
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+                disabled={busy}
+                className="w-full py-2.5 rounded-xl border border-emerald-200 text-emerald-700 text-sm font-semibold disabled:opacity-60"
+              >
+                Resend confirmation email
+              </button>
+              <button
+                onClick={() => { setSent(null); setMode('signin'); setPassword(''); }}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-bold"
+              >
+                Go to sign in
+              </button>
+            </div>
           ) : (
             <>
               <button
