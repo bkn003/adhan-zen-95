@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { inQuietHours } from '@/utils/quietHours';
+import { showWebNotification, ensureNotificationPermission } from '@/utils/webNotify';
 
 export interface TestNotificationResult {
   ok: boolean;
@@ -56,17 +57,17 @@ export async function sendTestNotification(
   if (typeof Notification === 'undefined') {
     return { ok: false, channel: 'none', message: 'This browser does not support notifications.' };
   }
-  let permission = Notification.permission;
-  if (permission === 'default') permission = await Notification.requestPermission();
-  if (permission !== 'granted') {
+  if (!(await ensureNotificationPermission())) {
     return { ok: false, channel: 'web', message: 'Allow notifications for this site, then run the test again.' };
   }
   try {
-    const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
-    if (reg) {
-      await reg.showNotification(title, { body, icon: '/icon-192.png', tag: 'prayer-test' });
-    } else {
-      new Notification(title, { body, icon: '/icon-192.png' });
+    const shown = await showWebNotification(title, {
+      body,
+      icon: '/app-icon-192.png',
+      tag: 'prayer-test',
+    });
+    if (!shown) {
+      return { ok: false, channel: 'web', message: 'Could not show the test notification. Reload the app so the service worker registers, then try again.' };
     }
     return {
       ok: true,

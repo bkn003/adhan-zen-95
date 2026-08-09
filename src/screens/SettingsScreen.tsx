@@ -20,6 +20,7 @@ import { VibrationSelector } from '@/components/VibrationSelector';
 import { SyncStatusCard } from '@/components/SyncStatusCard';
 import { PrayerNotificationToggles } from '@/components/PrayerNotificationToggles';
 import { Link } from 'react-router-dom';
+import { showWebNotification, ensureNotificationPermission } from '@/utils/webNotify';
 
 const SettingsCard = ({
   children,
@@ -611,11 +612,8 @@ const WeatherReminderToggle: React.FC = () => {
   useEffect(() => { if (on) void refresh(); }, [on, refresh]);
 
   const testReminder = async () => {
-    if (typeof Notification === 'undefined') return;
-    let perm = Notification.permission;
-    if (perm === 'default') perm = await Notification.requestPermission();
-    if (perm !== 'granted') return;
-    new Notification('Asr soon', {
+    if (!(await ensureNotificationPermission())) return;
+    await showWebNotification('Asr soon', {
       body: `Prayer in 15 minutes${weather ? `\n${weather}` : ''}${tip ? `\n${tip}` : ''}`,
       icon: '/app-icon-192.png',
       tag: 'weather-test',
