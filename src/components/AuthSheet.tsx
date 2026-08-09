@@ -69,8 +69,25 @@ export const AuthSheet: React.FC = () => {
           },
         });
         if (error) throw error;
+
+        // Supabase returns a user with no identities when the email already exists.
+        if (data.user && (data.user.identities?.length ?? 0) === 0) {
+          setMode('signin');
+          toast.info('This email already has an account — sign in with your password.');
+          return;
+        }
+
         if (!data.session) {
-          setSent('Account created. Confirm your email to finish signing in.');
+          // Try signing in straight away: works when email confirmation is off.
+          const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+          if (!signInErr) {
+            toast.success('Signed in');
+            closeAuth();
+            return;
+          }
+          setSent(
+            `We sent a confirmation link to ${email}. Open it (check spam/promotions), then come back and sign in with the same email and password.`,
+          );
           return;
         }
         toast.success('Signed in');
