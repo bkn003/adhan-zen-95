@@ -337,6 +337,44 @@ export type Database = {
           },
         ]
       }
+      mosque_attendance: {
+        Row: {
+          attend_date: string
+          created_at: string
+          id: string
+          location_id: string
+          prayer: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attend_date?: string
+          created_at?: string
+          id?: string
+          location_id: string
+          prayer: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attend_date?: string
+          created_at?: string
+          id?: string
+          location_id?: string
+          prayer?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mosque_attendance_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mosque_event_rsvps: {
         Row: {
           created_at: string
@@ -935,6 +973,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_attendance_counts: {
+        Args: { p_date: string; p_location_id: string }
+        Returns: {
+          count: number
+          prayer: string
+        }[]
+      }
       get_event_rsvp_counts: {
         Args: { p_event_ids: string[] }
         Returns: {
@@ -953,6 +998,14 @@ export type Database = {
           donation_ifsc: string
           donation_notes: string
           donation_upi_id: string
+        }[]
+      }
+      get_mosque_freshness: {
+        Args: { p_location_ids: string[] }
+        Returns: {
+          last_updated: string
+          location_id: string
+          verified: boolean
         }[]
       }
       get_verified_mosque_ids: {
