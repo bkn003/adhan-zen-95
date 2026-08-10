@@ -12,6 +12,9 @@ import { MosqueDonate } from '@/components/MosqueDonate';
 import { AppSupportCard } from '@/components/AppSupportCard';
 
 import { MosqueReviews } from '@/components/MosqueReviews';
+import { JamaatCountdown } from '@/components/JamaatCountdown';
+import { MosqueTrustBadge } from '@/components/MosqueTrustBadge';
+import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 
 interface MosqueDetailsScreenProps {
   locationId: string;
@@ -117,6 +120,8 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
 
   const now = new Date();
   const currentMonthIndex = now.getMonth();
+  const today = useMemo(() => new Date(), []);
+  const { prayerTimes: todayPrayers } = usePrayerTimes(locationId, today);
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(currentMonthIndex);
 
   const location = useMemo(() => locations?.find(l => l.id === locationId), [locations, locationId]);
@@ -271,6 +276,12 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
       </div>
 
       <div className="p-4 space-y-4 -mt-4">
+        {/* Live Jamaat countdown + attendance presence */}
+        <JamaatCountdown locationId={locationId} prayers={todayPrayers} />
+
+        {/* Verified badge + admin SLA freshness score */}
+        <MosqueTrustBadge locationId={locationId} variant="full" />
+
         {/* Mosque Info Card */}
         <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm">
           <h1 className="text-lg font-bold text-gray-800 mb-1 leading-snug">{location.mosque_name}</h1>

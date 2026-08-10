@@ -71,5 +71,8 @@ public class AlarmReceiver extends BroadcastReceiver {
         // Ensures unlimited-day reliability even if the app is never opened again.
         long nextTrigger = System.currentTimeMillis() + 24L * 60L * 60L * 1000L;
         AlarmScheduler.scheduleAt(context, prayerName, phase, adhan, iqamah, type, nextTrigger);
-    }
+    
+        // Keep widget + lock-screen countdown in sync with the new "next prayer"
+        try { PrayerWidgetProvider.refresh(context); } catch (Exception ignored) {}
+}
 }
