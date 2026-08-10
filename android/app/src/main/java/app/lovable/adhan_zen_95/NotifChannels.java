@@ -12,6 +12,7 @@ public class NotifChannels {
     public static final String CHANNEL_CHANGES = "prayer_changes_channel";
     public static final String CHANNEL_SYNC = "prayer_sync_channel";
     public static final String CHANNEL_ANNOUNCEMENTS = "mosque_announcements";
+    public static final String CHANNEL_SILENT = "prayer_live_activity";
 
 
     public static void ensure(Context ctx) {
@@ -58,6 +59,19 @@ public class NotifChannels {
                     NotificationManager.IMPORTANCE_MIN
             );
             ch.setDescription("Silent background prayer-time refresh status");
+            nm.createNotificationChannel(ch);
+        }
+
+        if (nm.getNotificationChannel(CHANNEL_SILENT) == null) {
+            NotificationChannel ch = new NotificationChannel(
+                    CHANNEL_SILENT,
+                    "Prayer Countdown (lock screen)",
+                    NotificationManager.IMPORTANCE_LOW
+            );
+            ch.setDescription("Persistent lock-screen countdown to the next prayer");
+            ch.setShowBadge(false);
+            ch.enableVibration(false);
+            ch.setSound(null, null);
             nm.createNotificationChannel(ch);
         }
 

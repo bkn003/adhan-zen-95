@@ -194,6 +194,7 @@ public class AlarmScheduler {
         } catch (Exception e) {
             // ignore
         }
+        try { PrayerWidgetProvider.refresh(ctx); } catch (Exception ignored) {}
         return scheduled;
     }
 
