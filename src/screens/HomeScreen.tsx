@@ -10,6 +10,8 @@ import { NextPrayerCard } from '@/components/NextPrayerCard';
 import { SpecialPrayers } from '@/components/SpecialPrayers';
 import { MosqueDonate } from '@/components/MosqueDonate';
 import { AppSupportCard } from '@/components/AppSupportCard';
+import { JamaatCountdown } from '@/components/JamaatCountdown';
+import { MosqueTrustBadge } from '@/components/MosqueTrustBadge';
 
 
 import { PrayerAlarmOverlay } from '@/components/PrayerAlarmOverlay';
@@ -356,9 +358,23 @@ export const HomeScreen = ({
           selectedLocation={selectedLocation || undefined}
         />
       )}
+      {/* Live Jamaat countdown + "I'm attending" presence */}
+      {selectedLocation && (
+        <JamaatCountdown
+          locationId={selectedLocation.id}
+          mosqueName={selectedLocation.mosque_name}
+          prayers={finalPrayerTimes}
+        />
+      )}
+
       {/* Location Selector - compact, no outer card */}
       <div className="bg-white rounded-xl px-2 py-1.5 border border-green-100 shadow-sm">
         <LocationSelector selectedLocation={selectedLocation} onLocationChange={handleLocationChange} />
+        {selectedLocation && (
+          <div className="mt-1.5">
+            <MosqueTrustBadge locationId={selectedLocation.id} />
+          </div>
+        )}
       </div>
 
       {/* One-tap UPI donation shortcut for the currently selected mosque */}

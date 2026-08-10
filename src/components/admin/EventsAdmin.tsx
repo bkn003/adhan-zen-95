@@ -8,7 +8,7 @@ interface Props {
   locationId: string;
 }
 
-const CATEGORIES = ['announcement', 'event', 'lecture', 'fundraiser', 'eid'];
+const CATEGORIES = ['announcement', 'event', 'lecture', 'fundraiser', 'eid', 'janazah', 'khutbah'];
 
 interface Form {
   id?: string;
