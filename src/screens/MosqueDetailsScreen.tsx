@@ -280,8 +280,8 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
         <JamaatCountdown
           locationId={locationId}
           prayers={todayPrayers}
-          latitude={(mosque as any)?.latitude}
-          longitude={(mosque as any)?.longitude}
+          latitude={location.latitude}
+          longitude={location.longitude}
         />
 
         {/* Verified badge + admin SLA freshness score */}
