@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Prayer } from '@/types/prayer.types';
+import { checkAtMosque, formatDistance, ATTENDANCE_RADIUS_M, type Coords } from '@/utils/geofence';
+import { toast } from 'sonner';
 
 const todayKey = () => {
   const d = new Date();
@@ -144,6 +146,20 @@ export const useAttendance = (
         .eq('attend_date', date)
         .eq('user_id', uid);
     } else {
+      // Attendance may only be marked while physically at the mosque.
+      if (mosqueCoords) {
+        setCheckingLocation(true);
+        const proximity = await checkAtMosque(mosqueCoords);
+        setCheckingLocation(false);
+        if (!proximity.ok) {
+          toast.error(
+            proximity.reason === 'no-location'
+              ? 'Turn on location to mark attendance at the mosque.'
+              : `You are ${formatDistance(proximity.distance)} away — come within ${ATTENDANCE_RADIUS_M} m of the mosque to mark attendance.`,
+          );
+          return;
+        }
+      }
       await supabase
         .from('mosque_attendance')
         .upsert(
@@ -155,13 +171,15 @@ export const useAttendance = (
       queryClient.invalidateQueries({ queryKey: ['attendance-counts', locationId, date] }),
       queryClient.invalidateQueries({ queryKey: ['attendance-mine', locationId, date, uid] }),
     ]);
-  }, [locationId, prayerKey, isAttending, requireAuth, user?.id, date, queryClient]);
+  }, [locationId, prayerKey, isAttending, requireAuth, user?.id, date, queryClient, mosqueCoords]);
 
   return {
     counts: countsQuery.data ?? {},
     count,
     isAttending,
     toggle,
+    checkingLocation,
+    requiresPresence: !!mosqueCoords,
     isLoading: countsQuery.isLoading,
   };
 };
