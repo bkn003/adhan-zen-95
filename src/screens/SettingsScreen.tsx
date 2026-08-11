@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Volume2, Clock, Moon, Bell, ChevronRight, Settings as SettingsIcon, VolumeX, Sunrise, Sun, Sunset, Home, Globe, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminAccess } from '@/hooks/useAdminAccess';
 import { syncPushLocation } from '@/native/pushRegistration';
 
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -102,6 +103,7 @@ const PrayerDndToggle = ({
 
 export const SettingsScreen = () => {
   const { isSignedIn, user, profile, signOut, openAuth } = useAuth();
+  const { isSuperAdmin, isMosqueAdmin } = useAdminAccess();
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
 
   const [mohallaLocation, setMohallaLocation] = useState<Location | null>(null);
@@ -242,35 +244,35 @@ export const SettingsScreen = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/30 p-3 pb-28 space-y-3">
       {/* Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-5 text-center shadow-xl shadow-emerald-500/20">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-white rounded-full blur-3xl" />
+      <div className="flex items-center gap-2.5 bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl px-3.5 py-2.5 shadow-md shadow-emerald-500/15">
+        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
+          <SettingsIcon className="w-4 h-4 text-white" />
         </div>
-        <div className="relative z-10">
-          <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl mx-auto mb-2 flex items-center justify-center">
-            <SettingsIcon className="w-6 h-6 text-white" />
-          </div>
-          <h2 className="text-xl font-bold text-white">{t('settings')}</h2>
-        </div>
+        <h2 className="text-base font-bold text-white">{t('settings')}</h2>
       </div>
 
       {/* Language Selector */}
-      <SettingsCard title={t('language')} icon={Globe} gradient="from-violet-50/50 to-white">
-        <div className="grid grid-cols-2 gap-2">
+      <div className="bg-white rounded-2xl px-3 py-2.5 border border-gray-100/70 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <Globe className="w-3.5 h-3.5 text-violet-500" />
+          <span className="text-xs font-bold text-gray-700">{t('language')}</span>
+          <span className="text-[10px] text-gray-400">{LANGUAGE_LABELS[language]}</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
           {(Object.entries(LANGUAGE_LABELS) as [Language, string][]).map(([code, label]) => (
             <button
               key={code}
               onClick={() => setLanguage(code)}
-              className={`py-2.5 px-3 rounded-xl text-sm font-medium transition-all ${language === code
-                ? 'bg-violet-500 text-white shadow-md shadow-violet-500/25'
-                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+              className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${language === code
+                ? 'bg-violet-500 text-white shadow-sm'
+                : 'bg-gray-50 border border-gray-200 text-gray-600'
                 }`}
             >
               {label}
             </button>
           ))}
         </div>
-      </SettingsCard>
+      </div>
 
       {/* Location Settings */}
       <SettingsCard title={t('location')} icon={MapPin} gradient="from-blue-50/50 to-white">
@@ -469,25 +471,34 @@ export const SettingsScreen = () => {
         </div>
       </SettingsCard>
 
-      {/* Mosque Admin */}
-      <SettingsCard title={t('mosqueAdmin')} icon={SettingsIcon} gradient="from-gray-50/50 to-white">
-        <div className="space-y-2">
-          <p className="text-xs text-gray-500">Login to manage your mosque's prayer times and info.</p>
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent('navigate-admin'))}
-            className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
-          >
-            <SettingsIcon className="w-4 h-4" />
-            {t('openAdminPanel')}
-          </button>
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent('navigate-super-admin'))}
-            className="w-full py-2 px-3 bg-gray-100 text-gray-600 rounded-xl text-xs font-medium flex items-center justify-center gap-2"
-          >
-            {t('superAdmin')}
-          </button>
-        </div>
-      </SettingsCard>
+      {/* Mosque management — only for signed-in admins */}
+      {(isSuperAdmin || isMosqueAdmin) && (
+        <SettingsCard title="Mosque Management" icon={ShieldCheck} gradient="from-gray-50/50 to-white">
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500">
+              Signed in as {user?.email} — you can manage {isSuperAdmin ? 'every mosque' : 'your mosque'}.
+            </p>
+            {isMosqueAdmin && (
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('navigate-admin'))}
+                className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+              >
+                <SettingsIcon className="w-4 h-4" />
+                {t('openAdminPanel')}
+              </button>
+            )}
+            {isSuperAdmin && (
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('navigate-super-admin'))}
+                className="w-full py-2.5 px-3 bg-gradient-to-r from-slate-800 to-slate-600 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                {t('superAdmin')}
+              </button>
+            )}
+          </div>
+        </SettingsCard>
+      )}
 
       {/* Tools */}
       <SettingsCard title="Tools" icon={SettingsIcon} gradient="from-amber-50/50 to-white">

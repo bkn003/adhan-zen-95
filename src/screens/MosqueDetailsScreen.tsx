@@ -277,7 +277,12 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
 
       <div className="p-4 space-y-4 -mt-4">
         {/* Live Jamaat countdown + attendance presence */}
-        <JamaatCountdown locationId={locationId} prayers={todayPrayers} />
+        <JamaatCountdown
+          locationId={locationId}
+          prayers={todayPrayers}
+          latitude={location.latitude}
+          longitude={location.longitude}
+        />
 
         {/* Verified badge + admin SLA freshness score */}
         <MosqueTrustBadge locationId={locationId} variant="full" />
