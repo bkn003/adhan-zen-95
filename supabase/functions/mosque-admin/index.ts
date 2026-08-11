@@ -55,6 +55,20 @@ serve(async (req) => {
       if (rolesErr) console.error("[mosque-admin] user_roles read failed:", rolesErr.message);
       isSuper = (roles ?? []).some((r: any) => r.role === "super_admin");
 
+      if (!isSuper && rolesErr) {
+        // Service-key read unavailable: ask the DB with the caller's own JWT.
+        const userClient = createClient(Deno.env.get("SUPABASE_URL")!, ANON_KEY ?? "", {
+          global: { headers: { Authorization: `Bearer ${jwt}` } },
+        });
+        const { data: hr, error: hrErr } = await userClient.rpc("has_role", {
+          _user_id: caller.id,
+          _role: "super_admin",
+        });
+        if (hrErr) console.error("[mosque-admin] has_role fallback failed:", hrErr.message);
+        isSuper = hr === true;
+      }
+
+
       const { data: assigns, error: assignErr } = await supabase
         .from("mosque_admin_users")
         .select("location_id")
