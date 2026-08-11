@@ -68,10 +68,17 @@ export const formatCountdown = (ms: number): string => {
 };
 
 /** Live "I'm attending" presence for a mosque + prayer, for today. */
-export const useAttendance = (locationId?: string, prayerKey?: string) => {
+export const useAttendance = (
+  locationId?: string,
+  prayerKey?: string,
+  /** Mosque coordinates — when given, attendance can only be marked nearby. */
+  mosqueCoords?: Coords | null,
+) => {
   const { user, isSignedIn, requireAuth } = useAuth();
   const queryClient = useQueryClient();
+  const [checkingLocation, setCheckingLocation] = useState(false);
   const date = todayKey();
+
 
   const countsQuery = useQuery({
     queryKey: ['attendance-counts', locationId, date],
