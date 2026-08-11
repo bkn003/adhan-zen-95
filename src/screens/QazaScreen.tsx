@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Minus, Plus, CalendarCheck, RotateCcw, Flame, AlertTriangle, Award, Lock } from 'lucide-react';
+import { Minus, Plus, CalendarCheck, RotateCcw, Flame, AlertTriangle, Award, Lock, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { computeBadges, bumpRecovered } from '@/utils/badges';
+import { AttendanceLog } from '@/components/AttendanceLog';
 
 // --- Types ---
 interface QazaCounts {
@@ -168,7 +169,7 @@ export const QazaScreen = () => {
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50/30 p-4 pb-28 space-y-4">
 
             <Tabs defaultValue="qaza" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsList className="grid w-full grid-cols-3 mb-4">
                     <TabsTrigger value="qaza" className="flex items-center gap-2">
                         <RotateCcw className="w-4 h-4" />
                         <span>{t('missedQaza')}</span>
@@ -176,6 +177,10 @@ export const QazaScreen = () => {
                     <TabsTrigger value="history" className="flex items-center gap-2">
                         <CalendarCheck className="w-4 h-4" />
                         <span>{t('history')}</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="jamaat" className="flex items-center gap-1.5">
+                        <Users className="w-4 h-4" />
+                        <span>Jamaat</span>
                     </TabsTrigger>
                 </TabsList>
 
@@ -393,6 +398,10 @@ export const QazaScreen = () => {
                             <p className="text-center text-gray-400 py-8">{t('selectDateHistory')}</p>
                         )}
                     </div>
+                </TabsContent>
+
+                <TabsContent value="jamaat" className="space-y-4">
+                    <AttendanceLog />
                 </TabsContent>
             </Tabs>
         </div>
