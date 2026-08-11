@@ -34,27 +34,52 @@ serve(async (req) => {
     const jwt = authHeader.replace(/^Bearer\s+/i, "").trim();
     let caller: { id: string; email: string } | null = null;
     if (jwt && jwt !== ANON_KEY) {
-      const { data: userData } = await supabase.auth.getUser(jwt);
-      const u = userData?.user as (typeof userData extends never ? never : any) | undefined;
+      // Validate against the auth server with an anon-key client (works with both
+      // legacy and new API-key setups); the service client is only used for reads.
+      const authClient = createClient(Deno.env.get("SUPABASE_URL")!, ANON_KEY ?? "", {
+        global: { headers: { Authorization: `Bearer ${jwt}` } },
+      });
+      const { data: userData, error: userErr } = await authClient.auth.getUser(jwt);
+      if (userErr) console.error("[mosque-admin] getUser failed:", userErr.message);
+      const u = userData?.user as any | undefined;
       if (u && !u.is_anonymous) caller = { id: u.id, email: u.email ?? "" };
     }
 
     let isSuper = false;
     let adminLocationIds: string[] = [];
     if (caller) {
-      const { data: roles } = await supabase
+      const { data: roles, error: rolesErr } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", caller.id);
+      if (rolesErr) console.error("[mosque-admin] user_roles read failed:", rolesErr.message);
       isSuper = (roles ?? []).some((r: any) => r.role === "super_admin");
 
-      const { data: assigns } = await supabase
+      if (!isSuper && rolesErr) {
+        // Service-key read unavailable: ask the DB with the caller's own JWT.
+        const userClient = createClient(Deno.env.get("SUPABASE_URL")!, ANON_KEY ?? "", {
+          global: { headers: { Authorization: `Bearer ${jwt}` } },
+        });
+        const { data: hr, error: hrErr } = await userClient.rpc("has_role", {
+          _user_id: caller.id,
+          _role: "super_admin",
+        });
+        if (hrErr) console.error("[mosque-admin] has_role fallback failed:", hrErr.message);
+        isSuper = hr === true;
+      }
+
+
+      const { data: assigns, error: assignErr } = await supabase
         .from("mosque_admin_users")
         .select("location_id")
         .eq("user_id", caller.id)
         .eq("is_paused", false);
+      if (assignErr) console.error("[mosque-admin] mosque_admin_users read failed:", assignErr.message);
       adminLocationIds = (assigns ?? []).map((a: any) => a.location_id as string);
+    } else {
+      console.error("[mosque-admin] no caller resolved; jwt present:", !!jwt, "action:", action);
     }
+
 
     /** Mosque-scoped authorization: the mosque's own admin, or any super admin. */
     const canManage = (loc?: string | null) =>
