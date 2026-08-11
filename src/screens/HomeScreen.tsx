@@ -364,6 +364,8 @@ export const HomeScreen = ({
           locationId={selectedLocation.id}
           mosqueName={selectedLocation.mosque_name}
           prayers={finalPrayerTimes}
+          latitude={(selectedLocation as any)?.latitude}
+          longitude={(selectedLocation as any)?.longitude}
         />
       )}
 
