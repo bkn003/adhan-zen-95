@@ -51,3 +51,42 @@ export async function checkAtMosque(
 
 export const formatDistance = (m?: number) =>
   m == null ? '' : m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`;
+
+export interface LiveProximity {
+  /** Metres from the mosque, null while unknown. */
+  distance: number | null;
+  inside: boolean;
+  status: 'idle' | 'locating' | 'ready' | 'denied' | 'unsupported';
+  accuracy?: number;
+}
+
+/**
+ * Continuously watches the device position and reports live distance to the
+ * mosque. Returns an unsubscribe function.
+ */
+export function watchProximity(
+  mosque: Coords,
+  onUpdate: (p: LiveProximity) => void,
+  radius = ATTENDANCE_RADIUS_M,
+): () => void {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    onUpdate({ distance: null, inside: false, status: 'unsupported' });
+    return () => {};
+  }
+  onUpdate({ distance: null, inside: false, status: 'locating' });
+  const id = navigator.geolocation.watchPosition(
+    (pos) => {
+      const distance = distanceMeters({ lat: pos.coords.latitude, lng: pos.coords.longitude }, mosque);
+      onUpdate({ distance, inside: distance <= radius, status: 'ready', accuracy: pos.coords.accuracy });
+    },
+    (err) => {
+      onUpdate({
+        distance: null,
+        inside: false,
+        status: err.code === err.PERMISSION_DENIED ? 'denied' : 'locating',
+      });
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
+  );
+  return () => navigator.geolocation.clearWatch(id);
+}

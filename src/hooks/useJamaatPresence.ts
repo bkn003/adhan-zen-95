@@ -3,7 +3,14 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Prayer } from '@/types/prayer.types';
-import { checkAtMosque, formatDistance, ATTENDANCE_RADIUS_M, type Coords } from '@/utils/geofence';
+import {
+  checkAtMosque,
+  formatDistance,
+  watchProximity,
+  ATTENDANCE_RADIUS_M,
+  type Coords,
+  type LiveProximity,
+} from '@/utils/geofence';
 import { toast } from 'sonner';
 
 const todayKey = () => {
@@ -79,12 +86,25 @@ export const useAttendance = (
   const { user, isSignedIn, requireAuth } = useAuth();
   const queryClient = useQueryClient();
   const [checkingLocation, setCheckingLocation] = useState(false);
+  const [proximity, setProximity] = useState<LiveProximity>({ distance: null, inside: false, status: 'idle' });
+  const [blockedReason, setBlockedReason] = useState<string | null>(null);
   const date = todayKey();
+
+  // Live distance feedback so the user always knows why they can (or can't) mark attendance.
+  const mosqueLat = mosqueCoords?.lat;
+  const mosqueLng = mosqueCoords?.lng;
+  useEffect(() => {
+    if (mosqueLat == null || mosqueLng == null) {
+      setProximity({ distance: null, inside: false, status: 'idle' });
+      return;
+    }
+    return watchProximity({ lat: mosqueLat, lng: mosqueLng }, setProximity);
+  }, [mosqueLat, mosqueLng]);
 
 
   const countsQuery = useQuery({
     queryKey: ['attendance-counts', locationId, date],
-    enabled: !!locationId,
+    enabled: !!locationId && isSignedIn,
     refetchInterval: 60_000,
     queryFn: async () => {
       const { data, error } = await (supabase as any).rpc('get_attendance_counts', {
@@ -152,6 +172,11 @@ export const useAttendance = (
         const proximity = await checkAtMosque(mosqueCoords);
         setCheckingLocation(false);
         if (!proximity.ok) {
+          setBlockedReason(
+            proximity.reason === 'no-location'
+              ? 'Location is off or blocked, so we cannot confirm you are at the mosque.'
+              : `You are ${formatDistance(proximity.distance)} away — attendance opens within ${ATTENDANCE_RADIUS_M} m of the mosque.`,
+          );
           toast.error(
             proximity.reason === 'no-location'
               ? 'Turn on location to mark attendance at the mosque.'
@@ -160,6 +185,7 @@ export const useAttendance = (
           return;
         }
       }
+      setBlockedReason(null);
       await supabase
         .from('mosque_attendance')
         .upsert(
@@ -179,6 +205,8 @@ export const useAttendance = (
     isAttending,
     toggle,
     checkingLocation,
+    proximity,
+    blockedReason,
     requiresPresence: !!mosqueCoords,
     isLoading: countsQuery.isLoading,
   };
