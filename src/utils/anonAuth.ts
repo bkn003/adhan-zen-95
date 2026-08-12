@@ -8,16 +8,21 @@ import { supabase } from '@/integrations/supabase/client';
  */
 let inflight: Promise<string | null> | null = null;
 
+let anonDisabled = false;
+
 export async function ensureAnonSession(): Promise<string | null> {
   const { data: { session } } = await supabase.auth.getSession();
   if (session?.user?.id) return session.user.id;
+  if (anonDisabled) return null;
 
   if (!inflight) {
     inflight = supabase.auth
       .signInAnonymously()
       .then(({ data, error }) => {
         if (error) {
-          console.warn('[auth] anonymous sign-in failed:', error.message);
+          // Anonymous sign-ins may be disabled on the project — regular users
+          // sign in normally, so fail quietly and don't retry.
+          anonDisabled = true;
           return null;
         }
         return data.user?.id ?? null;
@@ -26,6 +31,7 @@ export async function ensureAnonSession(): Promise<string | null> {
   }
   return inflight;
 }
+
 
 export async function getUserId(): Promise<string | null> {
   return ensureAnonSession();
