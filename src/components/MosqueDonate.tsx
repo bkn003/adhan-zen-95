@@ -62,6 +62,7 @@ export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: ba
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState<number | ''>('');
   const [details, setDetails] = useState<DonationInfo | null>(null);
+  const [platformEnabled, setPlatformEnabled] = useState(true);
 
   // Banking details are not publicly readable. Signed-in visitors can use the
   // security-definer RPC; everyone else (no session yet) falls back to the
@@ -90,7 +91,21 @@ export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: ba
         } catch { /* offline / blocked */ }
       }
 
-      if (!cancelled) setDetails(row);
+      // Platform-wide switch: super admin can hide every mosque donation option.
+      let master = true;
+      try {
+        const { data: rows } = await supabase
+          .from('app_settings')
+          .select('key, value')
+          .eq('key', 'mosque_donations_enabled');
+        const v = rows?.[0]?.value;
+        master = (v ?? 'true') === 'true';
+      } catch { /* keep default */ }
+
+      if (!cancelled) {
+        setPlatformEnabled(master);
+        setDetails(row);
+      }
     })();
     return () => { cancelled = true; };
   }, [locationId]);
@@ -98,7 +113,7 @@ export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: ba
   const info: DonationInfo = { ...(baseInfo ?? {}), ...(details ?? {}) };
   const enabled = !!(details?.donation_enabled ?? baseInfo?.donation_enabled);
 
-  if (!enabled) return null;
+  if (!platformEnabled || !enabled) return null;
   const hasUpi = !!info.donation_upi_id;
   const hasBank = !!(info.donation_account_number && info.donation_ifsc);
   if (!hasUpi && !hasBank) return null;
@@ -141,6 +156,14 @@ export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: ba
 
   const mobile = isMobile();
 
+  /** Exactly which account the money lands in — shown everywhere a donation can start. */
+  const destination =
+    info.donation_account_holder ||
+    (info.donation_bank_name ? `${mosqueName} · ${info.donation_bank_name}` : mosqueName);
+  const destinationHint = hasUpi
+    ? `Goes to ${destination} (UPI ${info.donation_upi_id})`
+    : `Goes to ${destination}${info.donation_account_number ? ` · A/c ••••${info.donation_account_number.slice(-4)}` : ''}`;
+
   return (
     <>
       {variant === 'compact' ? (
@@ -149,7 +172,7 @@ export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: ba
             <span className="p-1.5 bg-white/20 rounded-xl shrink-0"><HandCoins className="w-4 h-4" /></span>
             <span className="min-w-0 flex-1 text-left leading-tight">
               <span className="block text-[12px] font-extrabold">Support this mosque</span>
-              <span className="block text-[10px] opacity-90 truncate">{mosqueName}</span>
+              <span className="block text-[10px] opacity-90 truncate">{destinationHint}</span>
             </span>
             <ExternalLink className="w-3.5 h-3.5 opacity-90 shrink-0" />
           </button>
@@ -174,6 +197,7 @@ export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: ba
             <div className="min-w-0">
               <p className="text-sm font-extrabold leading-tight">Donate to this mosque</p>
               <p className="text-[11px] opacity-90 truncate">{mosqueName}</p>
+              <p className="text-[10px] opacity-90 leading-tight">{destinationHint}</p>
             </div>
           </div>
           {hasUpi ? (
@@ -227,6 +251,18 @@ export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: ba
             </div>
 
             <div className="p-4 space-y-4">
+              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
+                <p className="text-[10px] uppercase tracking-wide text-emerald-700 font-bold">Money goes to</p>
+                <p className="text-sm font-bold text-gray-800">{destination}</p>
+                <p className="text-[11px] text-gray-600 mt-0.5">
+                  {hasUpi && <>UPI: <span className="font-semibold">{info.donation_upi_id}</span><br /></>}
+                  {hasBank && <>A/c: <span className="font-semibold">{info.donation_account_number}</span> · {info.donation_ifsc}</>}
+                </p>
+                <p className="text-[10px] text-gray-500 mt-1">
+                  This is a donation to <span className="font-semibold">{mosqueName}</span> only — not app support, and Adhan Zen never receives it.
+                </p>
+              </div>
+
               {info.donation_notes && (
                 <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-xs text-amber-900 whitespace-pre-wrap">
                   {info.donation_notes}
