@@ -102,7 +102,7 @@ export const AppSupportCard: React.FC<Props> = ({ variant = 'compact' }) => {
             <span className="p-1.5 bg-white/20 rounded-xl shrink-0"><Heart className="w-4 h-4" /></span>
             <span className="min-w-0 flex-1 text-left leading-tight">
               <span className="block text-[12px] font-extrabold">Support this app's development</span>
-              <span className="block text-[10px] opacity-90 truncate">Helps keep Adhan Zen free for every mosque</span>
+              <span className="block text-[10px] opacity-90 truncate">Goes to {cfg.payee} (UPI {cfg.upiId}) — the app developer</span>
             </span>
             <ExternalLink className="w-3.5 h-3.5 opacity-90 shrink-0" />
           </button>
@@ -125,7 +125,7 @@ export const AppSupportCard: React.FC<Props> = ({ variant = 'compact' }) => {
             <span className="p-2.5 bg-white/20 rounded-2xl shrink-0"><Heart className="w-6 h-6" /></span>
             <div className="min-w-0">
               <p className="text-sm font-extrabold leading-tight">Support Adhan Zen development</p>
-              <p className="text-[11px] opacity-90">Separate from this mosque's donations</p>
+              <p className="text-[11px] opacity-90">Goes to {cfg.payee} (UPI {cfg.upiId}) — the app developer, not this mosque</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -160,6 +160,13 @@ export const AppSupportCard: React.FC<Props> = ({ variant = 'compact' }) => {
             </div>
 
             <div className="p-4 space-y-4">
+              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3">
+                <p className="text-[10px] uppercase tracking-wide text-indigo-700 font-bold">Money goes to</p>
+                <p className="text-sm font-bold text-gray-800">{cfg.payee}</p>
+                <p className="text-[11px] text-gray-600">UPI: <span className="font-semibold">{cfg.upiId}</span></p>
+                <p className="text-[10px] text-gray-500 mt-1">App development &amp; hosting — no mosque receives this amount.</p>
+              </div>
+
               {cfg.note && (
                 <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-xs text-indigo-900 whitespace-pre-wrap">
                   {cfg.note}

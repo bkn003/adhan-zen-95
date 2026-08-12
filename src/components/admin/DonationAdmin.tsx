@@ -22,6 +22,21 @@ export const DonationAdmin: React.FC<Props> = ({ locationId, location }) => {
   const qc = useQueryClient();
   const [form, setForm] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
+  const [platformEnabled, setPlatformEnabled] = useState(true);
+
+  // Super admins can block all mosque donations app-wide (anti-fraud kill switch).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'mosque_donations_enabled')
+        .maybeSingle();
+      if (!cancelled) setPlatformEnabled((data?.value ?? 'true') === 'true');
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const next: Record<string, any> = { donation_enabled: !!location?.donation_enabled };
@@ -47,8 +62,18 @@ export const DonationAdmin: React.FC<Props> = ({ locationId, location }) => {
     }
   };
 
+  const destination =
+    form.donation_account_holder?.toString().trim() ||
+    (location?.mosque_name ?? 'this mosque');
+
   return (
     <div className="space-y-3">
+      {!platformEnabled && (
+        <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-[11px] text-red-700 font-semibold">
+          Donations are currently disabled platform-wide by the Adhan Zen team. Your donate button is hidden in the app
+          and cannot be enabled until they allow it again.
+        </div>
+      )}
       <label className="flex items-center justify-between p-3 bg-amber-50/60 border border-amber-100 rounded-xl">
         <div className="flex items-center gap-2">
           <HandCoins className="w-4 h-4 text-amber-600" />
@@ -59,8 +84,9 @@ export const DonationAdmin: React.FC<Props> = ({ locationId, location }) => {
         </div>
         <input
           type="checkbox"
-          className="w-5 h-5 accent-amber-600"
-          checked={!!form.donation_enabled}
+          disabled={!platformEnabled}
+          className="w-5 h-5 accent-amber-600 disabled:opacity-40"
+          checked={platformEnabled && !!form.donation_enabled}
           onChange={e => setForm({ ...form, donation_enabled: e.target.checked })}
         />
       </label>
@@ -87,13 +113,23 @@ export const DonationAdmin: React.FC<Props> = ({ locationId, location }) => {
         </label>
       ))}
 
+      <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+        <p className="text-[10px] uppercase tracking-wide text-emerald-700 font-bold">Users will see</p>
+        <p className="text-xs font-bold text-gray-800 mt-0.5">Money goes to {destination}</p>
+        <p className="text-[11px] text-gray-600">
+          {form.donation_upi_id ? <>UPI: <span className="font-semibold">{form.donation_upi_id}</span></> : 'No UPI ID yet'}
+          {form.donation_account_number ? <> · A/c ••••{String(form.donation_account_number).slice(-4)}</> : null}
+        </p>
+      </div>
+
       <p className="text-[10px] text-gray-400 leading-snug">
-        Funds go directly to the mosque. Adhan Zen does not process payments. Ensure account details are correct.
+        Funds go directly to this mosque's own account. Adhan Zen does not process, hold or take a cut of payments.
+        Ensure account details are correct — wrong details mean lost donations.
       </p>
 
       <button
         onClick={save}
-        disabled={saving}
+        disabled={saving || !platformEnabled}
         className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white text-sm font-bold flex items-center justify-center gap-1.5 disabled:opacity-50"
       >
         <Save className="w-4 h-4" /> {saving ? 'Saving…' : 'Save Donation Info'}
