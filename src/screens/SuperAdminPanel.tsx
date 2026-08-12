@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Shield, Eye, EyeOff, Save, Trash2, Plus, Search, Pause, Play, Settings, LayoutGrid, Tag, BarChart3, X, Check, ToggleLeft, ToggleRight, Moon, Calendar, Clock, Heart } from 'lucide-react';
+import { ArrowLeft, Shield, Eye, EyeOff, Save, Trash2, Plus, Search, Pause, Play, Settings, LayoutGrid, Tag, BarChart3, X, Check, ToggleLeft, ToggleRight, Moon, Calendar, Clock, Heart, HandCoins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocations } from '@/hooks/useLocations';
 import { useAllCustomFilters, useManageFilter, type CustomFilter } from '@/hooks/useCustomFilters';
