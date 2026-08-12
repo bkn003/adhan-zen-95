@@ -124,7 +124,13 @@ serve(async (req) => {
       const { data: rows, error } = await supabase
         .from("app_settings")
         .select("key, value")
-        .like("key", "app_donation_%");
+        .in("key", [
+          "app_donation_enabled",
+          "app_donation_upi_id",
+          "app_donation_payee",
+          "app_donation_note",
+          "mosque_donations_enabled",
+        ]);
       if (error) return json({ error: error.message }, 500);
       return json({ settings: rows || [] });
     }
@@ -137,6 +143,7 @@ serve(async (req) => {
         "app_donation_upi_id",
         "app_donation_payee",
         "app_donation_note",
+        "mosque_donations_enabled",
       ]);
       const rows = Object.entries(entries)
         .filter(([k]) => allowed.has(k))
@@ -885,6 +892,20 @@ serve(async (req) => {
     if (action === "update_donation") {
       const ok = await verifyAdmin();
       if (!ok) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      // Master kill switch: when a super admin disables mosque donations globally,
+      // no mosque admin may turn their own donation option back on.
+      const { data: masterRow } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "mosque_donations_enabled")
+        .maybeSingle();
+      const masterOn = (masterRow?.value ?? "true") === "true";
+      if (!masterOn && (data as any)?.donation_enabled === true) {
+        return new Response(
+          JSON.stringify({ error: "Donations are currently disabled platform-wide by the Adhan Zen team. Contact the super admin to re-enable them." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
       const allowed = ["donation_enabled","donation_upi_id","donation_account_holder","donation_bank_name","donation_account_number","donation_ifsc","donation_notes"];
       const patch: Record<string, unknown> = {};
       for (const k of allowed) if (k in (data || {})) patch[k] = (data as any)[k];

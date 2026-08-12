@@ -1,6 +1,6 @@
 import React from 'react';
 import { Users, Timer, Check, MapPin } from 'lucide-react';
-import { ATTENDANCE_RADIUS_M } from '@/utils/geofence';
+import { ATTENDANCE_RADIUS_M, formatDistance } from '@/utils/geofence';
 import { useNextJamaat, useAttendance, formatCountdown } from '@/hooks/useJamaatPresence';
 import { formatTo12Hour } from '@/utils/timeFormat';
 import type { Prayer } from '@/types/prayer.types';
@@ -23,7 +23,8 @@ export const JamaatCountdown: React.FC<JamaatCountdownProps> = ({ locationId, mo
     const lng = longitude != null ? Number(longitude) : NaN;
     return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
   }, [latitude, longitude]);
-  const { count, isAttending, toggle, checkingLocation, requiresPresence } = useAttendance(locationId, prayerKey, coords);
+  const { count, isAttending, toggle, checkingLocation, requiresPresence, proximity, blockedReason } =
+    useAttendance(locationId, prayerKey, coords);
 
   if (!next || !locationId) return null;
 
@@ -51,11 +52,11 @@ export const JamaatCountdown: React.FC<JamaatCountdownProps> = ({ locationId, mo
 
       <button
         onClick={toggle}
-        disabled={checkingLocation}
+        disabled={checkingLocation || (requiresPresence && proximity.status === 'ready' && !proximity.inside && !isAttending)}
         className={`mt-2 w-full rounded-xl py-2 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
           isAttending
             ? 'bg-emerald-600 text-white shadow'
-            : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+            : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 disabled:opacity-60'
         }`}
       >
         {checkingLocation ? (
@@ -66,6 +67,38 @@ export const JamaatCountdown: React.FC<JamaatCountdownProps> = ({ locationId, mo
           <><Users className="w-4 h-4" /> I'm attending</>
         )}
       </button>
+      {requiresPresence && (
+        <div
+          className={`mt-2 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 text-[10px] font-semibold ${
+            proximity.status === 'ready'
+              ? proximity.inside
+                ? 'bg-emerald-50 text-emerald-700'
+                : 'bg-amber-50 text-amber-700'
+              : proximity.status === 'denied' || proximity.status === 'unsupported'
+                ? 'bg-red-50 text-red-700'
+                : 'bg-gray-50 text-gray-500'
+          }`}
+        >
+          <MapPin className={`w-3 h-3 shrink-0 ${proximity.status === 'locating' ? 'animate-pulse' : ''}`} />
+          <span className="leading-tight">
+            {proximity.status === 'ready' && proximity.inside &&
+              `At the mosque · ${formatDistance(proximity.distance ?? 0)} away — you can mark attendance`}
+            {proximity.status === 'ready' && !proximity.inside &&
+              `${formatDistance(proximity.distance ?? 0)} away · come within ${ATTENDANCE_RADIUS_M} m to mark attendance`}
+            {proximity.status === 'locating' && 'Getting your location…'}
+            {proximity.status === 'denied' && 'Location blocked — enable it in your phone settings to mark attendance'}
+            {proximity.status === 'unsupported' && 'This device cannot share location, so attendance is unavailable'}
+            {proximity.status === 'idle' && 'Waiting for location…'}
+          </span>
+        </div>
+      )}
+
+      {blockedReason && !isAttending && (
+        <p className="mt-1 text-[10px] text-red-600 text-center leading-snug">
+          Marked unattended: {blockedReason}
+        </p>
+      )}
+
       <p className="mt-1 text-[9px] text-gray-400 text-center">
         {requiresPresence
           ? `Only markable within ${ATTENDANCE_RADIUS_M} m of the mosque. Only the total count is shared.`

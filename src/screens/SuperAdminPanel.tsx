@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Shield, Eye, EyeOff, Save, Trash2, Plus, Search, Pause, Play, Settings, LayoutGrid, Tag, BarChart3, X, Check, ToggleLeft, ToggleRight, Moon, Calendar, Clock, Heart } from 'lucide-react';
+import { ArrowLeft, Shield, Eye, EyeOff, Save, Trash2, Plus, Search, Pause, Play, Settings, LayoutGrid, Tag, BarChart3, X, Check, ToggleLeft, ToggleRight, Moon, Calendar, Clock, Heart, HandCoins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocations } from '@/hooks/useLocations';
 import { useAllCustomFilters, useManageFilter, type CustomFilter } from '@/hooks/useCustomFilters';
@@ -105,6 +105,9 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
   // App-support (developer donation) configuration + weekly change watcher
   const [appDonation, setAppDonation] = useState({ enabled: false, upi: '', payee: 'Adhan Zen', note: '' });
   const [savingAppDonation, setSavingAppDonation] = useState(false);
+  // Master switch for every mosque's donation option (anti-scam kill switch)
+  const [mosqueDonations, setMosqueDonations] = useState(true);
+  const [savingMosqueDonations, setSavingMosqueDonations] = useState(false);
   const [runningWatch, setRunningWatch] = useState(false);
 
   const callSuper = React.useCallback(async (action: string, payload: Record<string, unknown> = {}) => {
@@ -129,6 +132,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
           payee: map['app_donation_payee'] || 'Adhan Zen',
           note: map['app_donation_note'] || '',
         });
+        setMosqueDonations((map['mosque_donations_enabled'] ?? 'true') === 'true');
       })
       .catch(() => { /* first run has no settings yet */ });
   }, [isAuthenticated, callSuper]);
@@ -153,6 +157,19 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       toast.error(e instanceof Error ? e.message : 'Save failed');
     } finally {
       setSavingAppDonation(false);
+    }
+  };
+
+  const toggleMosqueDonations = async (next: boolean) => {
+    setSavingMosqueDonations(true);
+    try {
+      await callSuper('super_set_app_settings', { data: { mosque_donations_enabled: String(next) } });
+      setMosqueDonations(next);
+      toast.success(next ? 'Mosque donations are visible again' : 'All mosque donations hidden app-wide');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSavingMosqueDonations(false);
     }
   };
 
@@ -555,6 +572,32 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       {/* ==================== SETTINGS TAB (Hijri + Ramadan) ==================== */}
       {activeTab === 'settings' && (
         <div className="space-y-3">
+          {/* Master kill switch for mosque donations */}
+          <div className="bg-gray-800/60 backdrop-blur-sm rounded-2xl p-4 border border-gray-700/40">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center"><HandCoins className="w-5 h-5 text-amber-400" /></div>
+              <div>
+                <p className="text-sm font-bold text-white">Mosque Donations (master switch)</p>
+                <p className="text-[10px] text-gray-500">Controls every mosque's donate option — separate from app support</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-gray-700/30 rounded-xl">
+              <span className="text-sm text-gray-300">
+                {mosqueDonations ? 'Allowed — mosque admins may accept donations' : 'Blocked — hidden everywhere, admins cannot enable'}
+              </span>
+              <button
+                disabled={savingMosqueDonations}
+                onClick={() => toggleMosqueDonations(!mosqueDonations)}
+                className={`w-12 h-7 rounded-full transition-colors disabled:opacity-50 ${mosqueDonations ? 'bg-amber-500' : 'bg-gray-600'}`}
+              >
+                <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-1 ${mosqueDonations ? 'translate-x-5' : ''}`} />
+              </button>
+            </div>
+            <p className="text-[10px] text-gray-500 mt-2 leading-snug">
+              Turn this off if a mosque account is suspected of fraud. Every mosque donate button disappears from the app immediately and no mosque admin can switch it back on. Money always goes directly to the mosque's own UPI/bank account — Adhan Zen never holds it.
+            </p>
+          </div>
+
           {/* App support / developer donations */}
           <div className="bg-gray-800/60 backdrop-blur-sm rounded-2xl p-4 border border-gray-700/40">
             <div className="flex items-center gap-3 mb-3">

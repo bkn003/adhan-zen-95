@@ -39,6 +39,18 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
+    // Platform-wide kill switch controlled by the super admin.
+    const { data: masterRow } = await admin
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'mosque_donations_enabled')
+      .maybeSingle();
+    if ((masterRow?.value ?? 'true') !== 'true') {
+      return new Response(JSON.stringify({ donation: null, disabled_by_platform: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60' },
+      });
+    }
+
     const { data, error } = await admin
       .from('locations')
       .select(
