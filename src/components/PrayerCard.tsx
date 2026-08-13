@@ -117,10 +117,11 @@ export const PrayerCard = ({
     <div className={`
       rounded-2xl transition-all duration-300 
       ${isNext
-        ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-xl shadow-emerald-500/20 scale-[1.02]'
+        ? 'bg-gradient-to-r from-emerald-800 via-emerald-700 to-green-800 text-white shadow-xl shadow-emerald-900/30 ring-2 ring-emerald-900/20 scale-[1.02]'
         : 'bg-white hover:shadow-md border border-gray-100'
       }
     `}>
+
       <div className="grid grid-cols-3 items-center p-4">
         {/* Prayer Name */}
         <div className="flex items-center gap-2">
