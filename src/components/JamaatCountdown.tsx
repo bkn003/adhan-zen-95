@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Timer, Check, MapPin } from 'lucide-react';
+import { Users, Timer, Check, MapPin, RefreshCw } from 'lucide-react';
 import { ATTENDANCE_RADIUS_M, formatDistance } from '@/utils/geofence';
 import { useNextJamaat, useAttendance, formatCountdown } from '@/hooks/useJamaatPresence';
 import { formatTo12Hour } from '@/utils/timeFormat';
