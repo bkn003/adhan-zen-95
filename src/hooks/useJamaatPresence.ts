@@ -88,6 +88,7 @@ export const useAttendance = (
   const [checkingLocation, setCheckingLocation] = useState(false);
   const [proximity, setProximity] = useState<LiveProximity>({ distance: null, inside: false, status: 'idle' });
   const [blockedReason, setBlockedReason] = useState<string | null>(null);
+  const [locateAttempt, setLocateAttempt] = useState(0);
   const date = todayKey();
 
   // Live distance feedback so the user always knows why they can (or can't) mark attendance.
@@ -99,7 +100,20 @@ export const useAttendance = (
       return;
     }
     return watchProximity({ lat: mosqueLat, lng: mosqueLng }, setProximity);
-  }, [mosqueLat, mosqueLng]);
+  }, [mosqueLat, mosqueLng, locateAttempt]);
+
+  /** Re-asks the browser for a fix (used by the "Retry location" button). */
+  const retryLocation = useCallback(async () => {
+    setBlockedReason(null);
+    setCheckingLocation(true);
+    const here = await getCurrentCoords();
+    setCheckingLocation(false);
+    if (!here) {
+      toast.error('Still cannot read your location — enable location for this app in your phone settings.');
+    }
+    setLocateAttempt((n) => n + 1);
+  }, []);
+
 
 
   const countsQuery = useQuery({
