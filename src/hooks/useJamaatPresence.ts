@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { Prayer } from '@/types/prayer.types';
 import {
   checkAtMosque,
+  getCurrentCoords,
+
   formatDistance,
   watchProximity,
   ATTENDANCE_RADIUS_M,
