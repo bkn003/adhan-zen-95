@@ -224,6 +224,8 @@ export const useAttendance = (
     proximity,
     blockedReason,
     requiresPresence: !!mosqueCoords,
+    retryLocation,
+
     isLoading: countsQuery.isLoading,
   };
 };
