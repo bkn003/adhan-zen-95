@@ -23,8 +23,9 @@ export const JamaatCountdown: React.FC<JamaatCountdownProps> = ({ locationId, mo
     const lng = longitude != null ? Number(longitude) : NaN;
     return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
   }, [latitude, longitude]);
-  const { count, isAttending, toggle, checkingLocation, requiresPresence, proximity, blockedReason } =
+  const { count, isAttending, toggle, checkingLocation, requiresPresence, proximity, blockedReason, retryLocation } =
     useAttendance(locationId, prayerKey, coords);
+
 
   if (!next || !locationId) return null;
 
