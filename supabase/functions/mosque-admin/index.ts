@@ -137,7 +137,12 @@ serve(async (req) => {
 
     // Super admin: write the app-support (donation) configuration
     if (action === "super_set_app_settings") {
-      const entries = (data ?? {}) as Record<string, unknown>;
+      // Accept settings nested under `data`, under `settings`, or flat on the body.
+      const entries = {
+        ...(body ?? {}),
+        ...((body?.settings ?? {}) as Record<string, unknown>),
+        ...((data ?? {}) as Record<string, unknown>),
+      } as Record<string, unknown>;
       const allowed = new Set([
         "app_donation_enabled",
         "app_donation_upi_id",
@@ -146,13 +151,17 @@ serve(async (req) => {
         "mosque_donations_enabled",
       ]);
       const rows = Object.entries(entries)
-        .filter(([k]) => allowed.has(k))
+        .filter(([k, v]) => allowed.has(k) && v !== undefined && v !== null)
         .map(([key, value]) => ({
           key,
-          value: String(value ?? "").slice(0, 500),
+          value: String(value).slice(0, 500),
           updated_at: new Date().toISOString(),
         }));
-      if (!rows.length) return json({ error: "No valid settings provided" }, 400);
+      if (!rows.length) {
+        console.error("[mosque-admin] super_set_app_settings got no allowed keys:", Object.keys(entries));
+        return json({ error: "No valid settings provided" }, 400);
+      }
+
       const { error } = await supabase.from("app_settings").upsert(rows, { onConflict: "key" });
       if (error) return json({ error: error.message }, 500);
       return json({ success: true, saved: rows.length });
