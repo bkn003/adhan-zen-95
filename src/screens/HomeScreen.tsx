@@ -414,28 +414,29 @@ export const HomeScreen = ({
         });
 
         return (
-          <div className="bg-white rounded-xl border border-green-100 shadow-sm">
-            <div className="grid grid-cols-3 text-center py-3 border-b border-green-100">
-              <div>
-                <p className="text-sm font-semibold text-gray-700">{localizedText.general.prayer.english}</p>
-                {localizedText.general.prayer.local && <p className="text-xs text-gray-500">{localizedText.general.prayer.local}</p>}
+          <div className="rounded-xl border border-emerald-100 shadow-sm overflow-hidden">
+            <div className="grid grid-cols-3 text-center divide-x divide-white/70">
+              <div className="bg-emerald-50 py-2.5">
+                <p className="text-sm font-bold text-emerald-800">{localizedText.general.prayer.english}</p>
+                {localizedText.general.prayer.local && <p className="text-[11px] text-emerald-600">{localizedText.general.prayer.local}</p>}
               </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-700">{localizedText.times.adhan.english}</p>
-                {localizedText.times.adhan.local && <p className="text-xs text-gray-500">{localizedText.times.adhan.local}</p>}
+              <div className="bg-sky-50 py-2.5">
+                <p className="text-sm font-bold text-sky-800">{localizedText.times.adhan.english}</p>
+                {localizedText.times.adhan.local && <p className="text-[11px] text-sky-600">{localizedText.times.adhan.local}</p>}
               </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-700">
+              <div className="bg-amber-50 py-2.5">
+                <p className="text-sm font-bold text-amber-800">
                   {isJummahTime ? localizedText.times.khutbah.english : localizedText.times.iqamah.english}
                 </p>
                 {(isJummahTime ? localizedText.times.khutbah.local : localizedText.times.iqamah.local) && (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-[11px] text-amber-600">
                     {isJummahTime ? localizedText.times.khutbah.local : localizedText.times.iqamah.local}
                   </p>
                 )}
               </div>
             </div>
           </div>
+
         );
       })()}
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Timer, Check, MapPin } from 'lucide-react';
+import { Users, Timer, Check, MapPin, RefreshCw } from 'lucide-react';
 import { ATTENDANCE_RADIUS_M, formatDistance } from '@/utils/geofence';
 import { useNextJamaat, useAttendance, formatCountdown } from '@/hooks/useJamaatPresence';
 import { formatTo12Hour } from '@/utils/timeFormat';
@@ -23,8 +23,9 @@ export const JamaatCountdown: React.FC<JamaatCountdownProps> = ({ locationId, mo
     const lng = longitude != null ? Number(longitude) : NaN;
     return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
   }, [latitude, longitude]);
-  const { count, isAttending, toggle, checkingLocation, requiresPresence, proximity, blockedReason } =
+  const { count, isAttending, toggle, checkingLocation, requiresPresence, proximity, blockedReason, retryLocation } =
     useAttendance(locationId, prayerKey, coords);
+
 
   if (!next || !locationId) return null;
 
@@ -80,7 +81,7 @@ export const JamaatCountdown: React.FC<JamaatCountdownProps> = ({ locationId, mo
           }`}
         >
           <MapPin className={`w-3 h-3 shrink-0 ${proximity.status === 'locating' ? 'animate-pulse' : ''}`} />
-          <span className="leading-tight">
+          <span className="leading-tight flex-1">
             {proximity.status === 'ready' && proximity.inside &&
               `At the mosque · ${formatDistance(proximity.distance ?? 0)} away — you can mark attendance`}
             {proximity.status === 'ready' && !proximity.inside &&
@@ -90,8 +91,18 @@ export const JamaatCountdown: React.FC<JamaatCountdownProps> = ({ locationId, mo
             {proximity.status === 'unsupported' && 'This device cannot share location, so attendance is unavailable'}
             {proximity.status === 'idle' && 'Waiting for location…'}
           </span>
+          {(proximity.status === 'denied' || proximity.status === 'idle' || proximity.status === 'locating') && (
+            <button
+              onClick={retryLocation}
+              disabled={checkingLocation}
+              className="shrink-0 flex items-center gap-1 rounded-lg bg-white/80 px-2 py-0.5 text-[10px] font-bold text-gray-700 border border-gray-200 active:scale-95 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3 h-3 ${checkingLocation ? 'animate-spin' : ''}`} /> Retry
+            </button>
+          )}
         </div>
       )}
+
 
       {blockedReason && !isAttending && (
         <p className="mt-1 text-[10px] text-red-600 text-center leading-snug">
