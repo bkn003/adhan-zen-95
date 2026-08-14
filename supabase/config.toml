@@ -11,3 +11,6 @@ verify_jwt = false
 [functions.prayer-change-watch]
 verify_jwt = false
 
+
+[functions.prayer-reminders]
+verify_jwt = false
