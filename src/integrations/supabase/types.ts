@@ -852,6 +852,9 @@ export type Database = {
           mohalla_location_id: string | null
           platform: string | null
           provider: string
+          reminder_prefs: Json
+          self_scheduled: boolean
+          timezone: string | null
           updated_at: string | null
           user_id: string | null
         }
@@ -866,6 +869,9 @@ export type Database = {
           mohalla_location_id?: string | null
           platform?: string | null
           provider?: string
+          reminder_prefs?: Json
+          self_scheduled?: boolean
+          timezone?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -880,6 +886,9 @@ export type Database = {
           mohalla_location_id?: string | null
           platform?: string | null
           provider?: string
+          reminder_prefs?: Json
+          self_scheduled?: boolean
+          timezone?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -899,6 +908,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reminder_sends: {
+        Row: {
+          created_at: string
+          id: string
+          send_key: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          send_key: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          send_key?: string
+          token?: string
+        }
+        Relationships: []
       }
       user_preferences: {
         Row: {
