@@ -64,6 +64,36 @@ const Index = () => {
     initPushNotifications();
   }, []);
 
+  // PWA/browser web push: register the FCM web token so prayer-time change
+  // alerts and adhan reminders arrive while the app is closed. No-ops on
+  // native, unsupported browsers, or until Firebase config is provided.
+  useEffect(() => {
+    let cancelled = false;
+    const register = async () => {
+      const { initWebPush, syncWebPushPrefs } = await import('@/native/webPush');
+      if (cancelled) return;
+      const result = await initWebPush();
+      if (result === 'ok') await syncWebPushPrefs();
+    };
+    void register();
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') void register();
+      if (event === 'SIGNED_OUT') {
+        void import('@/native/webPush').then(({ cleanupWebPush }) => cleanupWebPush());
+      }
+    });
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  // Keep the backend's copy of reminder prefs / mosque selection fresh.
+  useEffect(() => {
+    if (!selectedLocationId) return;
+    void import('@/native/webPush').then(({ syncWebPushPrefs }) => syncWebPushPrefs());
+  }, [selectedLocationId]);
+
   // Listen for admin panel navigation event
   useEffect(() => {
     const handler = () => setShowAdminPanel(true);
