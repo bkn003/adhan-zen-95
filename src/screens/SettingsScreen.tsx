@@ -140,6 +140,10 @@ export const SettingsScreen = () => {
   const [adhanVolume, setAdhanVolume] = useState(50);
   const [prayerAlarmEnabled, setPrayerAlarmEnabled] = useState(false);
 
+  // Only one settings group is expanded at a time to keep the page short.
+  const [openSection, setOpenSection] = useState<string | null>('mosque');
+  const toggle = (key: string) => setOpenSection((current) => (current === key ? null : key));
+
   // DND Settings
   const [dndEnabled, setDndEnabled] = useState(true);
   const [dndBeforeIqamah, setDndBeforeIqamah] = useState(5);
