@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Volume2, Clock, Moon, Bell, ChevronRight, Settings as SettingsIcon, VolumeX, Sunrise, Sun, Sunset, Home, Globe, ShieldCheck } from 'lucide-react';
+import { MapPin, Volume2, Clock, Moon, Bell, ChevronRight, Settings as SettingsIcon, VolumeX, Sunrise, Sun, Sunset, Home, Globe, ShieldCheck, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminAccess } from '@/hooks/useAdminAccess';
 import { syncPushLocation } from '@/native/pushRegistration';
@@ -81,6 +81,36 @@ const ToggleItem = ({
   </div>
 );
 
+
+/** Collapsible group so the settings page stays short. */
+const Section = ({
+  title,
+  icon: Icon,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  icon: React.ElementType;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) => (
+  <div className="bg-white/70 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <button
+      onClick={onToggle}
+      className="w-full flex items-center gap-2 px-3 py-2.5 active:bg-gray-50"
+    >
+      <div className="p-1.5 bg-emerald-50 rounded-lg">
+        <Icon className="w-4 h-4 text-emerald-600" />
+      </div>
+      <span className="text-sm font-bold text-gray-800 flex-1 text-left">{title}</span>
+      <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+    </button>
+    {open && <div className="px-2 pb-3 space-y-3">{children}</div>}
+  </div>
+);
+
 const PrayerDndToggle = ({
   prayerName,
   icon: Icon,
@@ -109,6 +139,10 @@ export const SettingsScreen = () => {
   const [mohallaLocation, setMohallaLocation] = useState<Location | null>(null);
   const [adhanVolume, setAdhanVolume] = useState(50);
   const [prayerAlarmEnabled, setPrayerAlarmEnabled] = useState(false);
+
+  // Only one settings group is expanded at a time to keep the page short.
+  const [openSection, setOpenSection] = useState<string | null>('mosque');
+  const toggle = (key: string) => setOpenSection((current) => (current === key ? null : key));
 
   // DND Settings
   const [dndEnabled, setDndEnabled] = useState(true);
@@ -274,6 +308,7 @@ export const SettingsScreen = () => {
         </div>
       </div>
 
+      <Section title="Mosque & Location" icon={MapPin} open={openSection === 'mosque'} onToggle={() => toggle('mosque')}>
       {/* Location Settings */}
       <SettingsCard title={t('location')} icon={MapPin} gradient="from-blue-50/50 to-white">
         <p className="text-xs text-gray-500 mb-2">
@@ -306,39 +341,9 @@ export const SettingsScreen = () => {
         </div>
       </SettingsCard>
 
-      {/* Account — verified sign-in keeps reviews, RSVPs and alerts trustworthy */}
-      <SettingsCard title="Account" icon={ShieldCheck} gradient="from-indigo-50/50 to-white">
-        {isSignedIn ? (
-          <div className="space-y-2">
-            <p className="text-xs text-gray-500">Signed in as</p>
-            <p className="text-sm font-bold text-gray-800 truncate">
-              {profile?.display_name || user?.email}
-            </p>
-            <button
-              onClick={() => void signOut()}
-              className="w-full py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold active:bg-gray-200"
-            >
-              Sign out
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-xs text-gray-500">
-              Prayer times stay free to browse. Sign in to post reviews, RSVP to events and sync your
-              bookmarks and prayer tracker across devices.
-            </p>
-            <button
-              onClick={() => openAuth('Sign in to unlock reviews, RSVPs and cross-device sync.')}
-              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-sky-600 text-white text-sm font-bold"
-            >
-              Sign in / Create account
-            </button>
-          </div>
-        )}
-      </SettingsCard>
+      </Section>
 
-
-
+      <Section title="Reminders & Alerts" icon={Bell} open={openSection === 'reminders'} onToggle={() => toggle('reminders')}>
       {/* DND Permission Prompt */}
       {showDndPermissionPrompt && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm">
@@ -471,35 +476,21 @@ export const SettingsScreen = () => {
         </div>
       </SettingsCard>
 
-      {/* Mosque management — only for signed-in admins */}
-      {(isSuperAdmin || isMosqueAdmin) && (
-        <SettingsCard title="Mosque Management" icon={ShieldCheck} gradient="from-gray-50/50 to-white">
-          <div className="space-y-2">
-            <p className="text-xs text-gray-500">
-              Signed in as {user?.email} — you can manage {isSuperAdmin ? 'every mosque' : 'your mosque'}.
-            </p>
-            {isMosqueAdmin && (
-              <button
-                onClick={() => window.dispatchEvent(new CustomEvent('navigate-admin'))}
-                className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
-              >
-                <SettingsIcon className="w-4 h-4" />
-                {t('openAdminPanel')}
-              </button>
-            )}
-            {isSuperAdmin && (
-              <button
-                onClick={() => window.dispatchEvent(new CustomEvent('navigate-super-admin'))}
-                className="w-full py-2.5 px-3 bg-gradient-to-r from-slate-800 to-slate-600 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
-              >
-                <ShieldCheck className="w-4 h-4" />
-                {t('superAdmin')}
-              </button>
-            )}
-          </div>
-        </SettingsCard>
-      )}
+      {/* Per-prayer notification toggles */}
+      <SettingsCard title="Per-prayer alerts" icon={Bell} gradient="from-emerald-50/50 to-white">
+        <PrayerNotificationToggles />
+      </SettingsCard>
 
+      {/* Smart Notifications */}
+      <SettingsCard title="Smart Reminders" icon={Bell} gradient="from-sky-50/50 to-white">
+        <WeatherReminderToggle />
+      </SettingsCard>
+
+
+
+      </Section>
+
+      <Section title="Tools" icon={SettingsIcon} open={openSection === 'tools'} onToggle={() => toggle('tools')}>
       {/* Tools */}
       <SettingsCard title="Tools" icon={SettingsIcon} gradient="from-amber-50/50 to-white">
         <div className="space-y-2">
@@ -572,22 +563,80 @@ export const SettingsScreen = () => {
         </div>
       </SettingsCard>
 
-      {/* Per-prayer notification toggles */}
-      <SettingsCard title="Per-prayer alerts" icon={Bell} gradient="from-emerald-50/50 to-white">
-        <PrayerNotificationToggles />
-      </SettingsCard>
+      </Section>
 
+      <Section title="Sync & Data" icon={Clock} open={openSection === 'sync'} onToggle={() => toggle('sync')}>
       {/* Background sync */}
       <SettingsCard title="Background sync" icon={Clock} gradient="from-blue-50/50 to-white">
         <SyncStatusCard />
       </SettingsCard>
 
-      {/* Smart Notifications */}
-      <SettingsCard title="Smart Reminders" icon={Bell} gradient="from-sky-50/50 to-white">
-        <WeatherReminderToggle />
+      </Section>
+
+      <Section title="Account & Admin" icon={ShieldCheck} open={openSection === 'account'} onToggle={() => toggle('account')}>
+      {/* Account — verified sign-in keeps reviews, RSVPs and alerts trustworthy */}
+      <SettingsCard title="Account" icon={ShieldCheck} gradient="from-indigo-50/50 to-white">
+        {isSignedIn ? (
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500">Signed in as</p>
+            <p className="text-sm font-bold text-gray-800 truncate">
+              {profile?.display_name || user?.email}
+            </p>
+            <button
+              onClick={() => void signOut()}
+              className="w-full py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold active:bg-gray-200"
+            >
+              Sign out
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500">
+              Prayer times stay free to browse. Sign in to post reviews, RSVP to events and sync your
+              bookmarks and prayer tracker across devices.
+            </p>
+            <button
+              onClick={() => openAuth('Sign in to unlock reviews, RSVPs and cross-device sync.')}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-sky-600 text-white text-sm font-bold"
+            >
+              Sign in / Create account
+            </button>
+          </div>
+        )}
       </SettingsCard>
 
 
+
+      {/* Mosque management — only for signed-in admins */}
+      {(isSuperAdmin || isMosqueAdmin) && (
+        <SettingsCard title="Mosque Management" icon={ShieldCheck} gradient="from-gray-50/50 to-white">
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500">
+              Signed in as {user?.email} — you can manage {isSuperAdmin ? 'every mosque' : 'your mosque'}.
+            </p>
+            {isMosqueAdmin && (
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('navigate-admin'))}
+                className="w-full py-2.5 px-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+              >
+                <SettingsIcon className="w-4 h-4" />
+                {t('openAdminPanel')}
+              </button>
+            )}
+            {isSuperAdmin && (
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('navigate-super-admin'))}
+                className="w-full py-2.5 px-3 bg-gradient-to-r from-slate-800 to-slate-600 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                {t('superAdmin')}
+              </button>
+            )}
+          </div>
+        </SettingsCard>
+      )}
+
+      </Section>
 
       {/* App Version */}
       <div className="text-center py-3">
