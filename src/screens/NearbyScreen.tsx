@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { MapPin, Clock, Navigation, Search, ChevronDown, Sparkles, Timer } from 'lucide-react';
+import { MapPin, Clock, Navigation, Search, ChevronDown, Sparkles, Timer, Share2, Ruler, X } from 'lucide-react';
 import { useLocations } from '@/hooks/useLocations';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useRamadanContext } from '@/contexts/RamadanContext';
@@ -8,7 +8,10 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { useCustomFilters, useAllLocationFilters } from '@/hooks/useCustomFilters';
 import { matchesSearch } from '@/utils/searchUtils';
 import { Button } from '@/components/ui/button';
+import { MosqueTrustBadge } from '@/components/MosqueTrustBadge';
+import { toast } from 'sonner';
 import type { Location } from '@/types/prayer.types';
+
 
 interface NearbyScreenProps {
   onLocationSelect?: (locationId: string) => void;
@@ -41,6 +44,8 @@ export const NearbyScreen = ({
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   const [sortByTime, setSortByTime] = useState(false);
   const [displayCount, setDisplayCount] = useState(10);
+  const [radiusKm, setRadiusKm] = useState<number | null>(null);
+
 
   const { data: locations, isLoading } = useLocations();
   const { latitude, longitude, calculateDistance, error: locationError } = useGeolocation();
@@ -136,7 +141,12 @@ export const NearbyScreen = ({
       return a.distance - b.distance;
     }
     return a.distance - b.distance;
-  });
+  }).filter(l => (radiusKm == null ? true : l.distance <= radiusKm));
+
+  const nearestKm = sortedLocations.length
+    ? Math.min(...sortedLocations.map(l => l.distance))
+    : null;
+
 
   const displayedLocations = sortedLocations.slice(0, displayCount);
   const hasMore = sortedLocations.length > displayCount;
@@ -147,6 +157,22 @@ export const NearbyScreen = ({
     const destination = `${location.latitude},${location.longitude}`;
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank');
   };
+
+  const handleShare = async (location: Location & { distance?: number }) => {
+    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`;
+    const text = `${location.mosque_name}, ${location.district}\n${mapUrl}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: location.mosque_name, text, url: mapUrl });
+      } else {
+        await navigator.clipboard.writeText(text);
+        toast.success('Mosque location copied');
+      }
+    } catch {
+      /* user cancelled */
+    }
+  };
+
 
   const handleViewPrayerTimings = (location: Location) => {
     onLocationSelect?.(location.id);
@@ -200,9 +226,11 @@ export const NearbyScreen = ({
               {t('nearbyMosques')}
             </h2>
           </div>
-          <p className="text-center text-blue-200 text-xs mt-2">
+          <p className="text-center text-blue-100 text-xs mt-2">
             {sortedLocations.length} {t('mosquesFound')}
+            {nearestKm != null && ` · nearest ${nearestKm < 1 ? `${Math.round(nearestKm * 1000)} m` : `${nearestKm.toFixed(1)} km`}`}
           </p>
+
         </div>
       </div>
 
@@ -255,7 +283,34 @@ export const NearbyScreen = ({
             );
           })}
         </div>
+
+        {/* Distance radius chips */}
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-400 shrink-0">
+            <Ruler className="w-3 h-3" /> Within
+          </span>
+          {[1, 3, 5, 10].map(km => (
+            <button
+              key={km}
+              onClick={() => setRadiusKm(radiusKm === km ? null : km)}
+              className={`px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition-all ${
+                radiusKm === km ? 'bg-indigo-500 text-white shadow' : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              {km} km
+            </button>
+          ))}
+          {radiusKm != null && (
+            <button
+              onClick={() => setRadiusKm(null)}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-50 text-gray-500 text-xs shrink-0"
+            >
+              <X className="w-3 h-3" /> Clear
+            </button>
+          )}
+        </div>
       </div>
+
 
       {/* Locations List */}
       <div className="space-y-3">
@@ -288,11 +343,20 @@ export const NearbyScreen = ({
                   </div>
                   <div className="text-right flex-shrink-0 ml-2">
                     <div className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-xl">
-                      <span className="text-lg font-bold">{location.distance.toFixed(1)}</span>
-                      <span className="text-xs ml-1">km</span>
+                      <span className="text-lg font-bold">
+                        {location.distance < 1 ? Math.round(location.distance * 1000) : location.distance.toFixed(1)}
+                      </span>
+                      <span className="text-xs ml-1">{location.distance < 1 ? 'm' : 'km'}</span>
                     </div>
+                    <p className="text-[10px] text-gray-400 mt-1">~{Math.max(1, Math.round(location.distance * 12))} min walk</p>
                   </div>
                 </div>
+
+                {/* Trust / freshness */}
+                <div className="mb-3">
+                  <MosqueTrustBadge locationId={location.id} />
+                </div>
+
 
                 {/* Next Iqamah Time Badge */}
                 {location.nextIqamahTime && (
@@ -327,22 +391,30 @@ export const NearbyScreen = ({
                 )}
 
                 {/* Action Buttons */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
                   <button
                     onClick={(e) => { e.stopPropagation(); handleViewPrayerTimings(location); }}
-                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-semibold text-sm py-3 hover:shadow-lg hover:shadow-emerald-500/25 transition-all active:scale-98"
+                    className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl font-semibold text-xs py-3 px-2 hover:shadow-lg hover:shadow-emerald-500/25 transition-all active:scale-98"
                   >
-                    <Clock className="w-4 h-4" />
-                    {t('prayerTimes')}
+                    <Clock className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{t('prayerTimes')}</span>
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleGetDirections(location); }}
-                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-semibold text-sm py-3 hover:shadow-lg hover:shadow-blue-500/25 transition-all active:scale-98"
+                    className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-semibold text-xs py-3 px-2 hover:shadow-lg hover:shadow-blue-500/25 transition-all active:scale-98"
                   >
-                    <Navigation className="w-4 h-4" />
-                    {t('directions')}
+                    <Navigation className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{t('directions')}</span>
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleShare(location); }}
+                    aria-label={`Share ${location.mosque_name}`}
+                    className="flex items-center justify-center bg-gray-100 text-gray-600 rounded-xl px-3 hover:bg-gray-200 transition-all active:scale-95"
+                  >
+                    <Share2 className="w-4 h-4" />
                   </button>
                 </div>
+
               </div>
             );
           })

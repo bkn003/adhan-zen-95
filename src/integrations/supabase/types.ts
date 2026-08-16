@@ -1018,6 +1018,15 @@ export type Database = {
           status: string
         }[]
       }
+      get_mosque_attendance_roster: {
+        Args: { p_date: string; p_location_id: string }
+        Returns: {
+          display_name: string
+          marked_at: string
+          prayer: string
+          user_id: string
+        }[]
+      }
       get_mosque_donation_details: {
         Args: { p_location_id: string }
         Returns: {
