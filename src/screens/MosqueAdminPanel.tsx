@@ -13,6 +13,8 @@ import { EventsAdmin } from '@/components/admin/EventsAdmin';
 import { DonationAdmin } from '@/components/admin/DonationAdmin';
 import { ReviewsAdmin } from '@/components/admin/ReviewsAdmin';
 import { AuditTrail } from '@/components/admin/AuditTrail';
+import { AttendanceAdmin } from '@/components/admin/AttendanceAdmin';
+
 import { AdminAuthCard } from '@/components/admin/AdminAuthCard';
 import { authHeaders, fetchAdminScope, adminSignOut } from '@/utils/adminApi';
 
@@ -540,6 +542,15 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         <DonationAdmin locationId={locationId!} location={mosque} />
       </CollapsibleSection>
 
+      {/* Jamaat attendance roster */}
+      <CollapsibleSection
+        title="Jamaat Attendance (who attended)"
+        expanded={expandedSection === 'attendance'}
+        onToggle={() => setExpandedSection(expandedSection === 'attendance' ? null : 'attendance')}
+      >
+        <AttendanceAdmin locationId={locationId!} />
+      </CollapsibleSection>
+
       {/* Timing edit history / audit trail */}
       <CollapsibleSection
         title="Edit History & Rollback"
@@ -548,6 +559,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       >
         <AuditTrail locationId={locationId!} canRollback />
       </CollapsibleSection>
+
 
     </div>
 

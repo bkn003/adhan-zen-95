@@ -1,13 +1,16 @@
-import { useState } from 'react';
-import { Compass, Navigation, RotateCcw, AlertCircle, MapPin, Star, Camera, WifiOff } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Compass, Navigation, RotateCcw, AlertCircle, MapPin, Star, Camera, WifiOff, Share2, Info, Sun } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { tamilText } from '@/utils/tamilText';
 import { QiblaAROverlay } from '@/components/QiblaAROverlay';
+import { toast } from 'sonner';
 
 export const QiblaScreen = () => {
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [arOpen, setArOpen] = useState(false);
+  const [showTips, setShowTips] = useState(false);
+  const alignedRef = useRef(false);
 
   const geo = useGeolocation() as any;
   const {
@@ -30,12 +33,43 @@ export const QiblaScreen = () => {
   const relativeQiblaDirection = getRelativeQiblaDirection();
   const deviceHeading = magneticHeading || heading || 0;
   const compassDirection = getCompassDirection(deviceHeading);
-  const isPointingToQibla = Math.abs(relativeQiblaDirection) < 5 || Math.abs(relativeQiblaDirection - 360) < 5;
+  /** Signed shortest turn to face Qibla: negative = turn left, positive = turn right. */
+  const turnOffset = ((relativeQiblaDirection + 180) % 360) - 180;
+  const offAxis = Math.abs(turnOffset);
+  const isPointingToQibla = offAxis < 5;
+  const alignment = Math.max(0, Math.round(100 - (offAxis / 180) * 100));
+
+  // Short haptic buzz the moment the phone lines up with the Qibla.
+  useEffect(() => {
+    if (isPointingToQibla && !alignedRef.current) {
+      alignedRef.current = true;
+      navigator.vibrate?.([40, 60, 40]);
+    } else if (!isPointingToQibla && offAxis > 12) {
+      alignedRef.current = false;
+    }
+  }, [isPointingToQibla, offAxis]);
 
   const handleCalibrate = () => {
     setIsCalibrating(true);
+    navigator.vibrate?.(30);
     setTimeout(() => setIsCalibrating(false), 2000);
   };
+
+  const handleShare = async () => {
+    const text = `Qibla direction here: ${Math.round(qiblaDirection)}° (${getCompassDirection(qiblaDirection)})${
+      latitude && longitude ? ` at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}` : ''
+    }`;
+    try {
+      if (navigator.share) await navigator.share({ title: 'Qibla direction', text });
+      else {
+        await navigator.clipboard.writeText(text);
+        toast.success('Qibla details copied');
+      }
+    } catch {
+      /* cancelled */
+    }
+  };
+
 
   if (loading) {
     return (
@@ -173,7 +207,32 @@ export const QiblaScreen = () => {
 
       {/* Info Cards - Stack on mobile */}
       <div className="space-y-3 mt-4">
+        {/* Live turn guidance */}
+        <div className={`rounded-xl p-3 border backdrop-blur-sm ${
+          isPointingToQibla ? 'bg-green-500/20 border-green-400/40' : 'bg-white/5 border-white/10'
+        }`}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-bold text-white">
+              {isPointingToQibla
+                ? 'Facing the Qibla — you can pray'
+                : `Turn ${turnOffset > 0 ? 'right' : 'left'} ${Math.round(offAxis)}°`}
+            </p>
+            <span className={`text-xs font-bold ${isPointingToQibla ? 'text-green-300' : 'text-emerald-300/80'}`}>
+              {alignment}%
+            </span>
+          </div>
+          <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${
+                isPointingToQibla ? 'bg-green-400' : offAxis < 20 ? 'bg-emerald-400' : 'bg-amber-400'
+              }`}
+              style={{ width: `${alignment}%` }}
+            />
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-2">
+
           <div className={`p-3 rounded-xl ${isPointingToQibla ? 'bg-green-500/20 border-green-500/30' : 'bg-white/5 border-white/10'
             } border backdrop-blur-sm`}>
             <p className="text-emerald-300/70 text-[10px] uppercase tracking-wider">Qibla</p>
@@ -248,6 +307,24 @@ export const QiblaScreen = () => {
             )}
           </Button>
 
+          <Button
+            onClick={handleShare}
+            size="sm"
+            className="bg-white/10 border border-white/20 text-white hover:bg-white/20 rounded-xl text-xs"
+          >
+            <Share2 className="w-3 h-3 mr-1.5" />
+            Share
+          </Button>
+
+          <Button
+            onClick={() => setShowTips(v => !v)}
+            size="sm"
+            className="bg-white/10 border border-white/20 text-white hover:bg-white/20 rounded-xl text-xs"
+          >
+            <Info className="w-3 h-3 mr-1.5" />
+            Accuracy tips
+          </Button>
+
           {magneticHeading === null && heading === null && (
             <span className="text-amber-400 text-xs flex items-center gap-1 w-full justify-center mt-1">
               <AlertCircle className="w-3 h-3" />
@@ -255,6 +332,22 @@ export const QiblaScreen = () => {
             </span>
           )}
         </div>
+
+        {showTips && (
+          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 border border-white/10 space-y-2">
+            <p className="text-white text-sm font-semibold flex items-center gap-1.5">
+              <Sun className="w-4 h-4 text-amber-400" /> Get the most accurate Qibla
+            </p>
+            <ul className="text-emerald-100/80 text-xs space-y-1 list-disc pl-4">
+              <li>Hold the phone flat, screen up, at chest height.</li>
+              <li>Stay away from metal, magnets, speakers and car dashboards.</li>
+              <li>Wave the phone in a figure-8 twice, then tap Calibrate.</li>
+              <li>Cross-check outdoors: the compass reading should match landmarks you know.</li>
+              <li>Qibla here is {Math.round(qiblaDirection)}° from true north ({getCompassDirection(qiblaDirection)}) — great-circle bearing to the Kaaba.</li>
+            </ul>
+          </div>
+        )}
+
       </div>
     </div>
   );
