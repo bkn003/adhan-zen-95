@@ -6,7 +6,7 @@ import {
   useAttendance,
   formatCountdown,
   ATTENDANCE_OPENS_BEFORE_MIN,
-  ATTENDANCE_GRACE_AFTER_MIN,
+  
 } from '@/hooks/useJamaatPresence';
 import { formatTo12Hour } from '@/utils/timeFormat';
 import type { Prayer } from '@/types/prayer.types';
