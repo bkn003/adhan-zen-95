@@ -79,7 +79,7 @@ export const formatCountdown = (ms: number): string => {
 };
 
 /** How long before this mosque's iqamah the "I'm attending" button opens. */
-export const ATTENDANCE_OPENS_BEFORE_MIN = 45;
+export const ATTENDANCE_OPENS_BEFORE_MIN = 15;
 /** Grace period after iqamah during which late arrivals can still mark. */
 export const ATTENDANCE_GRACE_AFTER_MIN = 15;
 
