@@ -81,23 +81,22 @@ export const JamaatCountdown: React.FC<JamaatCountdownProps> = ({ locationId, mo
           <><Check className="w-4 h-4" /> You're attending</>
         ) : window.phase === 'early' ? (
           <><Clock className="w-4 h-4" /> Opens in {formatCountdown(window.msUntilOpen)}</>
-        ) : window.phase === 'closed' ? (
-          <><Lock className="w-4 h-4" /> Jamaat window closed</>
+        ) : window.phase !== 'open' ? (
+          <><Lock className="w-4 h-4" /> Locked — jamaat has started</>
         ) : (
-          <><Users className="w-4 h-4" /> I'm attending</>
+          <><Users className="w-4 h-4" /> I'm attending ({formatCountdown(window.msUntilIqamah)} left)</>
         )}
       </button>
 
       <p className="mt-1.5 text-[10px] text-center leading-snug text-gray-500">
         {window.phase === 'early' &&
-          `Marking opens ${ATTENDANCE_OPENS_BEFORE_MIN} min before this mosque's ${next.prayer.name} jamaat.`}
+          `Marking opens ${ATTENDANCE_OPENS_BEFORE_MIN} min before this mosque's ${next.prayer.name} jamaat (${formatTo12Hour(next.prayer.iqamah || next.prayer.adhan)}) — ${formatCountdown(window.msUntilOpen)} to go.`}
         {window.phase === 'open' &&
-          `You can change your answer until jamaat starts — after that it locks (late marking allowed for ${ATTENDANCE_GRACE_AFTER_MIN} min).`}
-        {window.phase === 'locked' &&
+          `You can mark or change your answer for ${formatCountdown(window.msUntilIqamah)}, until jamaat starts at ${formatTo12Hour(next.prayer.iqamah || next.prayer.adhan)}. After that it locks.`}
+        {window.phase !== 'early' && window.phase !== 'open' &&
           (isAttending
-            ? 'Jamaat has started — your record is locked for an honest log.'
-            : `Jamaat started — you can still mark up to ${ATTENDANCE_GRACE_AFTER_MIN} min late.`)}
-        {window.phase === 'closed' && 'This jamaat is over. The next prayer window opens automatically.'}
+            ? `Jamaat started at ${formatTo12Hour(next.prayer.iqamah || next.prayer.adhan)} — your record is locked for an honest log.`
+            : `Button disabled: jamaat started at ${formatTo12Hour(next.prayer.iqamah || next.prayer.adhan)}, so attendance for this prayer is closed. The next prayer window opens automatically.`)}
       </p>
 
       {requiresPresence && (
