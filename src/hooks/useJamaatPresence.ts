@@ -223,6 +223,10 @@ export const useAttendance = (
     if (!uid) return;
 
     if (isAttending) {
+      if (!window.canUnmark) {
+        toast.error('Jamaat has started — your attendance is now locked and cannot be changed.');
+        return;
+      }
       await supabase
         .from('mosque_attendance')
         .delete()
@@ -231,6 +235,14 @@ export const useAttendance = (
         .eq('attend_date', date)
         .eq('user_id', uid);
     } else {
+      if (!window.canMark) {
+        toast.error(
+          window.phase === 'early'
+            ? `Attendance opens ${ATTENDANCE_OPENS_BEFORE_MIN} minutes before this mosque's jamaat time.`
+            : 'Attendance for this jamaat is closed.',
+        );
+        return;
+      }
       // Attendance may only be marked while physically at the mosque.
       if (mosqueCoords) {
         setCheckingLocation(true);
@@ -262,7 +274,7 @@ export const useAttendance = (
       queryClient.invalidateQueries({ queryKey: ['attendance-counts', locationId, date] }),
       queryClient.invalidateQueries({ queryKey: ['attendance-mine', locationId, date, uid] }),
     ]);
-  }, [locationId, prayerKey, isAttending, requireAuth, user?.id, date, queryClient, mosqueCoords]);
+  }, [locationId, prayerKey, isAttending, requireAuth, user?.id, date, queryClient, mosqueCoords, window]);
 
   return {
     counts: countsQuery.data ?? {},
@@ -274,7 +286,8 @@ export const useAttendance = (
     blockedReason,
     requiresPresence: !!mosqueCoords,
     retryLocation,
-
+    window,
     isLoading: countsQuery.isLoading,
+
   };
 };
