@@ -1,7 +1,13 @@
 import React from 'react';
-import { Users, Timer, Check, MapPin, RefreshCw } from 'lucide-react';
+import { Users, Timer, Check, MapPin, RefreshCw, Lock, Clock } from 'lucide-react';
 import { ATTENDANCE_RADIUS_M, formatDistance } from '@/utils/geofence';
-import { useNextJamaat, useAttendance, formatCountdown } from '@/hooks/useJamaatPresence';
+import {
+  useNextJamaat,
+  useAttendance,
+  formatCountdown,
+  ATTENDANCE_OPENS_BEFORE_MIN,
+  ATTENDANCE_GRACE_AFTER_MIN,
+} from '@/hooks/useJamaatPresence';
 import { formatTo12Hour } from '@/utils/timeFormat';
 import type { Prayer } from '@/types/prayer.types';
 
@@ -23,11 +29,18 @@ export const JamaatCountdown: React.FC<JamaatCountdownProps> = ({ locationId, mo
     const lng = longitude != null ? Number(longitude) : NaN;
     return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
   }, [latitude, longitude]);
-  const { count, isAttending, toggle, checkingLocation, requiresPresence, proximity, blockedReason, retryLocation } =
-    useAttendance(locationId, prayerKey, coords);
-
+  const { count, isAttending, toggle, checkingLocation, requiresPresence, proximity, blockedReason, retryLocation, window } =
+    useAttendance(locationId, prayerKey, coords, next?.at ?? null);
 
   if (!next || !locationId) return null;
+
+  const tooFar = requiresPresence && proximity.status === 'ready' && !proximity.inside;
+  const locked = isAttending && !window.canUnmark;
+  const disabled =
+    checkingLocation ||
+    locked ||
+    (!isAttending && !window.canMark) ||
+    (!isAttending && tooFar);
 
   return (
     <div className={`rounded-2xl border p-3 shadow-sm transition-colors ${next.isImminent ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-emerald-100'}`}>
@@ -53,21 +66,40 @@ export const JamaatCountdown: React.FC<JamaatCountdownProps> = ({ locationId, mo
 
       <button
         onClick={toggle}
-        disabled={checkingLocation || (requiresPresence && proximity.status === 'ready' && !proximity.inside && !isAttending)}
+        disabled={disabled}
         className={`mt-2 w-full rounded-xl py-2 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
           isAttending
             ? 'bg-emerald-600 text-white shadow'
-            : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 disabled:opacity-60'
-        }`}
+            : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+        } ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
       >
         {checkingLocation ? (
           <><MapPin className="w-4 h-4 animate-pulse" /> Checking you are at the mosque…</>
+        ) : locked ? (
+          <><Lock className="w-4 h-4" /> Attendance locked — you attended</>
         ) : isAttending ? (
           <><Check className="w-4 h-4" /> You're attending</>
+        ) : window.phase === 'early' ? (
+          <><Clock className="w-4 h-4" /> Opens in {formatCountdown(window.msUntilOpen)}</>
+        ) : window.phase === 'closed' ? (
+          <><Lock className="w-4 h-4" /> Jamaat window closed</>
         ) : (
           <><Users className="w-4 h-4" /> I'm attending</>
         )}
       </button>
+
+      <p className="mt-1.5 text-[10px] text-center leading-snug text-gray-500">
+        {window.phase === 'early' &&
+          `Marking opens ${ATTENDANCE_OPENS_BEFORE_MIN} min before this mosque's ${next.prayer.name} jamaat.`}
+        {window.phase === 'open' &&
+          `You can change your answer until jamaat starts — after that it locks (late marking allowed for ${ATTENDANCE_GRACE_AFTER_MIN} min).`}
+        {window.phase === 'locked' &&
+          (isAttending
+            ? 'Jamaat has started — your record is locked for an honest log.'
+            : `Jamaat started — you can still mark up to ${ATTENDANCE_GRACE_AFTER_MIN} min late.`)}
+        {window.phase === 'closed' && 'This jamaat is over. The next prayer window opens automatically.'}
+      </p>
+
       {requiresPresence && (
         <div
           className={`mt-2 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 text-[10px] font-semibold ${

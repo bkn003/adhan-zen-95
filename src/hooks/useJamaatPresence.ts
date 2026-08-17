@@ -78,12 +78,59 @@ export const formatCountdown = (ms: number): string => {
   return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m ${String(s).padStart(2, '0')}s`;
 };
 
+/** How long before this mosque's iqamah the "I'm attending" button opens. */
+export const ATTENDANCE_OPENS_BEFORE_MIN = 45;
+/** Grace period after iqamah during which late arrivals can still mark. */
+export const ATTENDANCE_GRACE_AFTER_MIN = 15;
+
+export type AttendanceWindowPhase = 'early' | 'open' | 'locked' | 'closed';
+
+export interface AttendanceWindow {
+  phase: AttendanceWindowPhase;
+  /** Marking allowed right now. */
+  canMark: boolean;
+  /** Un-marking allowed right now (only before iqamah starts). */
+  canUnmark: boolean;
+  /** ms until the window opens (phase 'early') or until iqamah (phase 'open'). */
+  msUntilOpen: number;
+  msUntilIqamah: number;
+}
+
+/** Computes the per-mosque attendance window from that mosque's own jamaat time. */
+export const useAttendanceWindow = (jamaatAt?: Date | null): AttendanceWindow => {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return useMemo(() => {
+    if (!jamaatAt) {
+      return { phase: 'early' as const, canMark: false, canUnmark: false, msUntilOpen: 0, msUntilIqamah: 0 };
+    }
+    const t = jamaatAt.getTime();
+    const opensAt = t - ATTENDANCE_OPENS_BEFORE_MIN * 60_000;
+    const closesAt = t + ATTENDANCE_GRACE_AFTER_MIN * 60_000;
+    const phase: AttendanceWindowPhase =
+      now < opensAt ? 'early' : now < t ? 'open' : now <= closesAt ? 'locked' : 'closed';
+    return {
+      phase,
+      canMark: phase === 'open' || phase === 'locked',
+      canUnmark: phase === 'open',
+      msUntilOpen: Math.max(0, opensAt - now),
+      msUntilIqamah: t - now,
+    };
+  }, [jamaatAt, now]);
+};
+
 /** Live "I'm attending" presence for a mosque + prayer, for today. */
 export const useAttendance = (
   locationId?: string,
   prayerKey?: string,
   /** Mosque coordinates — when given, attendance can only be marked nearby. */
   mosqueCoords?: Coords | null,
+  /** This mosque's jamaat time today — gates when the button is usable. */
+  jamaatAt?: Date | null,
 ) => {
   const { user, isSignedIn, requireAuth } = useAuth();
   const queryClient = useQueryClient();
@@ -92,6 +139,8 @@ export const useAttendance = (
   const [blockedReason, setBlockedReason] = useState<string | null>(null);
   const [locateAttempt, setLocateAttempt] = useState(0);
   const date = todayKey();
+  const window = useAttendanceWindow(jamaatAt);
+
 
   // Live distance feedback so the user always knows why they can (or can't) mark attendance.
   const mosqueLat = mosqueCoords?.lat;
@@ -174,6 +223,10 @@ export const useAttendance = (
     if (!uid) return;
 
     if (isAttending) {
+      if (!window.canUnmark) {
+        toast.error('Jamaat has started — your attendance is now locked and cannot be changed.');
+        return;
+      }
       await supabase
         .from('mosque_attendance')
         .delete()
@@ -182,6 +235,14 @@ export const useAttendance = (
         .eq('attend_date', date)
         .eq('user_id', uid);
     } else {
+      if (!window.canMark) {
+        toast.error(
+          window.phase === 'early'
+            ? `Attendance opens ${ATTENDANCE_OPENS_BEFORE_MIN} minutes before this mosque's jamaat time.`
+            : 'Attendance for this jamaat is closed.',
+        );
+        return;
+      }
       // Attendance may only be marked while physically at the mosque.
       if (mosqueCoords) {
         setCheckingLocation(true);
@@ -213,7 +274,7 @@ export const useAttendance = (
       queryClient.invalidateQueries({ queryKey: ['attendance-counts', locationId, date] }),
       queryClient.invalidateQueries({ queryKey: ['attendance-mine', locationId, date, uid] }),
     ]);
-  }, [locationId, prayerKey, isAttending, requireAuth, user?.id, date, queryClient, mosqueCoords]);
+  }, [locationId, prayerKey, isAttending, requireAuth, user?.id, date, queryClient, mosqueCoords, window]);
 
   return {
     counts: countsQuery.data ?? {},
@@ -225,7 +286,8 @@ export const useAttendance = (
     blockedReason,
     requiresPresence: !!mosqueCoords,
     retryLocation,
-
+    window,
     isLoading: countsQuery.isLoading,
+
   };
 };
