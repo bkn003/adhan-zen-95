@@ -80,8 +80,8 @@ export const formatCountdown = (ms: number): string => {
 
 /** How long before this mosque's iqamah the "I'm attending" button opens. */
 export const ATTENDANCE_OPENS_BEFORE_MIN = 15;
-/** Grace period after iqamah during which late arrivals can still mark. */
-export const ATTENDANCE_GRACE_AFTER_MIN = 15;
+/** No late marking: attendance locks the moment jamaat starts. */
+export const ATTENDANCE_GRACE_AFTER_MIN = 0;
 
 export type AttendanceWindowPhase = 'early' | 'open' | 'locked' | 'closed';
 
@@ -110,12 +110,11 @@ export const useAttendanceWindow = (jamaatAt?: Date | null): AttendanceWindow =>
     }
     const t = jamaatAt.getTime();
     const opensAt = t - ATTENDANCE_OPENS_BEFORE_MIN * 60_000;
-    const closesAt = t + ATTENDANCE_GRACE_AFTER_MIN * 60_000;
-    const phase: AttendanceWindowPhase =
-      now < opensAt ? 'early' : now < t ? 'open' : now <= closesAt ? 'locked' : 'closed';
+    const phase: AttendanceWindowPhase = now < opensAt ? 'early' : now < t ? 'open' : 'locked';
     return {
       phase,
-      canMark: phase === 'open' || phase === 'locked',
+      // Jamaat start is a hard cut-off — no marking once the prayer begins.
+      canMark: phase === 'open',
       canUnmark: phase === 'open',
       msUntilOpen: Math.max(0, opensAt - now),
       msUntilIqamah: t - now,
@@ -239,7 +238,7 @@ export const useAttendance = (
         toast.error(
           window.phase === 'early'
             ? `Attendance opens ${ATTENDANCE_OPENS_BEFORE_MIN} minutes before this mosque's jamaat time.`
-            : 'Attendance for this jamaat is closed.',
+            : 'Jamaat has started — attendance is locked and can no longer be marked.',
         );
         return;
       }
