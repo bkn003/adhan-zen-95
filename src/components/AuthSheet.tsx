@@ -178,12 +178,29 @@ export const AuthSheet: React.FC = () => {
 
               <form onSubmit={submit} className="space-y-2">
                 {mode === 'signup' && (
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your name"
-                    className="w-full text-sm px-3 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-emerald-400"
-                  />
+                  <>
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your name"
+                      className="w-full text-sm px-3 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-emerald-400"
+                    />
+                    <div className="relative">
+                      <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="tel"
+                        inputMode="tel"
+                        maxLength={16}
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value.replace(/[^\d+\s-]/g, ''))}
+                        placeholder="Mobile number (optional)"
+                        className="w-full text-sm pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-emerald-400"
+                      />
+                    </div>
+                    <p className="text-[10px] text-gray-400 -mt-1">
+                      Shared only with your mosque admin when you mark jamaat attendance.
+                    </p>
+                  </>
                 )}
                 <div className="relative">
                   <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
