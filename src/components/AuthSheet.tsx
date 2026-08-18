@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, LogIn, ShieldCheck, Loader2 } from 'lucide-react';
+import { X, Mail, Lock, LogIn, ShieldCheck, Loader2, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
