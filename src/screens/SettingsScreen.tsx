@@ -19,6 +19,7 @@ import { Capacitor } from '@capacitor/core';
 import { AdhanSoundSelector } from '@/components/AdhanSoundSelector';
 import { VibrationSelector } from '@/components/VibrationSelector';
 import { SyncStatusCard } from '@/components/SyncStatusCard';
+import { ProfilePhoneField } from '@/components/ProfilePhoneField';
 import { PrayerNotificationToggles } from '@/components/PrayerNotificationToggles';
 import { Link } from 'react-router-dom';
 import { showWebNotification, ensureNotificationPermission } from '@/utils/webNotify';
