@@ -22,6 +22,13 @@ export const AuthSheet: React.FC = () => {
 
   if (!authPrompt.open) return null;
 
+  /** Ensures the mobile number lands on the profile row even if the trigger ran first. */
+  const savePhone = async (value: string) => {
+    const { data } = await supabase.auth.getUser();
+    if (!data?.user) return;
+    await supabase.from('profiles').update({ phone: value } as never).eq('id', data.user.id);
+  };
+
   /** Anonymous sessions block real credential sign-in, so drop them first. */
   const clearAnonSession = async () => {
     const { data } = await supabase.auth.getUser();
