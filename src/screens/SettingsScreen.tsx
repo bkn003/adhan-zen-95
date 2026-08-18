@@ -582,6 +582,7 @@ export const SettingsScreen = () => {
             <p className="text-sm font-bold text-gray-800 truncate">
               {profile?.display_name || user?.email}
             </p>
+            <ProfilePhoneField />
             <button
               onClick={() => void signOut()}
               className="w-full py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold active:bg-gray-200"
