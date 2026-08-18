@@ -822,6 +822,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          phone: string | null
           updated_at: string
         }
         Insert: {
@@ -829,6 +830,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id: string
+          phone?: string | null
           updated_at?: string
         }
         Update: {
@@ -836,6 +838,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1023,6 +1026,7 @@ export type Database = {
         Returns: {
           display_name: string
           marked_at: string
+          phone: string
           prayer: string
           user_id: string
         }[]
