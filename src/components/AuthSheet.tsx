@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, LogIn, ShieldCheck, Loader2 } from 'lucide-react';
+import { X, Mail, Lock, LogIn, ShieldCheck, Loader2, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,10 +16,18 @@ export const AuthSheet: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
 
   if (!authPrompt.open) return null;
+
+  /** Ensures the mobile number lands on the profile row even if the trigger ran first. */
+  const savePhone = async (value: string) => {
+    const { data } = await supabase.auth.getUser();
+    if (!data?.user) return;
+    await supabase.from('profiles').update({ phone: value } as never).eq('id', data.user.id);
+  };
 
   /** Anonymous sessions block real credential sign-in, so drop them first. */
   const clearAnonSession = async () => {
@@ -60,12 +68,13 @@ export const AuthSheet: React.FC = () => {
       }
 
       if (mode === 'signup') {
+        const cleanPhone = phone.replace(/[^\d+]/g, '');
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { full_name: name || email.split('@')[0] },
+            data: { full_name: name || email.split('@')[0], phone: cleanPhone || null },
           },
         });
         if (error) throw error;
@@ -81,6 +90,7 @@ export const AuthSheet: React.FC = () => {
           // Try signing in straight away: works when email confirmation is off.
           const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
           if (!signInErr) {
+            if (cleanPhone) await savePhone(cleanPhone);
             toast.success('Signed in');
             closeAuth();
             return;
@@ -90,10 +100,12 @@ export const AuthSheet: React.FC = () => {
           );
           return;
         }
+        if (cleanPhone) await savePhone(cleanPhone);
         toast.success('Signed in');
         closeAuth();
         return;
       }
+
 
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
@@ -178,12 +190,29 @@ export const AuthSheet: React.FC = () => {
 
               <form onSubmit={submit} className="space-y-2">
                 {mode === 'signup' && (
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your name"
-                    className="w-full text-sm px-3 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-emerald-400"
-                  />
+                  <>
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your name"
+                      className="w-full text-sm px-3 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-emerald-400"
+                    />
+                    <div className="relative">
+                      <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="tel"
+                        inputMode="tel"
+                        maxLength={16}
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value.replace(/[^\d+\s-]/g, ''))}
+                        placeholder="Mobile number (optional)"
+                        className="w-full text-sm pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-emerald-400"
+                      />
+                    </div>
+                    <p className="text-[10px] text-gray-400 -mt-1">
+                      Shared only with your mosque admin when you mark jamaat attendance.
+                    </p>
+                  </>
                 )}
                 <div className="relative">
                   <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />

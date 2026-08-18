@@ -548,7 +548,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         expanded={expandedSection === 'attendance'}
         onToggle={() => setExpandedSection(expandedSection === 'attendance' ? null : 'attendance')}
       >
-        <AttendanceAdmin locationId={locationId!} />
+        <AttendanceAdmin locationId={locationId!} mosqueName={mosque?.mosque_name} />
       </CollapsibleSection>
 
       {/* Timing edit history / audit trail */}
