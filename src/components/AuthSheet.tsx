@@ -61,12 +61,13 @@ export const AuthSheet: React.FC = () => {
       }
 
       if (mode === 'signup') {
+        const cleanPhone = phone.replace(/[^\d+]/g, '');
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { full_name: name || email.split('@')[0] },
+            data: { full_name: name || email.split('@')[0], phone: cleanPhone || null },
           },
         });
         if (error) throw error;
@@ -82,6 +83,7 @@ export const AuthSheet: React.FC = () => {
           // Try signing in straight away: works when email confirmation is off.
           const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
           if (!signInErr) {
+            if (cleanPhone) await savePhone(cleanPhone);
             toast.success('Signed in');
             closeAuth();
             return;
@@ -91,10 +93,12 @@ export const AuthSheet: React.FC = () => {
           );
           return;
         }
+        if (cleanPhone) await savePhone(cleanPhone);
         toast.success('Signed in');
         closeAuth();
         return;
       }
+
 
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
