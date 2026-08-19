@@ -401,7 +401,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
                         <span className="text-sm">{prayer.icon}</span>
                         <span className="text-xs font-bold text-gray-700 w-16">{prayer.name}</span>
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3">
                         <div className="text-center">
                           <p className="text-[9px] text-blue-400 font-medium">Adhan</p>
                           <p className="text-xs font-bold text-blue-600">{formatTime12h((pt as any)[prayer.adhan])}</p>
@@ -410,9 +410,17 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
                           <p className="text-[9px] text-emerald-400 font-medium">Iqamah</p>
                           <p className="text-xs font-bold text-emerald-600">{formatTime12h((pt as any)[prayer.iqamah])}</p>
                         </div>
+                        <button
+                          onClick={() => handleClearPrayer(pt.id, prayer.name, [prayer.adhan, prayer.iqamah])}
+                          title={`Clear ${prayer.name} times`}
+                          className="p-1.5 rounded-lg bg-white/70 border border-gray-200 active:scale-95"
+                        >
+                          <Trash2 className="w-3 h-3 text-red-500" />
+                        </button>
                       </div>
                     </div>
                   ))}
+
                   {/* Jummah row */}
                   {(pt as any).jummah_adhan && (
                     <div className="flex items-center justify-between bg-teal-50 border border-teal-100 rounded-lg px-3 py-2">
