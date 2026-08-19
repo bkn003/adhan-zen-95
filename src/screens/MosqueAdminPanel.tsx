@@ -185,6 +185,33 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
     queryClient.invalidateQueries({ queryKey: ['locations'], refetchType: 'all' });
     queryClient.invalidateQueries({ queryKey: ['mosque-prayer-status'], refetchType: 'all' });
   };
+  /** Removes an entire date-range row (all prayers for that period). */
+  const handleDeletePrayerTime = async (ptId: string, label: string) => {
+    if (!window.confirm(`Delete all prayer times for ${label}? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
+        method: 'POST',
+        headers: await authHeaders(),
+        body: JSON.stringify({ action: 'delete_prayer_times', location_id: locationId, data: { id: ptId } }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(`Deleted ${label}`);
+      setEditingPT(null);
+      clearPrayerCaches();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  /** Clears just one prayer's adhan/iqamah inside a date range. */
+  const handleClearPrayer = async (ptId: string, prayerName: string, fields: string[]) => {
+    if (!window.confirm(`Clear ${prayerName} adhan and iqamah for this date range?`)) return;
+    const payload: Record<string, any> = {};
+    fields.forEach((f) => { payload[f] = null; });
+    await handleUpdatePrayerTime(ptId, payload);
+  };
+
 
   const handleUpdatePrayerTime = async (ptId: string, fields: Record<string, any>) => {
     try {
