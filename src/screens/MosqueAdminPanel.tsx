@@ -369,12 +369,22 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
                 <span className="text-sm font-bold text-gray-700">
                   {formatDateRangeDisplay(pt.date_range, selectedMonth)} {selectedMonth}
                 </span>
-                <button
-                  onClick={() => setEditingPT(editingPT === pt.id ? null : pt.id)}
-                  className="p-1.5 bg-emerald-50 rounded-lg"
-                >
-                  <Edit2 className="w-3.5 h-3.5 text-emerald-600" />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setEditingPT(editingPT === pt.id ? null : pt.id)}
+                    className="p-1.5 bg-emerald-50 rounded-lg"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 text-emerald-600" />
+                  </button>
+                  <button
+                    onClick={() => handleDeletePrayerTime(pt.id, `${formatDateRangeDisplay(pt.date_range, selectedMonth)} ${selectedMonth}`)}
+                    className="p-1.5 bg-red-50 rounded-lg"
+                    title="Delete this date range"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                  </button>
+                </div>
+
               </div>
 
               {editingPT === pt.id ? (
