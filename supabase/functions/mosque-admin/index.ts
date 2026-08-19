@@ -376,6 +376,49 @@ serve(async (req) => {
       );
     }
 
+    if (action === "delete_prayer_times") {
+      if (!location_id || !data?.id) return json({ error: "Missing prayer time id" }, 400);
+      if (!canManage(location_id)) return json({ error: "Unauthorized" }, 403);
+
+      const { data: beforeRow } = await supabase
+        .from("prayer_times")
+        .select("*")
+        .eq("id", data.id)
+        .eq("location_id", location_id)
+        .maybeSingle();
+
+      if (!beforeRow) return json({ error: "Prayer time not found for this mosque" }, 404);
+
+      const { error } = await supabase
+        .from("prayer_times")
+        .delete()
+        .eq("id", data.id)
+        .eq("location_id", location_id);
+
+      if (error) return json({ error: error.message }, 500);
+
+      try {
+        const changes = Object.entries(beforeRow)
+          .filter(([k, v]) => !["id", "location_id", "created_at", "month", "date_range"].includes(k) && v !== null)
+          .map(([field, oldValue]) => ({ field, old_value: oldValue, new_value: null }));
+        await supabase.from("mosque_timing_audit").insert({
+          location_id,
+          prayer_time_id: null,
+          month: beforeRow.month,
+          date_range: beforeRow.date_range,
+          editor_label: caller?.email ?? "admin",
+          actor_role: isSuper ? "super_admin" : "mosque_admin",
+          changes,
+          status: "deleted",
+        });
+      } catch (_e) {
+        /* auditing must never block the delete */
+      }
+
+      return json({ success: true });
+    }
+
+
     if (action === "rollback_timing_audit") {
       if (!location_id || !data?.audit_id) {
         return new Response(

@@ -185,6 +185,33 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
     queryClient.invalidateQueries({ queryKey: ['locations'], refetchType: 'all' });
     queryClient.invalidateQueries({ queryKey: ['mosque-prayer-status'], refetchType: 'all' });
   };
+  /** Removes an entire date-range row (all prayers for that period). */
+  const handleDeletePrayerTime = async (ptId: string, label: string) => {
+    if (!window.confirm(`Delete all prayer times for ${label}? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/mosque-admin`, {
+        method: 'POST',
+        headers: await authHeaders(),
+        body: JSON.stringify({ action: 'delete_prayer_times', location_id: locationId, data: { id: ptId } }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(`Deleted ${label}`);
+      setEditingPT(null);
+      clearPrayerCaches();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  /** Clears just one prayer's adhan/iqamah inside a date range. */
+  const handleClearPrayer = async (ptId: string, prayerName: string, fields: string[]) => {
+    if (!window.confirm(`Clear ${prayerName} adhan and iqamah for this date range?`)) return;
+    const payload: Record<string, any> = {};
+    fields.forEach((f) => { payload[f] = null; });
+    await handleUpdatePrayerTime(ptId, payload);
+  };
+
 
   const handleUpdatePrayerTime = async (ptId: string, fields: Record<string, any>) => {
     try {
@@ -369,12 +396,22 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
                 <span className="text-sm font-bold text-gray-700">
                   {formatDateRangeDisplay(pt.date_range, selectedMonth)} {selectedMonth}
                 </span>
-                <button
-                  onClick={() => setEditingPT(editingPT === pt.id ? null : pt.id)}
-                  className="p-1.5 bg-emerald-50 rounded-lg"
-                >
-                  <Edit2 className="w-3.5 h-3.5 text-emerald-600" />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setEditingPT(editingPT === pt.id ? null : pt.id)}
+                    className="p-1.5 bg-emerald-50 rounded-lg"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 text-emerald-600" />
+                  </button>
+                  <button
+                    onClick={() => handleDeletePrayerTime(pt.id, `${formatDateRangeDisplay(pt.date_range, selectedMonth)} ${selectedMonth}`)}
+                    className="p-1.5 bg-red-50 rounded-lg"
+                    title="Delete this date range"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                  </button>
+                </div>
+
               </div>
 
               {editingPT === pt.id ? (
@@ -401,7 +438,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
                         <span className="text-sm">{prayer.icon}</span>
                         <span className="text-xs font-bold text-gray-700 w-16">{prayer.name}</span>
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3">
                         <div className="text-center">
                           <p className="text-[9px] text-blue-400 font-medium">Adhan</p>
                           <p className="text-xs font-bold text-blue-600">{formatTime12h((pt as any)[prayer.adhan])}</p>
@@ -410,9 +447,17 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
                           <p className="text-[9px] text-emerald-400 font-medium">Iqamah</p>
                           <p className="text-xs font-bold text-emerald-600">{formatTime12h((pt as any)[prayer.iqamah])}</p>
                         </div>
+                        <button
+                          onClick={() => handleClearPrayer(pt.id, prayer.name, [prayer.adhan, prayer.iqamah])}
+                          title={`Clear ${prayer.name} times`}
+                          className="p-1.5 rounded-lg bg-white/70 border border-gray-200 active:scale-95"
+                        >
+                          <Trash2 className="w-3 h-3 text-red-500" />
+                        </button>
                       </div>
                     </div>
                   ))}
+
                   {/* Jummah row */}
                   {(pt as any).jummah_adhan && (
                     <div className="flex items-center justify-between bg-teal-50 border border-teal-100 rounded-lg px-3 py-2">
