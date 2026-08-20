@@ -10,7 +10,7 @@ import { HijriAdjustment } from '@/components/HijriAdjustment';
 import { useRamadanContext } from '@/contexts/RamadanContext';
 
 import { AdminAuthCard } from '@/components/admin/AdminAuthCard';
-import { authHeaders, fetchAdminScope, adminSignOut } from '@/utils/adminApi';
+import { authHeaders, fetchAdminScope, adminSignOut, ADMIN_SECTIONS, type AdminSectionKey } from '@/utils/adminApi';
 
 const SUPABASE_URL = "https://lhufqnokmdqkvzcxqwkl.supabase.co";
 
@@ -56,13 +56,17 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
-  const [adminMap, setAdminMap] = useState<Record<string, string>>({});
+  const [adminMap, setAdminMap] = useState<Record<string, { user_id: string; username: string; permissions: string[] }>>({});
+  // Per-admin section permissions editor
+  const [permEditId, setPermEditId] = useState<string | null>(null);
+  const [permDraft, setPermDraft] = useState<Set<string>>(new Set());
+  const [savingPerms, setSavingPerms] = useState(false);
   const { t } = useLanguage();
   const { isRamadan, setIsRamadan } = useRamadanContext();
 
   const { data: rawLocations, refetch: refetchLocations } = useLocations({ includePaused: true });
   const locations = React.useMemo(
-    () => rawLocations?.map(l => ({ ...l, admin_username: adminMap[l.id] })),
+    () => rawLocations?.map(l => ({ ...l, admin_username: adminMap[l.id]?.username })),
     [rawLocations, adminMap]
   );
   const { data: allFilters, refetch: refetchFilters } = useAllCustomFilters();
@@ -77,8 +81,10 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       });
       const data = await res.json();
       if (res.ok && Array.isArray(data.admins)) {
-        const map: Record<string, string> = {};
-        for (const a of data.admins) map[a.location_id] = a.username;
+        const map: Record<string, { user_id: string; username: string; permissions: string[] }> = {};
+        for (const a of data.admins) {
+          map[a.location_id] = { user_id: a.user_id, username: a.username, permissions: a.permissions ?? [] };
+        }
         setAdminMap(map);
       }
     } catch { /* ignore */ }
