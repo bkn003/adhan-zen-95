@@ -31,6 +31,39 @@ export interface AdminScope {
   is_super_admin: boolean;
   location_ids: string[];
   location_id: string | null;
+  /** location_id -> section keys the admin may manage (super admins bypass). */
+  permissions?: Record<string, string[]>;
+}
+
+/** All manageable admin-panel sections, in display order. */
+export const ADMIN_SECTIONS = [
+  { key: 'mosque', label: 'Mosque Info' },
+  { key: 'filters', label: 'Amenities & Filters' },
+  { key: 'prayer', label: 'Prayer Times' },
+  { key: 'photos', label: 'Photos' },
+  { key: 'events', label: 'Events & Announcements' },
+  { key: 'khutbah', label: 'Jummah Khutbah' },
+  { key: 'reviews', label: 'Reviews & Moderation' },
+  { key: 'donations', label: 'Donations' },
+  { key: 'attendance', label: 'Jamaat Attendance' },
+  { key: 'audit', label: 'Edit History & Rollback' },
+] as const;
+
+export type AdminSectionKey = (typeof ADMIN_SECTIONS)[number]['key'];
+
+/** True when the scope allows managing a section for a location. */
+export function canManageSection(
+  scope: Pick<AdminScope, 'is_super_admin' | 'permissions'> | null,
+  locationId: string | null,
+  section: AdminSectionKey,
+): boolean {
+  if (!scope) return false;
+  if (scope.is_super_admin) return true;
+  if (!locationId) return false;
+  const perms = scope.permissions?.[locationId];
+  // No permissions row yet (legacy admin) => full access, matches DB default.
+  if (!perms) return true;
+  return perms.includes(section);
 }
 
 /** Reads the caller's admin scope (super admin flag + managed mosques). */

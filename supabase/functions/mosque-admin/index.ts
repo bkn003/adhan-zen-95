@@ -47,6 +47,7 @@ serve(async (req) => {
 
     let isSuper = false;
     let adminLocationIds: string[] = [];
+    const adminPermissions: Record<string, string[]> = {};
     if (caller) {
       const { data: roles, error: rolesErr } = await supabase
         .from("user_roles")
@@ -71,11 +72,14 @@ serve(async (req) => {
 
       const { data: assigns, error: assignErr } = await supabase
         .from("mosque_admin_users")
-        .select("location_id")
+        .select("location_id, permissions")
         .eq("user_id", caller.id)
         .eq("is_paused", false);
       if (assignErr) console.error("[mosque-admin] mosque_admin_users read failed:", assignErr.message);
       adminLocationIds = (assigns ?? []).map((a: any) => a.location_id as string);
+      for (const a of assigns ?? []) {
+        adminPermissions[a.location_id as string] = (a as any).permissions ?? [];
+      }
     } else {
       console.error("[mosque-admin] no caller resolved; jwt present:", !!jwt, "action:", action);
     }
@@ -99,6 +103,7 @@ serve(async (req) => {
       "super_get_app_settings",
       "super_set_app_settings",
       "super_run_change_watch",
+      "super_set_admin_permissions",
     ]);
 
     if (SUPER_ACTIONS.has(action) && !isSuper) {
@@ -114,6 +119,7 @@ serve(async (req) => {
         is_super_admin: isSuper,
         location_ids: adminLocationIds,
         location_id: adminLocationIds[0] ?? null,
+        permissions: adminPermissions,
       });
     }
 
@@ -189,7 +195,7 @@ serve(async (req) => {
     if (action === "super_list_admins") {
       const { data: assigns, error } = await supabase
         .from("mosque_admin_users")
-        .select("location_id, user_id, is_paused");
+        .select("location_id, user_id, is_paused, permissions");
       if (error) return json({ error: error.message }, 500);
 
       const emails = new Map<string, string>();
@@ -204,8 +210,31 @@ serve(async (req) => {
         user_id: a.user_id,
         is_paused: a.is_paused,
         username: emails.get(a.user_id) ?? "",
+        permissions: a.permissions ?? [],
       }));
       return json({ admins });
+    }
+
+    // Super admin: set which panel sections a mosque admin may manage
+    if (action === "super_set_admin_permissions") {
+      const targetLoc = (data?.location_id ?? location_id) as string | undefined;
+      const targetUser = data?.user_id as string | undefined;
+      const perms = data?.permissions;
+      if (!targetLoc || !targetUser || !Array.isArray(perms)) {
+        return json({ error: "Missing location_id, user_id, or permissions" }, 400);
+      }
+      const ALLOWED_PERMS = new Set([
+        "mosque", "filters", "prayer", "photos", "events",
+        "khutbah", "reviews", "donations", "attendance", "audit",
+      ]);
+      const clean = perms.filter((p: unknown) => typeof p === "string" && ALLOWED_PERMS.has(p as string));
+      const { error } = await supabase
+        .from("mosque_admin_users")
+        .update({ permissions: clean })
+        .eq("location_id", targetLoc)
+        .eq("user_id", targetUser);
+      if (error) return json({ error: error.message }, 500);
+      return json({ success: true, permissions: clean });
     }
 
 
@@ -416,6 +445,73 @@ serve(async (req) => {
       }
 
       return json({ success: true });
+    }
+
+    // Bulk copy one date range's timings to other date ranges / months
+    if (action === "bulk_copy_prayer_times") {
+      if (!location_id || !data?.source_id || !Array.isArray(data?.targets)) {
+        return json({ error: "Missing source_id or targets" }, 400);
+      }
+      if (!canManage(location_id)) return json({ error: "Unauthorized" }, 403);
+
+      const { data: source } = await supabase
+        .from("prayer_times")
+        .select("*")
+        .eq("id", data.source_id)
+        .eq("location_id", location_id)
+        .maybeSingle();
+      if (!source) return json({ error: "Source date range not found for this mosque" }, 404);
+
+      const SKIP = new Set(["id", "location_id", "created_at", "month", "date_range"]);
+      const timeFields: Record<string, any> = {};
+      for (const [k, v] of Object.entries(source)) {
+        if (!SKIP.has(k)) timeFields[k] = v;
+      }
+
+      const targets = (data.targets as any[]).slice(0, 60);
+      const results: { month: string; date_range: string; status: string }[] = [];
+
+      for (const t of targets) {
+        const month = String(t?.month ?? "").slice(0, 20);
+        const date_range = String(t?.date_range ?? "").slice(0, 20);
+        if (!month || !date_range) continue;
+        if (month === source.month && date_range === source.date_range) continue;
+
+        const { data: existing } = await supabase
+          .from("prayer_times")
+          .select("id")
+          .eq("location_id", location_id)
+          .eq("month", month)
+          .eq("date_range", date_range)
+          .maybeSingle();
+
+        let resp;
+        if (existing?.id) {
+          resp = await supabase.from("prayer_times").update(timeFields).eq("id", existing.id);
+        } else {
+          resp = await supabase.from("prayer_times").insert({ ...timeFields, location_id, month, date_range });
+        }
+        results.push({ month, date_range, status: resp.error ? `error: ${resp.error.message}` : (existing?.id ? "updated" : "created") });
+      }
+
+      try {
+        await supabase.from("mosque_timing_audit").insert({
+          location_id,
+          prayer_time_id: null,
+          month: source.month,
+          date_range: source.date_range,
+          editor_label: caller?.email ?? "admin",
+          actor_role: isSuper ? "super_admin" : "mosque_admin",
+          changes: [{
+            field: "bulk_copy",
+            old_value: `${source.date_range} ${source.month}`,
+            new_value: `copied to ${results.filter(r => !r.status.startsWith("error")).length} range(s)`,
+          }],
+          status: "applied",
+        });
+      } catch (_e) { /* auditing must never block */ }
+
+      return json({ success: true, results });
     }
 
 

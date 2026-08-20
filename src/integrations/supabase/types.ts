@@ -223,6 +223,7 @@ export type Database = {
           id: string
           is_paused: boolean
           location_id: string
+          permissions: string[]
           updated_at: string
           user_id: string
         }
@@ -231,6 +232,7 @@ export type Database = {
           id?: string
           is_paused?: boolean
           location_id: string
+          permissions?: string[]
           updated_at?: string
           user_id: string
         }
@@ -239,6 +241,7 @@ export type Database = {
           id?: string
           is_paused?: boolean
           location_id?: string
+          permissions?: string[]
           updated_at?: string
           user_id?: string
         }
@@ -1009,6 +1012,14 @@ export type Database = {
       get_attendance_counts: {
         Args: { p_date: string; p_location_id: string }
         Returns: {
+          count: number
+          prayer: string
+        }[]
+      }
+      get_attendance_trend: {
+        Args: { p_from: string; p_location_id: string; p_to: string }
+        Returns: {
+          attend_date: string
           count: number
           prayer: string
         }[]

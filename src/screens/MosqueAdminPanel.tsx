@@ -16,7 +16,10 @@ import { AuditTrail } from '@/components/admin/AuditTrail';
 import { AttendanceAdmin } from '@/components/admin/AttendanceAdmin';
 
 import { AdminAuthCard } from '@/components/admin/AdminAuthCard';
-import { authHeaders, fetchAdminScope, adminSignOut } from '@/utils/adminApi';
+import { BulkCopyTimings } from '@/components/admin/BulkCopyTimings';
+import { KhutbahAdmin } from '@/components/admin/KhutbahAdmin';
+import { AttendanceTrends } from '@/components/admin/AttendanceTrends';
+import { authHeaders, fetchAdminScope, adminSignOut, canManageSection, type AdminScope, type AdminSectionKey } from '@/utils/adminApi';
 
 
 /**
@@ -75,6 +78,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
   const [newDateRange, setNewDateRange] = useState('1-5');
   const [selectedMonth, setSelectedMonth] = useState(monthNames[new Date().getMonth()]);
   const [expandedSection, setExpandedSection] = useState<string | null>('mosque');
+  const [scope, setScope] = useState<AdminScope | null>(null);
   const queryClient = useQueryClient();
 
   const { data: locations } = useLocations({ includePaused: true });
@@ -86,12 +90,20 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       setAdminEmail(scope.email);
       setLocationId(scope.location_id);
       setIsLoggedIn(true);
+      setScope(scope);
     } else {
       setIsLoggedIn(false);
       setLocationId(null);
+      setScope(null);
     }
     return scope;
   }, []);
+
+  /** Role-based gate: which sections this account may manage for this mosque. */
+  const can = React.useCallback(
+    (section: AdminSectionKey) => canManageSection(scope, locationId, section),
+    [scope, locationId],
+  );
 
   // Restore an existing Supabase session
   useEffect(() => {
@@ -297,6 +309,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       </div>
 
       {/* Mosque Info Section */}
+      {can('mosque') && (
       <CollapsibleSection
         title="Mosque Info"
         expanded={expandedSection === 'mosque'}
@@ -317,8 +330,10 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
           </div>
         )}
       </CollapsibleSection>
+      )}
 
       {/* Amenities & Filters Section */}
+      {can('filters') && (
       <CollapsibleSection
         title="Amenities & Filters"
         expanded={expandedSection === 'filters'}
@@ -326,8 +341,10 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       >
         <AmenitiesFiltersSection locationId={locationId} />
       </CollapsibleSection>
+      )}
 
       {/* Prayer Times Section */}
+      {can('prayer') && (
       <CollapsibleSection
         title="Prayer Times"
         expanded={expandedSection === 'prayer'}
@@ -548,10 +565,20 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
               )}
             </div>
           ))}
+
+          {/* Bulk copy timings across date ranges / months */}
+          <BulkCopyTimings
+            locationId={locationId!}
+            prayerTimes={prayerTimes ?? []}
+            selectedMonth={selectedMonth}
+            onDone={clearPrayerCaches}
+          />
         </div>
       </CollapsibleSection>
+      )}
 
       {/* Photos Section */}
+      {can('photos') && (
       <CollapsibleSection
         title="Photos"
         expanded={expandedSection === 'photos'}
@@ -559,8 +586,10 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       >
         <PhotoManager locationId={locationId!} />
       </CollapsibleSection>
+      )}
 
       {/* Events & Announcements */}
+      {can('events') && (
       <CollapsibleSection
         title="Events & Announcements"
         expanded={expandedSection === 'events'}
@@ -568,8 +597,21 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       >
         <EventsAdmin locationId={locationId!} />
       </CollapsibleSection>
+      )}
+
+      {/* Jummah khutbah topics */}
+      {can('khutbah') && (
+      <CollapsibleSection
+        title="Jummah Khutbah Topic"
+        expanded={expandedSection === 'khutbah'}
+        onToggle={() => setExpandedSection(expandedSection === 'khutbah' ? null : 'khutbah')}
+      >
+        <KhutbahAdmin locationId={locationId!} />
+      </CollapsibleSection>
+      )}
 
       {/* Reviews moderation */}
+      {can('reviews') && (
       <CollapsibleSection
         title="Reviews & Moderation"
         expanded={expandedSection === 'reviews'}
@@ -577,8 +619,10 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       >
         <ReviewsAdmin locationId={locationId!} />
       </CollapsibleSection>
+      )}
 
       {/* Donations */}
+      {can('donations') && (
       <CollapsibleSection
         title="Donations (UPI / Bank)"
         expanded={expandedSection === 'donations'}
@@ -586,8 +630,10 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       >
         <DonationAdmin locationId={locationId!} location={mosque} />
       </CollapsibleSection>
+      )}
 
       {/* Jamaat attendance roster */}
+      {can('attendance') && (
       <CollapsibleSection
         title="Jamaat Attendance (who attended)"
         expanded={expandedSection === 'attendance'}
@@ -595,8 +641,21 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       >
         <AttendanceAdmin locationId={locationId!} mosqueName={mosque?.mosque_name} />
       </CollapsibleSection>
+      )}
+
+      {/* Attendance trends */}
+      {can('attendance') && (
+      <CollapsibleSection
+        title="Attendance Trends"
+        expanded={expandedSection === 'trends'}
+        onToggle={() => setExpandedSection(expandedSection === 'trends' ? null : 'trends')}
+      >
+        <AttendanceTrends locationId={locationId!} />
+      </CollapsibleSection>
+      )}
 
       {/* Timing edit history / audit trail */}
+      {can('audit') && (
       <CollapsibleSection
         title="Edit History & Rollback"
         expanded={expandedSection === 'audit'}
@@ -604,6 +663,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       >
         <AuditTrail locationId={locationId!} canRollback />
       </CollapsibleSection>
+      )}
 
 
     </div>
