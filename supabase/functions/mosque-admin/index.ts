@@ -71,11 +71,14 @@ serve(async (req) => {
 
       const { data: assigns, error: assignErr } = await supabase
         .from("mosque_admin_users")
-        .select("location_id")
+        .select("location_id, permissions")
         .eq("user_id", caller.id)
         .eq("is_paused", false);
       if (assignErr) console.error("[mosque-admin] mosque_admin_users read failed:", assignErr.message);
       adminLocationIds = (assigns ?? []).map((a: any) => a.location_id as string);
+      for (const a of assigns ?? []) {
+        adminPermissions[a.location_id as string] = (a as any).permissions ?? [];
+      }
     } else {
       console.error("[mosque-admin] no caller resolved; jwt present:", !!jwt, "action:", action);
     }
