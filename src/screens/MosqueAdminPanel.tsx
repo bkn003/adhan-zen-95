@@ -565,10 +565,20 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
               )}
             </div>
           ))}
+
+          {/* Bulk copy timings across date ranges / months */}
+          <BulkCopyTimings
+            locationId={locationId!}
+            prayerTimes={prayerTimes ?? []}
+            selectedMonth={selectedMonth}
+            onDone={clearPrayerCaches}
+          />
         </div>
       </CollapsibleSection>
+      )}
 
       {/* Photos Section */}
+      {can('photos') && (
       <CollapsibleSection
         title="Photos"
         expanded={expandedSection === 'photos'}
@@ -576,8 +586,10 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       >
         <PhotoManager locationId={locationId!} />
       </CollapsibleSection>
+      )}
 
       {/* Events & Announcements */}
+      {can('events') && (
       <CollapsibleSection
         title="Events & Announcements"
         expanded={expandedSection === 'events'}
@@ -585,8 +597,21 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       >
         <EventsAdmin locationId={locationId!} />
       </CollapsibleSection>
+      )}
+
+      {/* Jummah khutbah topics */}
+      {can('khutbah') && (
+      <CollapsibleSection
+        title="Jummah Khutbah Topic"
+        expanded={expandedSection === 'khutbah'}
+        onToggle={() => setExpandedSection(expandedSection === 'khutbah' ? null : 'khutbah')}
+      >
+        <KhutbahAdmin locationId={locationId!} />
+      </CollapsibleSection>
+      )}
 
       {/* Reviews moderation */}
+      {can('reviews') && (
       <CollapsibleSection
         title="Reviews & Moderation"
         expanded={expandedSection === 'reviews'}
@@ -594,8 +619,10 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       >
         <ReviewsAdmin locationId={locationId!} />
       </CollapsibleSection>
+      )}
 
       {/* Donations */}
+      {can('donations') && (
       <CollapsibleSection
         title="Donations (UPI / Bank)"
         expanded={expandedSection === 'donations'}
@@ -603,8 +630,10 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       >
         <DonationAdmin locationId={locationId!} location={mosque} />
       </CollapsibleSection>
+      )}
 
       {/* Jamaat attendance roster */}
+      {can('attendance') && (
       <CollapsibleSection
         title="Jamaat Attendance (who attended)"
         expanded={expandedSection === 'attendance'}
@@ -612,8 +641,21 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       >
         <AttendanceAdmin locationId={locationId!} mosqueName={mosque?.mosque_name} />
       </CollapsibleSection>
+      )}
+
+      {/* Attendance trends */}
+      {can('attendance') && (
+      <CollapsibleSection
+        title="Attendance Trends"
+        expanded={expandedSection === 'trends'}
+        onToggle={() => setExpandedSection(expandedSection === 'trends' ? null : 'trends')}
+      >
+        <AttendanceTrends locationId={locationId!} />
+      </CollapsibleSection>
+      )}
 
       {/* Timing edit history / audit trail */}
+      {can('audit') && (
       <CollapsibleSection
         title="Edit History & Rollback"
         expanded={expandedSection === 'audit'}
@@ -621,6 +663,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       >
         <AuditTrail locationId={locationId!} canRollback />
       </CollapsibleSection>
+      )}
 
 
     </div>
