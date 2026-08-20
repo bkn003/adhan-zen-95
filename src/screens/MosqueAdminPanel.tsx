@@ -16,7 +16,10 @@ import { AuditTrail } from '@/components/admin/AuditTrail';
 import { AttendanceAdmin } from '@/components/admin/AttendanceAdmin';
 
 import { AdminAuthCard } from '@/components/admin/AdminAuthCard';
-import { authHeaders, fetchAdminScope, adminSignOut } from '@/utils/adminApi';
+import { BulkCopyTimings } from '@/components/admin/BulkCopyTimings';
+import { KhutbahAdmin } from '@/components/admin/KhutbahAdmin';
+import { AttendanceTrends } from '@/components/admin/AttendanceTrends';
+import { authHeaders, fetchAdminScope, adminSignOut, canManageSection, type AdminScope, type AdminSectionKey } from '@/utils/adminApi';
 
 
 /**
@@ -75,6 +78,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
   const [newDateRange, setNewDateRange] = useState('1-5');
   const [selectedMonth, setSelectedMonth] = useState(monthNames[new Date().getMonth()]);
   const [expandedSection, setExpandedSection] = useState<string | null>('mosque');
+  const [scope, setScope] = useState<AdminScope | null>(null);
   const queryClient = useQueryClient();
 
   const { data: locations } = useLocations({ includePaused: true });
@@ -86,12 +90,20 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       setAdminEmail(scope.email);
       setLocationId(scope.location_id);
       setIsLoggedIn(true);
+      setScope(scope);
     } else {
       setIsLoggedIn(false);
       setLocationId(null);
+      setScope(null);
     }
     return scope;
   }, []);
+
+  /** Role-based gate: which sections this account may manage for this mosque. */
+  const can = React.useCallback(
+    (section: AdminSectionKey) => canManageSection(scope, locationId, section),
+    [scope, locationId],
+  );
 
   // Restore an existing Supabase session
   useEffect(() => {
