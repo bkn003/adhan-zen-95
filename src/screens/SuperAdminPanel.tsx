@@ -10,7 +10,7 @@ import { HijriAdjustment } from '@/components/HijriAdjustment';
 import { useRamadanContext } from '@/contexts/RamadanContext';
 
 import { AdminAuthCard } from '@/components/admin/AdminAuthCard';
-import { authHeaders, fetchAdminScope, adminSignOut, ADMIN_SECTIONS, type AdminSectionKey } from '@/utils/adminApi';
+import { authHeaders, fetchAdminScope, adminSignOut, ADMIN_SECTIONS } from '@/utils/adminApi';
 
 const SUPABASE_URL = "https://lhufqnokmdqkvzcxqwkl.supabase.co";
 
