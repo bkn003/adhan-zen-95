@@ -47,6 +47,7 @@ serve(async (req) => {
 
     let isSuper = false;
     let adminLocationIds: string[] = [];
+    const adminPermissions: Record<string, string[]> = {};
     if (caller) {
       const { data: roles, error: rolesErr } = await supabase
         .from("user_roles")
@@ -117,6 +118,7 @@ serve(async (req) => {
         is_super_admin: isSuper,
         location_ids: adminLocationIds,
         location_id: adminLocationIds[0] ?? null,
+        permissions: adminPermissions,
       });
     }
 
