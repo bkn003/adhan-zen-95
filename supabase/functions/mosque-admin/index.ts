@@ -110,6 +110,36 @@ serve(async (req) => {
       return json({ error: "Super admin authentication required" }, 401);
     }
 
+    // ---- Section-level permission enforcement (server-side) ----
+    // UI gating alone is not security: a mosque admin may only call actions
+    // for sections the super admin granted them in mosque_admin_users.permissions.
+    if (!isSuper && caller && location_id && adminLocationIds.includes(location_id)) {
+      const perms = adminPermissions[location_id] ?? [];
+      const ACTION_SECTION: Record<string, string> = {
+        update_location: "mosque",
+        set_credentials: "mosque",
+        update_prayer_times: "prayer",
+        delete_prayer_times: "prayer",
+        bulk_copy_prayer_times: "prayer",
+        rollback_timing_audit: "audit",
+        set_location_filters: "filters",
+        update_donation: "donations",
+        moderate_review: "reviews",
+      };
+      let section = ACTION_SECTION[action];
+      if (action === "upsert_announcement") {
+        section = data?.category === "khutbah" ? "khutbah" : "events";
+      }
+      if (section && !perms.includes(section)) {
+        return json({ error: "You don't have permission to manage this section" }, 403);
+      }
+      // Announcement delete/push don't carry a category: allow either content section.
+      if ((action === "delete_announcement" || action === "send_announcement_push") &&
+          !perms.includes("events") && !perms.includes("khutbah")) {
+        return json({ error: "You don't have permission to manage this section" }, 403);
+      }
+    }
+
     // Who am I? Used by both panels right after signing in.
     if (action === "admin_whoami") {
       if (!caller) return json({ error: "Sign in required" }, 401);
