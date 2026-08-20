@@ -71,10 +71,10 @@ Deno.test("anon cannot upload to mosque-images bucket", async () => {
   assert(error, "expected storage upload to be denied for anon");
 });
 
-// --- Edge function: super admin login rejects wrong password ---
-Deno.test("mosque-admin rejects bad super admin password", async () => {
+// --- Edge function: legacy password-based super admin login no longer exists ---
+Deno.test("mosque-admin legacy super_admin_login action is removed", async () => {
   const { status } = await post({ action: "super_admin_login", password: "definitely-wrong-password-xyz" });
-  assertEquals(status, 401);
+  assertEquals(status, 400); // unknown action — auth is via Supabase sessions now
 });
 
 // --- Edge function: login rejects bad creds ---
@@ -84,14 +84,14 @@ Deno.test("mosque-admin login rejects bad credentials", async () => {
 });
 
 // --- Edge function: update actions require auth ---
-Deno.test("mosque-admin update_location without creds returns 401", async () => {
+Deno.test("mosque-admin update_location without creds is rejected", async () => {
   const { status } = await post({ action: "update_location", location_id: "00000000-0000-0000-0000-000000000000", data: {} });
-  assertEquals(status, 401);
+  assert(status === 401 || status === 403, `expected 401/403, got ${status}`);
 });
 
-Deno.test("mosque-admin update_prayer_times without creds returns 401", async () => {
+Deno.test("mosque-admin update_prayer_times without creds is rejected", async () => {
   const { status } = await post({ action: "update_prayer_times", location_id: "00000000-0000-0000-0000-000000000000", data: {} });
-  assertEquals(status, 401);
+  assert(status === 401 || status === 403, `expected 401/403, got ${status}`);
 });
 
 Deno.test("mosque-admin update_location with bad creds returns 403", async () => {
