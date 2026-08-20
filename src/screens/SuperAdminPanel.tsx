@@ -281,6 +281,35 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
     }
   };
 
+  const openPermEditor = (locationId: string) => {
+    const admin = adminMap[locationId];
+    if (!admin) return;
+    setPermDraft(new Set(admin.permissions.length ? admin.permissions : ADMIN_SECTIONS.map(s => s.key)));
+    setPermEditId(prev => (prev === locationId ? null : locationId));
+  };
+
+  const savePermissions = async (locationId: string) => {
+    const admin = adminMap[locationId];
+    if (!admin) return;
+    if (permDraft.size === 0) {
+      toast.error('Select at least one section, or remove the admin');
+      return;
+    }
+    setSavingPerms(true);
+    try {
+      await callSuper('super_set_admin_permissions', {
+        data: { location_id: locationId, user_id: admin.user_id, permissions: [...permDraft] },
+      });
+      toast.success('Permissions updated');
+      setAdminMap(prev => ({ ...prev, [locationId]: { ...admin, permissions: [...permDraft] } }));
+      setPermEditId(null);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSavingPerms(false);
+    }
+  };
+
   const toggleAdminPause = async (location: any) => {
     setLoading(true);
     try {
