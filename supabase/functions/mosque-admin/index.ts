@@ -210,8 +210,31 @@ serve(async (req) => {
         user_id: a.user_id,
         is_paused: a.is_paused,
         username: emails.get(a.user_id) ?? "",
+        permissions: a.permissions ?? [],
       }));
       return json({ admins });
+    }
+
+    // Super admin: set which panel sections a mosque admin may manage
+    if (action === "super_set_admin_permissions") {
+      const targetLoc = (data?.location_id ?? location_id) as string | undefined;
+      const targetUser = data?.user_id as string | undefined;
+      const perms = data?.permissions;
+      if (!targetLoc || !targetUser || !Array.isArray(perms)) {
+        return json({ error: "Missing location_id, user_id, or permissions" }, 400);
+      }
+      const ALLOWED_PERMS = new Set([
+        "mosque", "filters", "prayer", "photos", "events",
+        "khutbah", "reviews", "donations", "attendance", "audit",
+      ]);
+      const clean = perms.filter((p: unknown) => typeof p === "string" && ALLOWED_PERMS.has(p as string));
+      const { error } = await supabase
+        .from("mosque_admin_users")
+        .update({ permissions: clean })
+        .eq("location_id", targetLoc)
+        .eq("user_id", targetUser);
+      if (error) return json({ error: error.message }, 500);
+      return json({ success: true, permissions: clean });
     }
 
 
