@@ -447,6 +447,73 @@ serve(async (req) => {
       return json({ success: true });
     }
 
+    // Bulk copy one date range's timings to other date ranges / months
+    if (action === "bulk_copy_prayer_times") {
+      if (!location_id || !data?.source_id || !Array.isArray(data?.targets)) {
+        return json({ error: "Missing source_id or targets" }, 400);
+      }
+      if (!canManage(location_id)) return json({ error: "Unauthorized" }, 403);
+
+      const { data: source } = await supabase
+        .from("prayer_times")
+        .select("*")
+        .eq("id", data.source_id)
+        .eq("location_id", location_id)
+        .maybeSingle();
+      if (!source) return json({ error: "Source date range not found for this mosque" }, 404);
+
+      const SKIP = new Set(["id", "location_id", "created_at", "month", "date_range"]);
+      const timeFields: Record<string, any> = {};
+      for (const [k, v] of Object.entries(source)) {
+        if (!SKIP.has(k)) timeFields[k] = v;
+      }
+
+      const targets = (data.targets as any[]).slice(0, 60);
+      const results: { month: string; date_range: string; status: string }[] = [];
+
+      for (const t of targets) {
+        const month = String(t?.month ?? "").slice(0, 20);
+        const date_range = String(t?.date_range ?? "").slice(0, 20);
+        if (!month || !date_range) continue;
+        if (month === source.month && date_range === source.date_range) continue;
+
+        const { data: existing } = await supabase
+          .from("prayer_times")
+          .select("id")
+          .eq("location_id", location_id)
+          .eq("month", month)
+          .eq("date_range", date_range)
+          .maybeSingle();
+
+        let resp;
+        if (existing?.id) {
+          resp = await supabase.from("prayer_times").update(timeFields).eq("id", existing.id);
+        } else {
+          resp = await supabase.from("prayer_times").insert({ ...timeFields, location_id, month, date_range });
+        }
+        results.push({ month, date_range, status: resp.error ? `error: ${resp.error.message}` : (existing?.id ? "updated" : "created") });
+      }
+
+      try {
+        await supabase.from("mosque_timing_audit").insert({
+          location_id,
+          prayer_time_id: null,
+          month: source.month,
+          date_range: source.date_range,
+          editor_label: caller?.email ?? "admin",
+          actor_role: isSuper ? "super_admin" : "mosque_admin",
+          changes: [{
+            field: "bulk_copy",
+            old_value: `${source.date_range} ${source.month}`,
+            new_value: `copied to ${results.filter(r => !r.status.startsWith("error")).length} range(s)`,
+          }],
+          status: "applied",
+        });
+      } catch (_e) { /* auditing must never block */ }
+
+      return json({ success: true, results });
+    }
+
 
     if (action === "rollback_timing_audit") {
       if (!location_id || !data?.audit_id) {
