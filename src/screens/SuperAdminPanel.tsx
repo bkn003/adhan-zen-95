@@ -10,7 +10,7 @@ import { HijriAdjustment } from '@/components/HijriAdjustment';
 import { useRamadanContext } from '@/contexts/RamadanContext';
 
 import { AdminAuthCard } from '@/components/admin/AdminAuthCard';
-import { authHeaders, fetchAdminScope, adminSignOut } from '@/utils/adminApi';
+import { authHeaders, fetchAdminScope, adminSignOut, ADMIN_SECTIONS } from '@/utils/adminApi';
 
 const SUPABASE_URL = "https://lhufqnokmdqkvzcxqwkl.supabase.co";
 
@@ -56,13 +56,17 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
-  const [adminMap, setAdminMap] = useState<Record<string, string>>({});
+  const [adminMap, setAdminMap] = useState<Record<string, { user_id: string; username: string; permissions: string[] }>>({});
+  // Per-admin section permissions editor
+  const [permEditId, setPermEditId] = useState<string | null>(null);
+  const [permDraft, setPermDraft] = useState<Set<string>>(new Set());
+  const [savingPerms, setSavingPerms] = useState(false);
   const { t } = useLanguage();
   const { isRamadan, setIsRamadan } = useRamadanContext();
 
   const { data: rawLocations, refetch: refetchLocations } = useLocations({ includePaused: true });
   const locations = React.useMemo(
-    () => rawLocations?.map(l => ({ ...l, admin_username: adminMap[l.id] })),
+    () => rawLocations?.map(l => ({ ...l, admin_username: adminMap[l.id]?.username })),
     [rawLocations, adminMap]
   );
   const { data: allFilters, refetch: refetchFilters } = useAllCustomFilters();
@@ -77,8 +81,10 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       });
       const data = await res.json();
       if (res.ok && Array.isArray(data.admins)) {
-        const map: Record<string, string> = {};
-        for (const a of data.admins) map[a.location_id] = a.username;
+        const map: Record<string, { user_id: string; username: string; permissions: string[] }> = {};
+        for (const a of data.admins) {
+          map[a.location_id] = { user_id: a.user_id, username: a.username, permissions: a.permissions ?? [] };
+        }
         setAdminMap(map);
       }
     } catch { /* ignore */ }
@@ -272,6 +278,35 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
       toast.error(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openPermEditor = (locationId: string) => {
+    const admin = adminMap[locationId];
+    if (!admin) return;
+    setPermDraft(new Set(admin.permissions.length ? admin.permissions : ADMIN_SECTIONS.map(s => s.key)));
+    setPermEditId(prev => (prev === locationId ? null : locationId));
+  };
+
+  const savePermissions = async (locationId: string) => {
+    const admin = adminMap[locationId];
+    if (!admin) return;
+    if (permDraft.size === 0) {
+      toast.error('Select at least one section, or remove the admin');
+      return;
+    }
+    setSavingPerms(true);
+    try {
+      await callSuper('super_set_admin_permissions', {
+        data: { location_id: locationId, user_id: admin.user_id, permissions: [...permDraft] },
+      });
+      toast.success('Permissions updated');
+      setAdminMap(prev => ({ ...prev, [locationId]: { ...admin, permissions: [...permDraft] } }));
+      setPermEditId(null);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSavingPerms(false);
     }
   };
 
@@ -836,8 +871,54 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
                   </div>
 
                   {loc.admin_username && editingId !== loc.id && (
-                    <div className="mt-2 p-2 bg-gray-700/30 rounded-lg">
-                      <p className="text-xs text-gray-500">Username: <span className="font-medium text-gray-300">{loc.admin_username}</span></p>
+                    <div className="mt-2 p-2 bg-gray-700/30 rounded-lg space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs text-gray-500">Username: <span className="font-medium text-gray-300">{loc.admin_username}</span></p>
+                        <button
+                          onClick={() => openPermEditor(loc.id)}
+                          className="text-[10px] font-semibold text-violet-400 hover:text-violet-300 flex items-center gap-1"
+                        >
+                          <LayoutGrid className="w-3 h-3" /> {permEditId === loc.id ? 'Close' : 'Permissions'}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-gray-500">
+                        Can manage: <span className="text-gray-400">{(adminMap[loc.id]?.permissions?.length ?? 0) === ADMIN_SECTIONS.length ? 'All sections' : (adminMap[loc.id]?.permissions ?? []).map(p => ADMIN_SECTIONS.find(s => s.key === p)?.label ?? p).join(', ') || 'All sections'}</span>
+                      </p>
+                    </div>
+                  )}
+
+                  {permEditId === loc.id && adminMap[loc.id] && (
+                    <div className="mt-2 p-2.5 bg-violet-500/10 rounded-lg border border-violet-500/20 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-bold text-violet-300 uppercase tracking-wider">Sections this admin can manage</p>
+                        <button
+                          onClick={() => setPermDraft(permDraft.size === ADMIN_SECTIONS.length ? new Set() : new Set(ADMIN_SECTIONS.map(s => s.key)))}
+                          className="text-[10px] font-semibold text-violet-400 underline"
+                        >
+                          {permDraft.size === ADMIN_SECTIONS.length ? 'Clear' : 'All'}
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {ADMIN_SECTIONS.map(s => (
+                          <button
+                            key={s.key}
+                            onClick={() => setPermDraft(prev => { const next = new Set(prev); if (next.has(s.key)) next.delete(s.key); else next.add(s.key); return next; })}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-semibold border flex items-center gap-1 transition-colors ${
+                              permDraft.has(s.key) ? 'bg-violet-500/30 text-violet-200 border-violet-400/40' : 'bg-gray-700/40 text-gray-500 border-gray-600/30'
+                            }`}
+                          >
+                            {permDraft.has(s.key) && <Check className="w-2.5 h-2.5" />}
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+                      <Button
+                        onClick={() => savePermissions(loc.id)}
+                        disabled={savingPerms}
+                        className="w-full bg-violet-500 hover:bg-violet-600 text-white rounded-lg text-xs h-8"
+                      >
+                        <Save className="w-3 h-3 mr-1" /> {savingPerms ? 'Saving…' : 'Save permissions'}
+                      </Button>
                     </div>
                   )}
 
