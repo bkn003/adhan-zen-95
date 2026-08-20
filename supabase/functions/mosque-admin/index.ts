@@ -103,6 +103,7 @@ serve(async (req) => {
       "super_get_app_settings",
       "super_set_app_settings",
       "super_run_change_watch",
+      "super_set_admin_permissions",
     ]);
 
     if (SUPER_ACTIONS.has(action) && !isSuper) {
@@ -194,7 +195,7 @@ serve(async (req) => {
     if (action === "super_list_admins") {
       const { data: assigns, error } = await supabase
         .from("mosque_admin_users")
-        .select("location_id, user_id, is_paused");
+        .select("location_id, user_id, is_paused, permissions");
       if (error) return json({ error: error.message }, 500);
 
       const emails = new Map<string, string>();
