@@ -309,6 +309,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       </div>
 
       {/* Mosque Info Section */}
+      {can('mosque') && (
       <CollapsibleSection
         title="Mosque Info"
         expanded={expandedSection === 'mosque'}
@@ -329,8 +330,10 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
           </div>
         )}
       </CollapsibleSection>
+      )}
 
       {/* Amenities & Filters Section */}
+      {can('filters') && (
       <CollapsibleSection
         title="Amenities & Filters"
         expanded={expandedSection === 'filters'}
@@ -338,8 +341,10 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
       >
         <AmenitiesFiltersSection locationId={locationId} />
       </CollapsibleSection>
+      )}
 
       {/* Prayer Times Section */}
+      {can('prayer') && (
       <CollapsibleSection
         title="Prayer Times"
         expanded={expandedSection === 'prayer'}
