@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
     const { data: times } = await supabase
       .from("prayer_times")
       .select(
-        "location_id, date_from, date_to, fajr_adhan, fajr_iqamah, dhuhr_adhan, dhuhr_iqamah, asr_adhan, asr_iqamah, maghrib_adhan, maghrib_iqamah, isha_adhan, isha_iqamah",
+        "location_id, date_from, date_to, fajr_adhan, fajr_iqamah, dhuhr_adhan, dhuhr_iqamah, asr_adhan, asr_iqamah, maghrib_adhan, maghrib_iqamah, isha_adhan, isha_iqamah, fajr_ramadan_iqamah, maghrib_ramadan_adhan, maghrib_ramadan_iqamah, isha_ramadan_iqamah, sahar_end, ifthar_time, tharaweeh",
       )
       .in("location_id", locationIds)
       .lte("date_from", iso(Date.now() + day))
@@ -169,11 +169,21 @@ Deno.serve(async (req) => {
 
       const mosque = nameOf.get(locationId) ?? "Your mosque";
 
+      // Ramadan mode: when a mosque publishes Ramadan-specific columns for this
+      // date range, those override the regular adhan/iqamah times.
+      const field = (base: string) => {
+        const ram = schedule[`${base.replace("_adhan", "_ramadan_adhan").replace("_iqamah", "_ramadan_iqamah")}` as keyof typeof schedule] as string | null;
+        return (ram ?? (schedule[base as keyof typeof schedule] as string | null)) ?? null;
+      };
+      const ramadanOn = prefs.ramadan !== false;
+
       for (const p of PRAYERS) {
-        const adhanMin = toMinutes(schedule[p.adhan as keyof typeof schedule] as string | null);
-        const iqamahMin = toMinutes(schedule[p.iqamah as keyof typeof schedule] as string | null);
-        const adhanTxt = adhanMin != null ? to12h(String(schedule[p.adhan as keyof typeof schedule]).slice(0, 5)) : "";
-        const iqamahTxt = iqamahMin != null ? to12h(String(schedule[p.iqamah as keyof typeof schedule]).slice(0, 5)) : "";
+        const adhanRaw = field(p.adhan);
+        const iqamahRaw = field(p.iqamah);
+        const adhanMin = toMinutes(adhanRaw);
+        const iqamahMin = toMinutes(iqamahRaw);
+        const adhanTxt = adhanMin != null ? to12h(String(adhanRaw).slice(0, 5)) : "";
+        const iqamahTxt = iqamahMin != null ? to12h(String(iqamahRaw).slice(0, 5)) : "";
         const adhanOn = periods.adhan !== false && prefs.adhan?.[p.key] !== false;
         const iqamahOn = periods.iqamah !== false && prefs.iqamah?.[p.key] !== false;
 
