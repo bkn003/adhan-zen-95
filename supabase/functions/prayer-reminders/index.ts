@@ -159,6 +159,7 @@ Deno.serve(async (req) => {
           iqamah?: Record<string, boolean>;
           periods?: Record<string, boolean>;
           preMinutes?: number;
+          ramadan?: boolean;
         };
         quietHours?: { enabled?: boolean; start?: string; end?: string };
       };
@@ -212,6 +213,66 @@ Deno.serve(async (req) => {
             body: `${mosque} — the jamaat is starting now.`,
             sendKey: `${date}:${p.key}:iqamah`,
             data: { type: "prayer_iqamah", prayer: p.key, location_id: locationId },
+          });
+        }
+      }
+
+      // ---- Ramadan-only alerts: Sahar end, Iftar, Tharaweeh ----
+      if (ramadanOn) {
+        const saharRaw = schedule["sahar_end" as keyof typeof schedule] as string | null;
+        const saharMin = toMinutes(saharRaw);
+        if (saharMin != null && minutes === saharMin - preMinutes && periods.preReminder !== false) {
+          jobs.push({
+            token: row.expo_push_token,
+            title: `Sahar ends in ${preMinutes} min`,
+            body: `${mosque} — Sahar ends at ${to12h(String(saharRaw).slice(0, 5))}. Finish your meal and prepare for Fajr.`,
+            sendKey: `${date}:sahar:pre`,
+            data: { type: "ramadan_sahar", location_id: locationId },
+          });
+        }
+        if (saharMin != null && minutes === saharMin) {
+          jobs.push({
+            token: row.expo_push_token,
+            title: `🌙 Sahar has ended — ${to12h(String(saharRaw).slice(0, 5))}`,
+            body: `${mosque} — begin your fast. Fajr jamaat follows shortly.`,
+            sendKey: `${date}:sahar:end`,
+            data: { type: "ramadan_sahar", location_id: locationId },
+          });
+        }
+
+        const iftarRaw =
+          (schedule["ifthar_time" as keyof typeof schedule] as string | null) ??
+          (schedule["maghrib_ramadan_adhan" as keyof typeof schedule] as string | null) ??
+          (schedule["maghrib_adhan" as keyof typeof schedule] as string | null);
+        const iftarMin = toMinutes(iftarRaw);
+        if (iftarMin != null && minutes === iftarMin - preMinutes && periods.preReminder !== false) {
+          jobs.push({
+            token: row.expo_push_token,
+            title: `Iftar in ${preMinutes} min`,
+            body: `${mosque} — Iftar at ${to12h(String(iftarRaw).slice(0, 5))}.`,
+            sendKey: `${date}:iftar:pre`,
+            data: { type: "ramadan_iftar", location_id: locationId },
+          });
+        }
+        if (iftarMin != null && minutes === iftarMin) {
+          jobs.push({
+            token: row.expo_push_token,
+            title: `🌙 Iftar time — ${to12h(String(iftarRaw).slice(0, 5))}`,
+            body: `${mosque} — break your fast. Maghrib jamaat follows.`,
+            sendKey: `${date}:iftar:now`,
+            data: { type: "ramadan_iftar", location_id: locationId },
+          });
+        }
+
+        const tharRaw = schedule["tharaweeh" as keyof typeof schedule] as string | null;
+        const tharMin = toMinutes(tharRaw);
+        if (tharMin != null && minutes === tharMin) {
+          jobs.push({
+            token: row.expo_push_token,
+            title: `Tharaweeh — ${to12h(String(tharRaw).slice(0, 5))}`,
+            body: `${mosque} — Tharaweeh prayers are starting now.`,
+            sendKey: `${date}:tharaweeh:now`,
+            data: { type: "ramadan_tharaweeh", location_id: locationId },
           });
         }
       }
