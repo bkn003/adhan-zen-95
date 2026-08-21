@@ -1125,7 +1125,50 @@ serve(async (req) => {
         resp = await supabase.from("mosque_announcements").insert(payload).select().maybeSingle();
       }
       if (resp.error) return new Response(JSON.stringify({ error: resp.error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      return new Response(JSON.stringify({ success: true, event: resp.data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      // ---- Auto-notify followers when a NEW Jummah khutbah post is published ----
+      // (Events keep their manual "send push" button; khutbahs notify on publish.)
+      let pushSent = 0;
+      if (!id && resp.data && (payload as any).category === "khutbah") {
+        try {
+          const { data: follows } = await supabase
+            .from("mosque_follows")
+            .select("user_id")
+            .eq("location_id", location_id)
+            .eq("announcements", true);
+          const userIds = (follows ?? []).map((f: any) => f.user_id);
+          let query = supabase
+            .from("push_tokens")
+            .select("expo_push_token, user_id")
+            .eq("disabled", false);
+          query = userIds.length
+            ? query.or(`user_id.in.(${userIds.join(",")}),location_id.eq.${location_id}`)
+            : query.eq("location_id", location_id);
+          const { data: tokenRows } = await query;
+          const tokens = Array.from(
+            new Set((tokenRows ?? []).map((t: any) => t.expo_push_token).filter(Boolean)),
+          ) as string[];
+          if (tokens.length) {
+            const eventAt = (resp.data as any).event_at
+              ? new Date((resp.data as any).event_at).toLocaleString("en-IN", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })
+              : "this Jummah";
+            const res = await sendFcm(
+              tokens,
+              `🕌 Jummah Khutbah: ${(payload as any).title}`,
+              `Topic for ${eventAt}. Tap to read the summary.`,
+              { type: "khutbah", location_id: String(location_id), announcement_id: String((resp.data as any).id ?? "") },
+            );
+            pushSent = res.sent;
+            if (res.invalidTokens.length) {
+              await supabase.from("push_tokens").update({ disabled: true }).in("expo_push_token", res.invalidTokens);
+            }
+          }
+        } catch (e) {
+          console.warn("khutbah push failed", e instanceof Error ? e.message : e);
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, event: resp.data, push_sent: pushSent }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "delete_announcement") {
