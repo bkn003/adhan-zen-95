@@ -320,6 +320,13 @@ serve(async (req) => {
 
       if (!canManage(location_id)) return json({ error: "Unauthorized" }, 403);
 
+      // Snapshot before the update so the audit log can show a real diff
+      const { data: beforeLoc } = await supabase
+        .from("locations")
+        .select("*")
+        .eq("id", location_id)
+        .maybeSingle();
+
       // Update location data
       const { error: updateError } = await supabase
         .from("locations")
@@ -331,6 +338,34 @@ serve(async (req) => {
           JSON.stringify({ error: updateError.message }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      // ---- Audit trail: mosque info / facility changes ----
+      try {
+        const SKIP = new Set(["id", "created_at", "updated_at", "latitude", "longitude"]);
+        const changes = Object.entries((data ?? {}) as Record<string, unknown>)
+          .filter(([k]) => !SKIP.has(k))
+          .map(([field, newValue]) => ({
+            field,
+            old_value: beforeLoc ? (beforeLoc[field] ?? null) : null,
+            new_value: (newValue ?? null) as any,
+          }))
+          .filter((c) => String(c.old_value ?? "") !== String(c.new_value ?? ""));
+        if (changes.length > 0) {
+          await supabase.from("mosque_timing_audit").insert({
+            location_id,
+            prayer_time_id: null,
+            month: null,
+            date_range: null,
+            editor_label: caller?.email ?? "admin",
+            actor_role: isSuper ? "super_admin" : "mosque_admin",
+            changes,
+            status: "applied",
+            section: "mosque_info",
+          });
+        }
+      } catch (_e) {
+        /* auditing must never block the update */
       }
 
       return new Response(
@@ -423,6 +458,7 @@ serve(async (req) => {
             actor_role: isSuper ? "super_admin" : "mosque_admin",
             changes,
             status: beforeRow ? "applied" : "created",
+            section: "prayer_times",
           });
         }
       } catch (_e) {
@@ -469,6 +505,7 @@ serve(async (req) => {
           actor_role: isSuper ? "super_admin" : "mosque_admin",
           changes,
           status: "deleted",
+          section: "prayer_times",
         });
       } catch (_e) {
         /* auditing must never block the delete */
@@ -538,6 +575,7 @@ serve(async (req) => {
             new_value: `copied to ${results.filter(r => !r.status.startsWith("error")).length} range(s)`,
           }],
           status: "applied",
+          section: "prayer_times",
         });
       } catch (_e) { /* auditing must never block */ }
 
