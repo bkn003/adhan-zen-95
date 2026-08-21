@@ -258,12 +258,44 @@ serve(async (req) => {
         "khutbah", "reviews", "donations", "attendance", "audit",
       ]);
       const clean = perms.filter((p: unknown) => typeof p === "string" && ALLOWED_PERMS.has(p as string));
+
+      const { data: beforeAdmin } = await supabase
+        .from("mosque_admin_users")
+        .select("permissions")
+        .eq("location_id", targetLoc)
+        .eq("user_id", targetUser)
+        .maybeSingle();
+
       const { error } = await supabase
         .from("mosque_admin_users")
         .update({ permissions: clean })
         .eq("location_id", targetLoc)
         .eq("user_id", targetUser);
       if (error) return json({ error: error.message }, 500);
+
+      // ---- Audit trail: permission changes ----
+      try {
+        const oldPerms = ((beforeAdmin?.permissions ?? []) as string[]).slice().sort().join(", ");
+        const newPerms = clean.slice().sort().join(", ");
+        if (oldPerms !== newPerms) {
+          await supabase.from("mosque_timing_audit").insert({
+            location_id: targetLoc,
+            prayer_time_id: null,
+            month: null,
+            date_range: null,
+            editor_label: caller?.email ?? "super admin",
+            actor_role: "super_admin",
+            changes: [{
+              field: "admin_permissions",
+              old_value: oldPerms || "(none)",
+              new_value: newPerms || "(none)",
+            }],
+            status: "applied",
+            section: "permissions",
+          });
+        }
+      } catch (_e) { /* auditing must never block */ }
+
       return json({ success: true, permissions: clean });
     }
 
@@ -320,6 +352,13 @@ serve(async (req) => {
 
       if (!canManage(location_id)) return json({ error: "Unauthorized" }, 403);
 
+      // Snapshot before the update so the audit log can show a real diff
+      const { data: beforeLoc } = await supabase
+        .from("locations")
+        .select("*")
+        .eq("id", location_id)
+        .maybeSingle();
+
       // Update location data
       const { error: updateError } = await supabase
         .from("locations")
@@ -331,6 +370,34 @@ serve(async (req) => {
           JSON.stringify({ error: updateError.message }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      // ---- Audit trail: mosque info / facility changes ----
+      try {
+        const SKIP = new Set(["id", "created_at", "updated_at", "latitude", "longitude"]);
+        const changes = Object.entries((data ?? {}) as Record<string, unknown>)
+          .filter(([k]) => !SKIP.has(k))
+          .map(([field, newValue]) => ({
+            field,
+            old_value: beforeLoc ? (beforeLoc[field] ?? null) : null,
+            new_value: (newValue ?? null) as any,
+          }))
+          .filter((c) => String(c.old_value ?? "") !== String(c.new_value ?? ""));
+        if (changes.length > 0) {
+          await supabase.from("mosque_timing_audit").insert({
+            location_id,
+            prayer_time_id: null,
+            month: null,
+            date_range: null,
+            editor_label: caller?.email ?? "admin",
+            actor_role: isSuper ? "super_admin" : "mosque_admin",
+            changes,
+            status: "applied",
+            section: "mosque_info",
+          });
+        }
+      } catch (_e) {
+        /* auditing must never block the update */
       }
 
       return new Response(
@@ -423,6 +490,7 @@ serve(async (req) => {
             actor_role: isSuper ? "super_admin" : "mosque_admin",
             changes,
             status: beforeRow ? "applied" : "created",
+            section: "prayer_times",
           });
         }
       } catch (_e) {
@@ -469,6 +537,7 @@ serve(async (req) => {
           actor_role: isSuper ? "super_admin" : "mosque_admin",
           changes,
           status: "deleted",
+          section: "prayer_times",
         });
       } catch (_e) {
         /* auditing must never block the delete */
@@ -538,6 +607,7 @@ serve(async (req) => {
             new_value: `copied to ${results.filter(r => !r.status.startsWith("error")).length} range(s)`,
           }],
           status: "applied",
+          section: "prayer_times",
         });
       } catch (_e) { /* auditing must never block */ }
 
@@ -1055,7 +1125,50 @@ serve(async (req) => {
         resp = await supabase.from("mosque_announcements").insert(payload).select().maybeSingle();
       }
       if (resp.error) return new Response(JSON.stringify({ error: resp.error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      return new Response(JSON.stringify({ success: true, event: resp.data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      // ---- Auto-notify followers when a NEW Jummah khutbah post is published ----
+      // (Events keep their manual "send push" button; khutbahs notify on publish.)
+      let pushSent = 0;
+      if (!id && resp.data && (payload as any).category === "khutbah") {
+        try {
+          const { data: follows } = await supabase
+            .from("mosque_follows")
+            .select("user_id")
+            .eq("location_id", location_id)
+            .eq("announcements", true);
+          const userIds = (follows ?? []).map((f: any) => f.user_id);
+          let query = supabase
+            .from("push_tokens")
+            .select("expo_push_token, user_id")
+            .eq("disabled", false);
+          query = userIds.length
+            ? query.or(`user_id.in.(${userIds.join(",")}),location_id.eq.${location_id}`)
+            : query.eq("location_id", location_id);
+          const { data: tokenRows } = await query;
+          const tokens = Array.from(
+            new Set((tokenRows ?? []).map((t: any) => t.expo_push_token).filter(Boolean)),
+          ) as string[];
+          if (tokens.length) {
+            const eventAt = (resp.data as any).event_at
+              ? new Date((resp.data as any).event_at).toLocaleString("en-IN", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })
+              : "this Jummah";
+            const res = await sendFcm(
+              tokens,
+              `🕌 Jummah Khutbah: ${(payload as any).title}`,
+              `Topic for ${eventAt}. Tap to read the summary.`,
+              { type: "khutbah", location_id: String(location_id), announcement_id: String((resp.data as any).id ?? "") },
+            );
+            pushSent = res.sent;
+            if (res.invalidTokens.length) {
+              await supabase.from("push_tokens").update({ disabled: true }).in("expo_push_token", res.invalidTokens);
+            }
+          }
+        } catch (e) {
+          console.warn("khutbah push failed", e instanceof Error ? e.message : e);
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, event: resp.data, push_sent: pushSent }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "delete_announcement") {
@@ -1087,8 +1200,46 @@ serve(async (req) => {
       const allowed = ["donation_enabled","donation_upi_id","donation_account_holder","donation_bank_name","donation_account_number","donation_ifsc","donation_notes"];
       const patch: Record<string, unknown> = {};
       for (const k of allowed) if (k in (data || {})) patch[k] = (data as any)[k];
+
+      const { data: beforeDon } = await supabase
+        .from("locations")
+        .select(allowed.join(","))
+        .eq("id", location_id)
+        .maybeSingle();
+
       const { error } = await supabase.from("locations").update(patch).eq("id", location_id);
       if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      // ---- Audit trail: donation settings changes (mask account number) ----
+      try {
+        const mask = (k: string, v: unknown) => {
+          if (v == null) return null;
+          const s = String(v);
+          if (k === "donation_account_number" && s.length > 4) return `••••${s.slice(-4)}`;
+          return s;
+        };
+        const changes = Object.entries(patch)
+          .map(([field, newValue]) => ({
+            field,
+            old_value: mask(field, beforeDon ? (beforeDon as any)[field] : null),
+            new_value: mask(field, newValue),
+          }))
+          .filter((c) => String(c.old_value ?? "") !== String(c.new_value ?? ""));
+        if (changes.length > 0) {
+          await supabase.from("mosque_timing_audit").insert({
+            location_id,
+            prayer_time_id: null,
+            month: null,
+            date_range: null,
+            editor_label: caller?.email ?? "admin",
+            actor_role: isSuper ? "super_admin" : "mosque_admin",
+            changes,
+            status: "applied",
+            section: "donations",
+          });
+        }
+      } catch (_e) { /* auditing must never block */ }
+
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
