@@ -580,6 +580,7 @@ export type Database = {
           month: string | null
           prayer_time_id: string | null
           rolled_back_at: string | null
+          section: string
           status: string
           updated_at: string
         }
@@ -594,6 +595,7 @@ export type Database = {
           month?: string | null
           prayer_time_id?: string | null
           rolled_back_at?: string | null
+          section?: string
           status?: string
           updated_at?: string
         }
@@ -608,6 +610,7 @@ export type Database = {
           month?: string | null
           prayer_time_id?: string | null
           rolled_back_at?: string | null
+          section?: string
           status?: string
           updated_at?: string
         }
