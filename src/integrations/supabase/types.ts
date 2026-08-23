@@ -303,6 +303,8 @@ export type Database = {
           location_note: string | null
           title: string
           updated_at: string
+          visible_from: string | null
+          visible_until: string | null
         }
         Insert: {
           allow_rsvp?: boolean
@@ -316,6 +318,8 @@ export type Database = {
           location_note?: string | null
           title: string
           updated_at?: string
+          visible_from?: string | null
+          visible_until?: string | null
         }
         Update: {
           allow_rsvp?: boolean
@@ -329,6 +333,8 @@ export type Database = {
           location_note?: string | null
           title?: string
           updated_at?: string
+          visible_from?: string | null
+          visible_until?: string | null
         }
         Relationships: [
           {
