@@ -2,8 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { History, Download, Filter, RotateCcw, Loader2, SearchX } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { getSupabaseFunctionsUrl } from '@/integrations/supabase/functions';
-import { authHeaders } from '@/utils/adminApi';
+import { authHeaders, ADMIN_FN_URL } from '@/utils/adminApi';
 import { cn } from '@/lib/utils';
 
 interface AuditEntry {
@@ -124,7 +123,7 @@ export const AuditLogExplorer: React.FC<Props> = ({ fixedLocationId, canRollback
     if (!window.confirm(`Roll back this change by ${entry.editor_label}? The previous values will be restored.`)) return;
     setBusy(entry.id);
     try {
-      const res = await fetch(getSupabaseFunctionsUrl('mosque-admin'), {
+      const res = await fetch(ADMIN_FN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({ action: 'rollback_timing_audit', audit_id: entry.id, location_id: entry.location_id }),
