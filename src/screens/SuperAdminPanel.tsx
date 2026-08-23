@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Shield, Eye, EyeOff, Save, Trash2, Plus, Search, Pause, Play, Settings, LayoutGrid, Tag, BarChart3, X, Check, ToggleLeft, ToggleRight, Moon, Calendar, Clock, Heart, HandCoins } from 'lucide-react';
+import { ArrowLeft, Shield, Eye, EyeOff, Save, Trash2, Plus, Search, Pause, Play, Settings, LayoutGrid, Tag, BarChart3, X, Check, ToggleLeft, ToggleRight, Moon, Calendar, Clock, Heart, HandCoins, History as HistoryIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocations } from '@/hooks/useLocations';
 import { useAllCustomFilters, useManageFilter, type CustomFilter } from '@/hooks/useCustomFilters';
@@ -546,7 +546,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
           { key: 'mosques', icon: LayoutGrid, label: 'Mosques' },
           { key: 'filters', icon: Tag, label: 'Filters' },
           { key: 'settings', icon: Settings, label: 'Settings' },
-          { key: 'audit', icon: History, label: 'Audit' },
+          { key: 'audit', icon: HistoryIcon, label: 'Audit' },
         ] as const).map(tab => (
           <button
             key={tab.key}
