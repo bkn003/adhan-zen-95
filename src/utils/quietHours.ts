@@ -21,6 +21,7 @@ export function loadQuietHours(): QuietHours {
 
 export function saveQuietHours(q: QuietHours) {
   localStorage.setItem(KEY, JSON.stringify(q));
+  window.dispatchEvent(new CustomEvent('quiet-hours-changed'));
 }
 
 const toMin = (t: string) => {

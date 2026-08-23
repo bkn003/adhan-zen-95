@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { MosqueTrustBadge } from '@/components/MosqueTrustBadge';
+import { isAnnouncementVisible } from '@/utils/announcementWindow';
 import { toast } from 'sonner';
 
 interface FeedScreenProps {
@@ -93,7 +94,10 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({ onBack }) => {
     queryClient.invalidateQueries({ queryKey: ['my-follows', user?.id] });
   };
 
-  const visible = (posts ?? []).filter((p: any) => filter === 'all' || (p.category || 'announcement') === filter);
+  const visible = (posts ?? []).filter((p: any) => {
+    if (filter !== 'all' && (p.category || 'announcement') !== filter) return false;
+    return isAnnouncementVisible(p); // respect admin display windows
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 pb-20">

@@ -15,6 +15,7 @@ import { MosqueTrustBadge } from '@/components/MosqueTrustBadge';
 
 
 import { PrayerAlarmOverlay } from '@/components/PrayerAlarmOverlay';
+import { AnnouncementPopup } from '@/components/AnnouncementPopup';
 import { useLocations } from '@/hooks/useLocations';
 import { usePrayerTimes } from '@/hooks/usePrayerTimes';
 import { useHijriDate } from '@/hooks/useHijriDate';
@@ -483,6 +484,9 @@ export const HomeScreen = ({
       {/* Ramadan Toggle */}
       <RamadanToggle isRamadan={isRamadan} onToggle={toggleRamadan} onResetAuto={resetAutoRamadan} autoOverride={autoRamadanOverride} isRamadanMonth={hijriDate?.monthNumber === 9} />
     </div>
+
+    {/* Mosque announcement popups (respect admin display windows; long text scrolls) */}
+    {selectedLocation && <AnnouncementPopup locationId={selectedLocation.id} />}
 
     {/* Full-screen Prayer Alarm Overlay */}
     {alarm.active && (

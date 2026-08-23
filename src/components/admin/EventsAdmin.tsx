@@ -19,9 +19,11 @@ interface Form {
   end_at: string;
   location_note: string;
   allow_rsvp: boolean;
+  visible_from: string;
+  visible_until: string;
 }
 
-const empty: Form = { title: '', body: '', category: 'announcement', event_at: '', end_at: '', location_note: '', allow_rsvp: false };
+const empty: Form = { title: '', body: '', category: 'announcement', event_at: '', end_at: '', location_note: '', allow_rsvp: false, visible_from: '', visible_until: '' };
 
 const toInput = (iso?: string | null) => iso ? new Date(iso).toISOString().slice(0, 16) : '';
 const fromInput = (v: string) => v ? new Date(v).toISOString() : null;
@@ -55,6 +57,8 @@ export const EventsAdmin: React.FC<Props> = ({ locationId }) => {
       end_at: fromInput(editing.end_at),
       location_note: editing.location_note.trim() || null,
       allow_rsvp: editing.allow_rsvp,
+      visible_from: fromInput(editing.visible_from),
+      visible_until: fromInput(editing.visible_until),
     };
     if (editing.id) fields.id = editing.id;
     try {
@@ -171,6 +175,29 @@ export const EventsAdmin: React.FC<Props> = ({ locationId }) => {
               />
             </label>
           </div>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs font-semibold text-gray-600">
+              Show from (optional)
+              <input
+                type="datetime-local"
+                className="w-full mt-1 px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                value={editing.visible_from}
+                onChange={e => setEditing({ ...editing, visible_from: e.target.value })}
+              />
+            </label>
+            <label className="text-xs font-semibold text-gray-600">
+              Hide after (optional)
+              <input
+                type="datetime-local"
+                className="w-full mt-1 px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                value={editing.visible_until}
+                onChange={e => setEditing({ ...editing, visible_until: e.target.value })}
+              />
+            </label>
+          </div>
+          <p className="text-[10px] text-gray-400 -mt-1">
+            Display window: the announcement appears on the mosque page, follow feed and home-page popup only between these times, then disappears automatically. Leave empty to always show.
+          </p>
           <label className="flex items-center gap-2 text-xs text-gray-700 py-1">
             <input
               type="checkbox"
@@ -211,6 +238,12 @@ export const EventsAdmin: React.FC<Props> = ({ locationId }) => {
                     <Calendar className="w-3 h-3" /> {new Date(e.event_at).toLocaleString()}
                   </p>
                 )}
+                {(e.visible_from || e.visible_until) && (
+                  <p className="text-[10px] text-teal-600 mt-0.5">
+                    ⏳ Visible {e.visible_from ? `from ${new Date(e.visible_from).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}` : 'from now'}
+                    {e.visible_until ? ` until ${new Date(e.visible_until).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}` : ' onwards'}
+                  </p>
+                )}
               </div>
               <div className="flex gap-1">
                 <button
@@ -218,6 +251,7 @@ export const EventsAdmin: React.FC<Props> = ({ locationId }) => {
                     id: e.id, title: e.title, body: e.body || '', category: e.category || 'announcement',
                     event_at: toInput(e.event_at), end_at: toInput(e.end_at),
                     location_note: e.location_note || '', allow_rsvp: !!e.allow_rsvp,
+                    visible_from: toInput(e.visible_from), visible_until: toInput(e.visible_until),
                   })}
                   className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"
                 >

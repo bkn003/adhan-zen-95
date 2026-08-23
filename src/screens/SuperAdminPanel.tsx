@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Shield, Eye, EyeOff, Save, Trash2, Plus, Search, Pause, Play, Settings, LayoutGrid, Tag, BarChart3, X, Check, ToggleLeft, ToggleRight, Moon, Calendar, Clock, Heart, HandCoins } from 'lucide-react';
+import { ArrowLeft, Shield, Eye, EyeOff, Save, Trash2, Plus, Search, Pause, Play, Settings, LayoutGrid, Tag, BarChart3, X, Check, ToggleLeft, ToggleRight, Moon, Calendar, Clock, Heart, HandCoins, History as HistoryIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocations } from '@/hooks/useLocations';
 import { useAllCustomFilters, useManageFilter, type CustomFilter } from '@/hooks/useCustomFilters';
@@ -10,6 +10,7 @@ import { HijriAdjustment } from '@/components/HijriAdjustment';
 import { useRamadanContext } from '@/contexts/RamadanContext';
 
 import { AdminAuthCard } from '@/components/admin/AdminAuthCard';
+import { AuditLogExplorer } from '@/components/admin/AuditLogExplorer';
 import { authHeaders, fetchAdminScope, adminSignOut, ADMIN_SECTIONS } from '@/utils/adminApi';
 
 const SUPABASE_URL = "https://lhufqnokmdqkvzcxqwkl.supabase.co";
@@ -48,7 +49,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [superEmail, setSuperEmail] = useState('');
-  const [activeTab, setActiveTab] = useState<'mosques' | 'filters' | 'dashboard' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'mosques' | 'filters' | 'dashboard' | 'settings' | 'audit'>('dashboard');
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newUsername, setNewUsername] = useState('');
@@ -545,6 +546,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
           { key: 'mosques', icon: LayoutGrid, label: 'Mosques' },
           { key: 'filters', icon: Tag, label: 'Filters' },
           { key: 'settings', icon: Settings, label: 'Settings' },
+          { key: 'audit', icon: HistoryIcon, label: 'Audit' },
         ] as const).map(tab => (
           <button
             key={tab.key}
@@ -755,6 +757,11 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ==================== AUDIT LOG TAB ==================== */}
+      {activeTab === 'audit' && (
+        <AuditLogExplorer dark />
       )}
 
       {/* ==================== MOSQUES TAB ==================== */}
