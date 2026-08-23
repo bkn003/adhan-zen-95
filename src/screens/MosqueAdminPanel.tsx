@@ -12,7 +12,7 @@ import { useSignedPhotoUrls, invalidateSignedPhotoUrl } from '@/utils/signedPhot
 import { EventsAdmin } from '@/components/admin/EventsAdmin';
 import { DonationAdmin } from '@/components/admin/DonationAdmin';
 import { ReviewsAdmin } from '@/components/admin/ReviewsAdmin';
-import { AuditTrail } from '@/components/admin/AuditTrail';
+import { AuditLogExplorer } from '@/components/admin/AuditLogExplorer';
 import { AttendanceAdmin } from '@/components/admin/AttendanceAdmin';
 
 import { AdminAuthCard } from '@/components/admin/AdminAuthCard';
@@ -661,7 +661,7 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         expanded={expandedSection === 'audit'}
         onToggle={() => setExpandedSection(expandedSection === 'audit' ? null : 'audit')}
       >
-        <AuditTrail locationId={locationId!} canRollback />
+        <AuditLogExplorer fixedLocationId={locationId!} canRollback />
       </CollapsibleSection>
       )}
 

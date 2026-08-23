@@ -19,6 +19,8 @@ interface Form {
   end_at: string;
   location_note: string;
   allow_rsvp: boolean;
+  visible_from: string;
+  visible_until: string;
 }
 
 const empty: Form = { title: '', body: '', category: 'announcement', event_at: '', end_at: '', location_note: '', allow_rsvp: false };
@@ -55,6 +57,8 @@ export const EventsAdmin: React.FC<Props> = ({ locationId }) => {
       end_at: fromInput(editing.end_at),
       location_note: editing.location_note.trim() || null,
       allow_rsvp: editing.allow_rsvp,
+      visible_from: fromInput(editing.visible_from),
+      visible_until: fromInput(editing.visible_until),
     };
     if (editing.id) fields.id = editing.id;
     try {

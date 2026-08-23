@@ -93,7 +93,8 @@ export const MosqueEvents: React.FC<MosqueEventsProps> = ({ locationId }) => {
 
   const { upcoming, past } = useMemo(() => {
     const now = Date.now();
-    const list = events ?? [];
+    // Hide announcements outside their admin-set display window (visible_from → visible_until)
+    const list = (events ?? []).filter((e: any) => isAnnouncementVisible(e, now));
     const withDate = list.filter((e: any) => e.event_at);
     const noDate = list.filter((e: any) => !e.event_at);
     const upcoming = [
