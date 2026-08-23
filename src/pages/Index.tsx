@@ -88,10 +88,20 @@ const Index = () => {
     };
   }, []);
 
-  // Keep the backend's copy of reminder prefs / mosque selection fresh.
+  // Keep the backend's copy of reminder prefs / mosque selection fresh —
+  // on mosque change and whenever the user edits lead times or quiet hours.
   useEffect(() => {
-    if (!selectedLocationId) return;
-    void import('@/native/webPush').then(({ syncWebPushPrefs }) => syncWebPushPrefs());
+    const sync = () => {
+      if (!selectedLocationId) return;
+      void import('@/native/webPush').then(({ syncWebPushPrefs }) => syncWebPushPrefs());
+    };
+    sync();
+    window.addEventListener('prayer-notification-prefs-changed', sync);
+    window.addEventListener('quiet-hours-changed', sync);
+    return () => {
+      window.removeEventListener('prayer-notification-prefs-changed', sync);
+      window.removeEventListener('quiet-hours-changed', sync);
+    };
   }, [selectedLocationId]);
 
   // Listen for admin panel navigation event

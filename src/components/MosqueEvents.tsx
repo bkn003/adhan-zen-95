@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 import { toast } from 'sonner';
 import { showWebNotification } from '@/utils/webNotify';
+import { isAnnouncementVisible } from '@/utils/announcementWindow';
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string; icon: string }> = {
   announcement: { bg: 'bg-blue-100', text: 'text-blue-700', icon: '📢' },
