@@ -145,6 +145,7 @@ export const HomeScreen = ({
 
   // Sync Ramadan state to context for use in other screens
   const { setIsRamadan } = useRamadanContext();
+  const adminAccess = useAdminAccess();
 
   useEffect(() => {
     setIsRamadan(isRamadan);
