@@ -1203,12 +1203,14 @@ serve(async (req) => {
       for (const k of allowed) if (k in (data || {})) patch[k] = (data as any)[k];
 
       const { data: beforeDon } = await supabase
-        .from("locations")
+        .from("location_donation_details")
         .select(allowed.join(","))
-        .eq("id", location_id)
+        .eq("location_id", location_id)
         .maybeSingle();
 
-      const { error } = await supabase.from("locations").update(patch).eq("id", location_id);
+      const { error } = await supabase
+        .from("location_donation_details")
+        .upsert({ location_id, ...patch, updated_at: new Date().toISOString() }, { onConflict: "location_id" });
       if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       // ---- Audit trail: donation settings changes (mask account number) ----
