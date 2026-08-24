@@ -35,6 +35,7 @@ import { initializeOfflineAdhanService } from '@/native/offlineAdhanService';
 import { scheduleAdhanWithMedian, savePrayerTimesForBoot, registerMedianPrayerTimesSaver, isMedianApp } from '@/native/medianBridge';
 import { useRamadanContext } from '@/contexts/RamadanContext';
 import { useAdhanInitializer } from '@/hooks/useAdhanInitializer';
+import { useAdminAccess } from '@/hooks/useAdminAccess';
 import { useLanguage } from '@/i18n/LanguageContext';
 interface HomeScreenProps {
   selectedLocationId?: string;
