@@ -1,13 +1,25 @@
-const CACHE_NAME = 'adhan-zen-v3';
+const CACHE_NAME = 'adhan-zen-v4';
+// Only cache assets that actually exist in the build output. A single missing
+// URL rejects cache.addAll and the whole worker fails to install — which is
+// why notification tests reported "service worker not registered".
 const urlsToCache = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
   '/manifest.json',
   '/app-icon-192.png',
   '/app-icon-512.png',
   '/adhan-local.mp3'
 ];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      // Cache each asset independently so one 404 can't abort the install.
+      await Promise.allSettled(urlsToCache.map((u) => cache.add(u)));
+    })()
+  );
+  self.skipWaiting();
+});
 
 // Store prayer times and location data
 let prayerTimesCache = null;
