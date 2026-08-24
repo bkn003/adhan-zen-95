@@ -12,12 +12,29 @@ export async function showWebNotification(
 
   try {
     if ('serviceWorker' in navigator) {
-      const reg =
-        (await navigator.serviceWorker.getRegistration()) ??
+      let reg =
+        (await navigator.serviceWorker.getRegistration('/')) ??
         (await Promise.race([
           navigator.serviceWorker.ready,
           new Promise<null>((r) => setTimeout(() => r(null), 3000)),
         ]));
+      // No active worker yet — register one ourselves instead of asking the
+      // user to reload. Await the registering worker becoming active.
+      if (!reg) {
+        reg = await navigator.serviceWorker.register('/sw.js');
+      }
+      if (reg && !reg.active && (reg.installing || reg.waiting)) {
+        const worker = reg.installing ?? reg.waiting;
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(resolve, 5000);
+          worker!.addEventListener('statechange', () => {
+            if (worker!.state === 'activated') {
+              clearTimeout(timeout);
+              resolve();
+            }
+          });
+        });
+      }
       if (reg) {
         await reg.showNotification(title, options);
         return true;
