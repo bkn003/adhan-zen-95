@@ -360,10 +360,20 @@ serve(async (req) => {
         .eq("id", location_id)
         .maybeSingle();
 
+      // Donation banking fields live in the restricted location_donation_details
+      // table and are managed only via update_donation — never through here.
+      const DONATION_KEYS = new Set([
+        "donation_enabled","donation_upi_id","donation_account_holder",
+        "donation_bank_name","donation_account_number","donation_ifsc","donation_notes",
+      ]);
+      const cleanData = Object.fromEntries(
+        Object.entries((data ?? {}) as Record<string, unknown>).filter(([k]) => !DONATION_KEYS.has(k))
+      );
+
       // Update location data
       const { error: updateError } = await supabase
         .from("locations")
-        .update(data)
+        .update(cleanData)
         .eq("id", location_id);
 
       if (updateError) {
@@ -1179,6 +1189,18 @@ serve(async (req) => {
       const { error } = await supabase.from("mosque_announcements").delete().eq("id", id).eq("location_id", location_id);
       if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (action === "get_donation") {
+      const ok = await verifyAdmin();
+      if (!ok) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const { data: d, error } = await supabase
+        .from("location_donation_details")
+        .select("donation_enabled, donation_upi_id, donation_account_holder, donation_bank_name, donation_account_number, donation_ifsc, donation_notes")
+        .eq("location_id", location_id)
+        .maybeSingle();
+      if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ donation: d ?? null }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "update_donation") {
