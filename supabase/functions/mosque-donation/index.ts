@@ -51,17 +51,25 @@ serve(async (req) => {
       });
     }
 
-    const { data, error } = await admin
+    // Banking details live in a locked-down table (no anon/authenticated access).
+    const { data: loc, error: locErr } = await admin
       .from('locations')
-      .select(
-        'donation_enabled, donation_upi_id, donation_account_holder, donation_bank_name, donation_account_number, donation_ifsc, donation_notes, is_visible'
-      )
+      .select('is_visible')
       .eq('id', locationId)
+      .maybeSingle();
+    if (locErr) throw locErr;
+
+    const { data, error } = await admin
+      .from('location_donation_details')
+      .select(
+        'donation_enabled, donation_upi_id, donation_account_holder, donation_bank_name, donation_account_number, donation_ifsc, donation_notes'
+      )
+      .eq('location_id', locationId)
       .maybeSingle();
 
     if (error) throw error;
 
-    const visible = data && data.donation_enabled === true && data.is_visible !== false;
+    const visible = !!loc && loc.is_visible !== false && data && data.donation_enabled === true;
     const payload = visible
       ? {
           donation_enabled: true,

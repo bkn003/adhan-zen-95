@@ -124,6 +124,7 @@ serve(async (req) => {
         rollback_timing_audit: "audit",
         set_location_filters: "filters",
         update_donation: "donations",
+        get_donation: "donations",
         moderate_review: "reviews",
       };
       let section = ACTION_SECTION[action];
