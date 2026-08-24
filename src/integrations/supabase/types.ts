@@ -133,11 +133,8 @@ export type Database = {
           },
         ]
       }
-      locations: {
+      location_donation_details: {
         Row: {
-          ac_available: boolean | null
-          created_at: string | null
-          district: string
           donation_account_holder: string | null
           donation_account_number: string | null
           donation_bank_name: string | null
@@ -145,6 +142,46 @@ export type Database = {
           donation_ifsc: string | null
           donation_notes: string | null
           donation_upi_id: string | null
+          location_id: string
+          updated_at: string
+        }
+        Insert: {
+          donation_account_holder?: string | null
+          donation_account_number?: string | null
+          donation_bank_name?: string | null
+          donation_enabled?: boolean
+          donation_ifsc?: string | null
+          donation_notes?: string | null
+          donation_upi_id?: string | null
+          location_id: string
+          updated_at?: string
+        }
+        Update: {
+          donation_account_holder?: string | null
+          donation_account_number?: string | null
+          donation_bank_name?: string | null
+          donation_enabled?: boolean
+          donation_ifsc?: string | null
+          donation_notes?: string | null
+          donation_upi_id?: string | null
+          location_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_donation_details_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: true
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      locations: {
+        Row: {
+          ac_available: boolean | null
+          created_at: string | null
+          district: string
           id: string
           is_paused: boolean | null
           is_visible: boolean | null
@@ -165,13 +202,6 @@ export type Database = {
           ac_available?: boolean | null
           created_at?: string | null
           district: string
-          donation_account_holder?: string | null
-          donation_account_number?: string | null
-          donation_bank_name?: string | null
-          donation_enabled?: boolean
-          donation_ifsc?: string | null
-          donation_notes?: string | null
-          donation_upi_id?: string | null
           id?: string
           is_paused?: boolean | null
           is_visible?: boolean | null
@@ -192,13 +222,6 @@ export type Database = {
           ac_available?: boolean | null
           created_at?: string | null
           district?: string
-          donation_account_holder?: string | null
-          donation_account_number?: string | null
-          donation_bank_name?: string | null
-          donation_enabled?: boolean
-          donation_ifsc?: string | null
-          donation_notes?: string | null
-          donation_upi_id?: string | null
           id?: string
           is_paused?: boolean | null
           is_visible?: boolean | null

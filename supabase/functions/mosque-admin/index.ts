@@ -124,6 +124,7 @@ serve(async (req) => {
         rollback_timing_audit: "audit",
         set_location_filters: "filters",
         update_donation: "donations",
+        get_donation: "donations",
         moderate_review: "reviews",
       };
       let section = ACTION_SECTION[action];
@@ -359,10 +360,20 @@ serve(async (req) => {
         .eq("id", location_id)
         .maybeSingle();
 
+      // Donation banking fields live in the restricted location_donation_details
+      // table and are managed only via update_donation — never through here.
+      const DONATION_KEYS = new Set([
+        "donation_enabled","donation_upi_id","donation_account_holder",
+        "donation_bank_name","donation_account_number","donation_ifsc","donation_notes",
+      ]);
+      const cleanData = Object.fromEntries(
+        Object.entries((data ?? {}) as Record<string, unknown>).filter(([k]) => !DONATION_KEYS.has(k))
+      );
+
       // Update location data
       const { error: updateError } = await supabase
         .from("locations")
-        .update(data)
+        .update(cleanData)
         .eq("id", location_id);
 
       if (updateError) {
@@ -375,7 +386,7 @@ serve(async (req) => {
       // ---- Audit trail: mosque info / facility changes ----
       try {
         const SKIP = new Set(["id", "created_at", "updated_at", "latitude", "longitude"]);
-        const changes = Object.entries((data ?? {}) as Record<string, unknown>)
+        const changes = Object.entries(cleanData)
           .filter(([k]) => !SKIP.has(k))
           .map(([field, newValue]) => ({
             field,
@@ -1180,6 +1191,18 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    if (action === "get_donation") {
+      const ok = await verifyAdmin();
+      if (!ok) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const { data: d, error } = await supabase
+        .from("location_donation_details")
+        .select("donation_enabled, donation_upi_id, donation_account_holder, donation_bank_name, donation_account_number, donation_ifsc, donation_notes")
+        .eq("location_id", location_id)
+        .maybeSingle();
+      if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ donation: d ?? null }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (action === "update_donation") {
       const ok = await verifyAdmin();
       if (!ok) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -1202,12 +1225,14 @@ serve(async (req) => {
       for (const k of allowed) if (k in (data || {})) patch[k] = (data as any)[k];
 
       const { data: beforeDon } = await supabase
-        .from("locations")
+        .from("location_donation_details")
         .select(allowed.join(","))
-        .eq("id", location_id)
+        .eq("location_id", location_id)
         .maybeSingle();
 
-      const { error } = await supabase.from("locations").update(patch).eq("id", location_id);
+      const { error } = await supabase
+        .from("location_donation_details")
+        .upsert({ location_id, ...patch, updated_at: new Date().toISOString() }, { onConflict: "location_id" });
       if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       // ---- Audit trail: donation settings changes (mask account number) ----
