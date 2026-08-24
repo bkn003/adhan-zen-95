@@ -111,21 +111,21 @@ export const AnnouncementPopup: React.FC<{ locationId?: string | null }> = ({ lo
           </button>
         </div>
 
-        <div className="p-4">
-          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${meta.chip}`}>
+        <div className="p-4 text-center">
+          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold ${meta.chip}`}>
             <span>{meta.icon}</span> {current.category}
           </span>
-          <h3 className="mt-2 text-base font-bold text-gray-900 leading-snug">{current.title}</h3>
+          <h3 className="mt-2 text-base font-bold text-gray-900 leading-snug text-center">{current.title}</h3>
 
           {/* Long text scrolls inside the card instead of overflowing */}
           {current.body && (
-            <div className="mt-2 max-h-[40vh] overflow-y-auto pr-1 -mr-1">
-              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{current.body}</p>
+            <div className="mt-2 max-h-[40vh] overflow-y-auto px-1">
+              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap text-center">{current.body}</p>
             </div>
           )}
 
           {current.visible_until && (
-            <p className="mt-2 flex items-center gap-1 text-[10px] text-gray-400">
+            <p className="mt-2 flex items-center justify-center gap-1 text-[10px] text-gray-400">
               <CalendarClock className="w-3 h-3" />
               Shown until{' '}
               {new Date(current.visible_until).toLocaleString(undefined, {

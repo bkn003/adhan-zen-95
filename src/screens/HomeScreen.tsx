@@ -481,8 +481,11 @@ export const HomeScreen = ({
       <AppSupportCard variant="compact" />
 
 
-      {/* Ramadan Toggle */}
-      <RamadanToggle isRamadan={isRamadan} onToggle={toggleRamadan} onResetAuto={resetAutoRamadan} autoOverride={autoRamadanOverride} isRamadanMonth={hijriDate?.monthNumber === 9} />
+      {/* Ramadan Toggle — admin/super admin only; regular users get auto-detection
+          so a mistaken tap can't switch the whole app into Ramadan timings. */}
+      {(adminAccess.isSuperAdmin || adminAccess.isMosqueAdmin) && (
+        <RamadanToggle isRamadan={isRamadan} onToggle={toggleRamadan} onResetAuto={resetAutoRamadan} autoOverride={autoRamadanOverride} isRamadanMonth={hijriDate?.monthNumber === 9} />
+      )}
     </div>
 
     {/* Mosque announcement popups (respect admin display windows; long text scrolls) */}
