@@ -386,7 +386,7 @@ serve(async (req) => {
       // ---- Audit trail: mosque info / facility changes ----
       try {
         const SKIP = new Set(["id", "created_at", "updated_at", "latitude", "longitude"]);
-        const changes = Object.entries((data ?? {}) as Record<string, unknown>)
+        const changes = Object.entries(cleanData)
           .filter(([k]) => !SKIP.has(k))
           .map(([field, newValue]) => ({
             field,

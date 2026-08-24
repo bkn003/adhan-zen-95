@@ -38,11 +38,26 @@ export const DonationAdmin: React.FC<Props> = ({ locationId, location }) => {
     return () => { cancelled = true; };
   }, []);
 
+  // Banking details live in a restricted table — load them through the admin
+  // edge function (service role) instead of the public locations row.
   useEffect(() => {
-    const next: Record<string, any> = { donation_enabled: !!location?.donation_enabled };
-    FIELDS.forEach(f => { next[f.key] = location?.[f.key] ?? ''; });
-    setForm(next);
-  }, [locationId, location]);
+    if (!locationId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('mosque-admin', {
+          body: { action: 'get_donation', location_id: locationId },
+        });
+        const d = (data as any)?.donation;
+        if (!cancelled && !error && d) {
+          const next: Record<string, any> = { donation_enabled: !!d.donation_enabled };
+          FIELDS.forEach(f => { next[f.key] = d[f.key] ?? ''; });
+          setForm(next);
+        }
+      } catch { /* no permission / offline — keep blank form */ }
+    })();
+    return () => { cancelled = true; };
+  }, [locationId]);
 
   const save = async () => {
     setSaving(true);
