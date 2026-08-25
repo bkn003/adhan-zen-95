@@ -342,6 +342,11 @@ export const SettingsScreen = () => {
         </div>
       </SettingsCard>
 
+      {/* Sahar & Iftar times for the selected mosque (read-only for users) */}
+      <SettingsCard title="Sahar & Iftar" icon={Moon} gradient="from-orange-50/50 to-white">
+        <SaharTimeSettings location={selectedLocation} />
+      </SettingsCard>
+
       </Section>
 
       <Section title="Reminders & Alerts" icon={Bell} open={openSection === 'reminders'} onToggle={() => toggle('reminders')}>
