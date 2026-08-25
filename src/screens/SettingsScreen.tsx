@@ -21,6 +21,7 @@ import { VibrationSelector } from '@/components/VibrationSelector';
 import { SyncStatusCard } from '@/components/SyncStatusCard';
 import { ProfilePhoneField } from '@/components/ProfilePhoneField';
 import { PrayerNotificationToggles } from '@/components/PrayerNotificationToggles';
+import { SaharTimeSettings } from '@/components/SaharTimeSettings';
 import { Link } from 'react-router-dom';
 import { showWebNotification, ensureNotificationPermission } from '@/utils/webNotify';
 
@@ -340,6 +341,11 @@ export const SettingsScreen = () => {
             </div>
           )}
         </div>
+      </SettingsCard>
+
+      {/* Sahar & Iftar times for the selected mosque (read-only for users) */}
+      <SettingsCard title="Sahar & Iftar" icon={Moon} gradient="from-orange-50/50 to-white">
+        <SaharTimeSettings location={selectedLocation} />
       </SettingsCard>
 
       </Section>
