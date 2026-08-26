@@ -152,7 +152,7 @@ export const HomeScreen = ({
   useEffect(() => {
     if (!selectedLocation || !selectedDate) return;
     if (processedPrayerTimes.length > 0 || prayerTimes.length > 0) {
-      setOfflineFallbackTimes([]);
+      setOfflineFallbackTimes((prev) => (prev.length === 0 ? prev : []));
       return;
     }
     loadDailySchedule(selectedLocation.id, selectedDate)
@@ -162,7 +162,8 @@ export const HomeScreen = ({
         }
       })
       .catch(console.error);
-  }, [selectedLocation?.id, selectedDate, processedPrayerTimes, prayerTimes]);
+  }, [selectedLocation?.id, selectedDate, processedPrayerTimes.length, prayerTimes.length]);
+
 
   // Use processed data if available, otherwise use hook data
   // PRIORITY: Supabase (prayerTimes) > Static JSON (processedPrayerTimes) > Offline fallback
