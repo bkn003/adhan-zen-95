@@ -110,23 +110,20 @@ export const HomeScreen = ({
     selectedLocation
   );
 
-  // Process prayer times based on data source
-  let processedPrayerTimes, processedForbiddenTimes;
-
-  if (staticPrayerTimesData && staticPrayerTimesData.times.length > 0) {
-    // Use static data - find prayer times for selected date
-    const dailyPrayerTime = getPrayerTimesForDate(staticPrayerTimesData.times, selectedDate);
-    if (dailyPrayerTime) {
-      processedPrayerTimes = convertToPrayerObject(dailyPrayerTime, false, false);
-      processedForbiddenTimes = createForbiddenTimes(dailyPrayerTime);
-    } else {
-      processedPrayerTimes = [];
-      processedForbiddenTimes = [];
+  // Process prayer times based on data source (memoised so identities stay stable)
+  const { processedPrayerTimes, processedForbiddenTimes } = useMemo(() => {
+    if (staticPrayerTimesData && staticPrayerTimesData.times.length > 0) {
+      const dailyPrayerTime = getPrayerTimesForDate(staticPrayerTimesData.times, selectedDate);
+      if (dailyPrayerTime) {
+        return {
+          processedPrayerTimes: convertToPrayerObject(dailyPrayerTime, false, false),
+          processedForbiddenTimes: createForbiddenTimes(dailyPrayerTime),
+        };
+      }
     }
-  } else {
-    processedPrayerTimes = [];
-    processedForbiddenTimes = [];
-  }
+    return { processedPrayerTimes: [] as Prayer[], processedForbiddenTimes: [] as any[] };
+  }, [staticPrayerTimesData, selectedDate]);
+
 
   const {
     prayerTimes,
