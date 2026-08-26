@@ -121,7 +121,7 @@ export const HomeScreen = ({
         };
       }
     }
-    return { processedPrayerTimes: [] as Prayer[], processedForbiddenTimes: [] as any[] };
+    return { processedPrayerTimes: [] as any[], processedForbiddenTimes: [] as any[] };
   }, [staticPrayerTimesData, selectedDate]);
 
 
