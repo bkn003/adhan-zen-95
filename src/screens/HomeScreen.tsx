@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { PrayerCard } from '@/components/PrayerCard';
 import { HijriDate } from '@/components/HijriDate';
 import { LocationSelector } from '@/components/LocationSelector';
@@ -110,23 +110,20 @@ export const HomeScreen = ({
     selectedLocation
   );
 
-  // Process prayer times based on data source
-  let processedPrayerTimes, processedForbiddenTimes;
-
-  if (staticPrayerTimesData && staticPrayerTimesData.times.length > 0) {
-    // Use static data - find prayer times for selected date
-    const dailyPrayerTime = getPrayerTimesForDate(staticPrayerTimesData.times, selectedDate);
-    if (dailyPrayerTime) {
-      processedPrayerTimes = convertToPrayerObject(dailyPrayerTime, false, false);
-      processedForbiddenTimes = createForbiddenTimes(dailyPrayerTime);
-    } else {
-      processedPrayerTimes = [];
-      processedForbiddenTimes = [];
+  // Process prayer times based on data source (memoised so identities stay stable)
+  const { processedPrayerTimes, processedForbiddenTimes } = useMemo(() => {
+    if (staticPrayerTimesData && staticPrayerTimesData.times.length > 0) {
+      const dailyPrayerTime = getPrayerTimesForDate(staticPrayerTimesData.times, selectedDate);
+      if (dailyPrayerTime) {
+        return {
+          processedPrayerTimes: convertToPrayerObject(dailyPrayerTime, false, false),
+          processedForbiddenTimes: createForbiddenTimes(dailyPrayerTime),
+        };
+      }
     }
-  } else {
-    processedPrayerTimes = [];
-    processedForbiddenTimes = [];
-  }
+    return { processedPrayerTimes: [] as any[], processedForbiddenTimes: [] as any[] };
+  }, [staticPrayerTimesData, selectedDate]);
+
 
   const {
     prayerTimes,
@@ -155,7 +152,7 @@ export const HomeScreen = ({
   useEffect(() => {
     if (!selectedLocation || !selectedDate) return;
     if (processedPrayerTimes.length > 0 || prayerTimes.length > 0) {
-      setOfflineFallbackTimes([]);
+      setOfflineFallbackTimes((prev) => (prev.length === 0 ? prev : []));
       return;
     }
     loadDailySchedule(selectedLocation.id, selectedDate)
@@ -165,7 +162,8 @@ export const HomeScreen = ({
         }
       })
       .catch(console.error);
-  }, [selectedLocation?.id, selectedDate, processedPrayerTimes, prayerTimes]);
+  }, [selectedLocation?.id, selectedDate, processedPrayerTimes.length, prayerTimes.length]);
+
 
   // Use processed data if available, otherwise use hook data
   // PRIORITY: Supabase (prayerTimes) > Static JSON (processedPrayerTimes) > Offline fallback
