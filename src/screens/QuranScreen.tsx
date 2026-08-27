@@ -453,9 +453,13 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
                     <p dir="rtl" className="text-xl leading-[2.2rem] text-right font-medium">
                       {a.text}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                    <p
+                      dir={editionMeta?.rtl ? 'rtl' : 'ltr'}
+                      className={`text-xs text-muted-foreground mt-2 leading-relaxed ${editionMeta?.rtl ? 'text-right' : ''}`}
+                    >
                       {translation[i]?.text}
                     </p>
+
                   </div>
                 ))}
               </div>
