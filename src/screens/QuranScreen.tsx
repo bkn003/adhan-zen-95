@@ -366,6 +366,28 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
             </div>
           ) : (
             <>
+              {/* Translation language chips */}
+              <div className="rounded-2xl bg-card border border-border p-2.5 shadow-sm">
+                <p className="px-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Translation language
+                </p>
+                <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+                  {TRANSLATION_EDITIONS.map((e) => (
+                    <button
+                      key={e.id}
+                      onClick={() => changeEdition(e.id)}
+                      className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold border transition ${
+                        edition === e.id
+                          ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-primary-foreground border-transparent'
+                          : 'bg-muted text-foreground/70 border-border'
+                      }`}
+                    >
+                      {e.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => { stopAudio(); setOpenSurah(Math.max(1, openSurah - 1)); }}
