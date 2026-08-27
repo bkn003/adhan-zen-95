@@ -25,7 +25,18 @@ interface Ayah {
 }
 
 const LAST_READ_KEY = 'quran_last_read_v1';
+const TRANSLATION_KEY = 'quran_translation_edition_v1';
 const AUDIO_BASE = 'https://cdn.islamic.network/quran/audio/128/ar.alafasy';
+
+const TRANSLATION_EDITIONS: { id: string; label: string; rtl?: boolean }[] = [
+  { id: 'en.sahih', label: 'English' },
+  { id: 'ta.tamil', label: 'தமிழ்' },
+  { id: 'hi.hindi', label: 'हिन्दी' },
+  { id: 'ml.abdulhameed', label: 'മലയാളം' },
+  { id: 'bn.bengali', label: 'বাংলা' },
+  { id: 'ur.jalandhry', label: 'اردو', rtl: true },
+];
+
 
 const fmt = (s: number) => {
   if (!isFinite(s) || s < 0) s = 0;
@@ -47,6 +58,14 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
   });
   const [arabic, setArabic] = useState<Ayah[]>([]);
   const [translation, setTranslation] = useState<Ayah[]>([]);
+  const [edition, setEdition] = useState<string>(() => {
+    try {
+      return localStorage.getItem(TRANSLATION_KEY) || 'en.sahih';
+    } catch {
+      return 'en.sahih';
+    }
+  });
+
   const [loadingList, setLoadingList] = useState(true);
   const [loadingSurah, setLoadingSurah] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,13 +107,13 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
     setError(null);
     (async () => {
       try {
-        const [ar, en] = await Promise.all([
+        const [ar, tr] = await Promise.all([
           fetch(`https://api.alquran.cloud/v1/surah/${openSurah}/quran-uthmani`, { cache: 'force-cache' }).then((r) => r.json()),
-          fetch(`https://api.alquran.cloud/v1/surah/${openSurah}/en.sahih`, { cache: 'force-cache' }).then((r) => r.json()),
+          fetch(`https://api.alquran.cloud/v1/surah/${openSurah}/${edition}`, { cache: 'force-cache' }).then((r) => r.json()),
         ]);
         if (cancelled) return;
         setArabic(ar.data?.ayahs || []);
-        setTranslation(en.data?.ayahs || []);
+        setTranslation(tr.data?.ayahs || []);
         localStorage.setItem(LAST_READ_KEY, JSON.stringify({ surah: openSurah }));
       } catch {
         if (!cancelled) setError('Could not load this surah. Check your connection.');
@@ -103,7 +122,15 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
       }
     })();
     return () => { cancelled = true; };
-  }, [openSurah]);
+  }, [openSurah, edition]);
+
+  const changeEdition = (id: string) => {
+    setEdition(id);
+    try { localStorage.setItem(TRANSLATION_KEY, id); } catch { /* ignore */ }
+  };
+
+  const editionMeta = TRANSLATION_EDITIONS.find((e) => e.id === edition);
+
 
   const stopAudio = useCallback(() => {
     audioRef.current?.pause();
@@ -339,6 +366,28 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
             </div>
           ) : (
             <>
+              {/* Translation language chips */}
+              <div className="rounded-2xl bg-card border border-border p-2.5 shadow-sm">
+                <p className="px-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Translation language
+                </p>
+                <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+                  {TRANSLATION_EDITIONS.map((e) => (
+                    <button
+                      key={e.id}
+                      onClick={() => changeEdition(e.id)}
+                      className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold border transition ${
+                        edition === e.id
+                          ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-primary-foreground border-transparent'
+                          : 'bg-muted text-foreground/70 border-border'
+                      }`}
+                    >
+                      {e.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => { stopAudio(); setOpenSurah(Math.max(1, openSurah - 1)); }}
@@ -404,9 +453,13 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
                     <p dir="rtl" className="text-xl leading-[2.2rem] text-right font-medium">
                       {a.text}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                    <p
+                      dir={editionMeta?.rtl ? 'rtl' : 'ltr'}
+                      className={`text-xs text-muted-foreground mt-2 leading-relaxed ${editionMeta?.rtl ? 'text-right' : ''}`}
+                    >
                       {translation[i]?.text}
                     </p>
+
                   </div>
                 ))}
               </div>
