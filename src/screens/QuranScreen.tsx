@@ -58,6 +58,14 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
   });
   const [arabic, setArabic] = useState<Ayah[]>([]);
   const [translation, setTranslation] = useState<Ayah[]>([]);
+  const [edition, setEdition] = useState<string>(() => {
+    try {
+      return localStorage.getItem(TRANSLATION_KEY) || 'en.sahih';
+    } catch {
+      return 'en.sahih';
+    }
+  });
+
   const [loadingList, setLoadingList] = useState(true);
   const [loadingSurah, setLoadingSurah] = useState(false);
   const [error, setError] = useState<string | null>(null);
