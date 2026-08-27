@@ -25,7 +25,18 @@ interface Ayah {
 }
 
 const LAST_READ_KEY = 'quran_last_read_v1';
+const TRANSLATION_KEY = 'quran_translation_edition_v1';
 const AUDIO_BASE = 'https://cdn.islamic.network/quran/audio/128/ar.alafasy';
+
+const TRANSLATION_EDITIONS: { id: string; label: string; rtl?: boolean }[] = [
+  { id: 'en.sahih', label: 'English' },
+  { id: 'ta.tamil', label: 'தமிழ்' },
+  { id: 'hi.hindi', label: 'हिन्दी' },
+  { id: 'ml.abdulhameed', label: 'മലയാളം' },
+  { id: 'bn.bengali', label: 'বাংলা' },
+  { id: 'ur.jalandhry', label: 'اردو', rtl: true },
+];
+
 
 const fmt = (s: number) => {
   if (!isFinite(s) || s < 0) s = 0;
