@@ -107,13 +107,13 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
     setError(null);
     (async () => {
       try {
-        const [ar, en] = await Promise.all([
+        const [ar, tr] = await Promise.all([
           fetch(`https://api.alquran.cloud/v1/surah/${openSurah}/quran-uthmani`, { cache: 'force-cache' }).then((r) => r.json()),
-          fetch(`https://api.alquran.cloud/v1/surah/${openSurah}/en.sahih`, { cache: 'force-cache' }).then((r) => r.json()),
+          fetch(`https://api.alquran.cloud/v1/surah/${openSurah}/${edition}`, { cache: 'force-cache' }).then((r) => r.json()),
         ]);
         if (cancelled) return;
         setArabic(ar.data?.ayahs || []);
-        setTranslation(en.data?.ayahs || []);
+        setTranslation(tr.data?.ayahs || []);
         localStorage.setItem(LAST_READ_KEY, JSON.stringify({ surah: openSurah }));
       } catch {
         if (!cancelled) setError('Could not load this surah. Check your connection.');
@@ -122,7 +122,15 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
       }
     })();
     return () => { cancelled = true; };
-  }, [openSurah]);
+  }, [openSurah, edition]);
+
+  const changeEdition = (id: string) => {
+    setEdition(id);
+    try { localStorage.setItem(TRANSLATION_KEY, id); } catch { /* ignore */ }
+  };
+
+  const editionMeta = TRANSLATION_EDITIONS.find((e) => e.id === edition);
+
 
   const stopAudio = useCallback(() => {
     audioRef.current?.pause();
