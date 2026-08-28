@@ -81,9 +81,24 @@ export const AppSupportCard: React.FC<Props> = ({ variant = 'compact' }) => {
   };
 
   const payWith = (scheme: string) => {
-    window.location.href = link(scheme);
-    setTimeout(() => toast.info('No UPI app opened? Copy the UPI ID and pay manually.'), 2500);
+    if (!isMobile()) {
+      // Desktop browsers cannot handle UPI app schemes — open the QR/copy sheet instead.
+      setOpen(true);
+      toast.info('UPI apps only open on a phone. Scan the QR or copy the UPI ID.');
+      return;
+    }
+    const url = link(scheme);
+    const start = Date.now();
+    window.location.href = url;
+    setTimeout(() => {
+      // Still here and no app switch happened → likely no handler installed.
+      if (document.visibilityState === 'visible' && Date.now() - start < 4000) {
+        toast.info('No UPI app opened? Copy the UPI ID and pay manually.');
+        setOpen(true);
+      }
+    }, 2500);
   };
+
 
   const copy = async () => {
     try {
