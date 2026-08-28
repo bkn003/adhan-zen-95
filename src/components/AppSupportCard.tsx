@@ -121,17 +121,27 @@ export const AppSupportCard: React.FC<Props> = ({ variant = 'compact' }) => {
             </span>
             <ExternalLink className="w-3.5 h-3.5 opacity-90 shrink-0" />
           </button>
-          <div className="grid grid-cols-3 gap-1.5 mt-2">
-            {UPI_APPS.slice(0, 3).map((a) => (
-              <button
-                key={a.label}
-                onClick={() => payWith(a.scheme)}
-                className="bg-white/95 text-gray-800 rounded-xl py-1.5 text-[10px] font-bold shadow-sm active:scale-[0.97]"
-              >
-                {a.label.replace(' Pay', 'Pay')}
-              </button>
-            ))}
-          </div>
+          {isMobile() ? (
+            <div className="grid grid-cols-3 gap-1.5 mt-2">
+              {UPI_APPS.slice(0, 3).map((a) => (
+                <button
+                  key={a.label}
+                  onClick={() => payWith(a.scheme)}
+                  className="bg-white/95 text-gray-800 rounded-xl py-1.5 text-[10px] font-bold shadow-sm active:scale-[0.97]"
+                >
+                  {a.label.replace(' Pay', 'Pay')}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <button
+              onClick={() => setOpen(true)}
+              className="w-full mt-2 bg-white/95 text-gray-800 rounded-xl py-1.5 text-[10px] font-bold shadow-sm flex items-center justify-center gap-1.5 active:scale-[0.97]"
+            >
+              <QrCode className="w-3 h-3" /> Show QR &amp; UPI ID
+            </button>
+          )}
+
           <p className="text-[9px] opacity-80 mt-1.5 leading-snug">Not a mosque donation — supports app development only.</p>
         </div>
       ) : (
