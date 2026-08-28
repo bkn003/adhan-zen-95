@@ -81,9 +81,24 @@ export const AppSupportCard: React.FC<Props> = ({ variant = 'compact' }) => {
   };
 
   const payWith = (scheme: string) => {
-    window.location.href = link(scheme);
-    setTimeout(() => toast.info('No UPI app opened? Copy the UPI ID and pay manually.'), 2500);
+    if (!isMobile()) {
+      // Desktop browsers cannot handle UPI app schemes — open the QR/copy sheet instead.
+      setOpen(true);
+      toast.info('UPI apps only open on a phone. Scan the QR or copy the UPI ID.');
+      return;
+    }
+    const url = link(scheme);
+    const start = Date.now();
+    window.location.href = url;
+    setTimeout(() => {
+      // Still here and no app switch happened → likely no handler installed.
+      if (document.visibilityState === 'visible' && Date.now() - start < 4000) {
+        toast.info('No UPI app opened? Copy the UPI ID and pay manually.');
+        setOpen(true);
+      }
+    }, 2500);
   };
+
 
   const copy = async () => {
     try {
@@ -106,17 +121,27 @@ export const AppSupportCard: React.FC<Props> = ({ variant = 'compact' }) => {
             </span>
             <ExternalLink className="w-3.5 h-3.5 opacity-90 shrink-0" />
           </button>
-          <div className="grid grid-cols-3 gap-1.5 mt-2">
-            {UPI_APPS.slice(0, 3).map((a) => (
-              <button
-                key={a.label}
-                onClick={() => payWith(a.scheme)}
-                className="bg-white/95 text-gray-800 rounded-xl py-1.5 text-[10px] font-bold shadow-sm active:scale-[0.97]"
-              >
-                {a.label.replace(' Pay', 'Pay')}
-              </button>
-            ))}
-          </div>
+          {isMobile() ? (
+            <div className="grid grid-cols-3 gap-1.5 mt-2">
+              {UPI_APPS.slice(0, 3).map((a) => (
+                <button
+                  key={a.label}
+                  onClick={() => payWith(a.scheme)}
+                  className="bg-white/95 text-gray-800 rounded-xl py-1.5 text-[10px] font-bold shadow-sm active:scale-[0.97]"
+                >
+                  {a.label.replace(' Pay', 'Pay')}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <button
+              onClick={() => setOpen(true)}
+              className="w-full mt-2 bg-white/95 text-gray-800 rounded-xl py-1.5 text-[10px] font-bold shadow-sm flex items-center justify-center gap-1.5 active:scale-[0.97]"
+            >
+              <QrCode className="w-3 h-3" /> Show QR &amp; UPI ID
+            </button>
+          )}
+
           <p className="text-[9px] opacity-80 mt-1.5 leading-snug">Not a mosque donation — supports app development only.</p>
         </div>
       ) : (

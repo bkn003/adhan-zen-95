@@ -348,8 +348,9 @@ export const HomeScreen = ({
   const filteredNextPrayer = nextPrayer;
   const { language } = useLanguage();
   const localizedText = getLocalizedText(language);
-  return <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-white">
+  return <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-white pb-28">
     <div className="p-4 space-y-2 px-[4px] py-[2px]">
+
       {/* Offline indicator */}
       <OfflineBanner />
       {/* Next Prayer Card */}
