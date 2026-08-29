@@ -1,5 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { ArrowLeft, MapPin, Clock, Navigation, Users, Utensils, Phone, Share2, ChevronLeft, ChevronRight, Car, Wind, Accessibility, Camera, ImageIcon } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Navigation, Users, Utensils, Phone, Share2, ChevronLeft, ChevronRight, Car, Wind, Accessibility, Camera, ImageIcon, FileDown, CalendarPlus } from 'lucide-react';
+import { exportSchedulePdf, exportScheduleIcs } from '@/utils/prayerExport';
+import { useHijriDate } from '@/hooks/useHijriDate';
+import { toast } from '@/hooks/use-toast';
+
 import { useLocations } from '@/hooks/useLocations';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { supabase } from '@/integrations/supabase/client';
@@ -163,6 +167,10 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
     return [...prayerTimes].sort((a, b) => parseDateRangeStart(a.date_range) - parseDateRangeStart(b.date_range));
   }, [prayerTimes]);
 
+  const { data: hijri } = useHijriDate();
+
+
+
   if (!location) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 pb-28 flex items-center justify-center">
@@ -226,6 +234,28 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
 
   const canGoBack = selectedMonthIndex > 0;
   const canGoForward = selectedMonthIndex < 11;
+
+  /** Download the visible month's schedule as a PDF or .ics calendar. */
+  const runExport = (kind: 'pdf' | 'ics') => {
+    const meta = {
+      mosqueName: location.mosque_name,
+      district: location.district || undefined,
+      month: selectedMonth,
+      monthIndex: selectedMonthIndex,
+      year: now.getFullYear(),
+      isRamadan,
+      hijriLabel: hijri ? `${hijri.date} ${hijri.month} ${hijri.year} ${hijri.designation}` : undefined,
+    };
+    try {
+      if (kind === 'pdf') exportSchedulePdf(sortedPrayerTimes as any, meta);
+      else exportScheduleIcs(sortedPrayerTimes as any, meta);
+      toast({ title: 'Export ready', description: `${selectedMonth} schedule downloaded.` });
+    } catch {
+      toast({ title: 'Export failed', description: 'Please try again.', variant: 'destructive' });
+    }
+  };
+
+
 
   const getIshraqTime = (sunriseTime: string | null | undefined) => {
     if (!sunriseTime) return null;
@@ -528,6 +558,19 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
+
+          {/* Export the visible month as a PDF or calendar file */}
+          {sortedPrayerTimes.length > 0 && (
+            <div className="flex gap-2 mb-4">
+              <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => runExport('pdf')}>
+                <FileDown className="w-3.5 h-3.5 mr-1.5" /> PDF
+              </Button>
+              <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => runExport('ics')}>
+                <CalendarPlus className="w-3.5 h-3.5 mr-1.5" /> Calendar (.ics)
+              </Button>
+            </div>
+          )}
+
 
           {timesLoading ? (
             <div className="space-y-3">

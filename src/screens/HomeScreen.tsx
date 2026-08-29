@@ -23,6 +23,8 @@ import { useStaticPrayerTimes, convertToPrayerObject, createForbiddenTimes } fro
 import { getPrayerTimesForDate } from '@/utils/staticPrayerTimes';
 import { usePrayerWorker } from '@/hooks/usePrayerWorker';
 import { usePrayerNotifications } from '@/hooks/usePrayerNotifications';
+import { useNextPrayerReminder } from '@/hooks/useNextPrayerReminder';
+
 import { usePrayerAlarm } from '@/hooks/usePrayerAlarm';
 import { usePrayerChangeNotifier } from '@/hooks/usePrayerChangeNotifier';
 import { getLocalizedText } from '@/utils/tamilText';
@@ -266,6 +268,10 @@ export const HomeScreen = ({
   // Prayer time change notifier for My Mohalla
   const mohallaId = localStorage.getItem('myMohallaId');
   usePrayerChangeNotifier(finalPrayerTimes, mohallaId);
+
+  // In-app / PWA reminders for the upcoming prayer (configurable lead time)
+  useNextPrayerReminder(nextPrayer, selectedLocation?.mosque_name);
+
 
   // Load persisted location or auto-select first location
   useEffect(() => {

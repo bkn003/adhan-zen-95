@@ -22,6 +22,8 @@ import { SyncStatusCard } from '@/components/SyncStatusCard';
 import { ProfilePhoneField } from '@/components/ProfilePhoneField';
 import { PrayerNotificationToggles } from '@/components/PrayerNotificationToggles';
 import { SaharTimeSettings } from '@/components/SaharTimeSettings';
+import { DonationSettings } from '@/components/DonationSettings';
+
 import { Link } from 'react-router-dom';
 import { showWebNotification, ensureNotificationPermission } from '@/utils/webNotify';
 
@@ -347,6 +349,12 @@ export const SettingsScreen = () => {
       <SettingsCard title="Sahar & Iftar" icon={Moon} gradient="from-orange-50/50 to-white">
         <SaharTimeSettings location={selectedLocation} />
       </SettingsCard>
+
+      {/* Mosque donation visibility */}
+      <SettingsCard title="Donations" icon={ShieldCheck} gradient="from-amber-50/50 to-white">
+        <DonationSettings />
+      </SettingsCard>
+
 
       </Section>
 
