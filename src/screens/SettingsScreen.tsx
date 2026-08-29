@@ -348,6 +348,12 @@ export const SettingsScreen = () => {
         <SaharTimeSettings location={selectedLocation} />
       </SettingsCard>
 
+      {/* Mosque donation visibility */}
+      <SettingsCard title="Donations" icon={ShieldCheck} gradient="from-amber-50/50 to-white">
+        <DonationSettings />
+      </SettingsCard>
+
+
       </Section>
 
       <Section title="Reminders & Alerts" icon={Bell} open={openSection === 'reminders'} onToggle={() => toggle('reminders')}>
