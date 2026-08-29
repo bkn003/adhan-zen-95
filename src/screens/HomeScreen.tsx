@@ -267,6 +267,10 @@ export const HomeScreen = ({
   const mohallaId = localStorage.getItem('myMohallaId');
   usePrayerChangeNotifier(finalPrayerTimes, mohallaId);
 
+  // In-app / PWA reminders for the upcoming prayer (configurable lead time)
+  useNextPrayerReminder(nextPrayer, selectedLocation?.mosque_name);
+
+
   // Load persisted location or auto-select first location
   useEffect(() => {
     const syncLocationToNative = async (locationId: string) => {
