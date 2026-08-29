@@ -301,3 +301,29 @@ export function getCacheStats(): { entries: number; size: number; hitRate: strin
 
 // Clean old cache on module load
 cleanOldCache();
+
+export interface PrayerCacheMeta {
+    /** When the payload was last fetched successfully (ms epoch). */
+    timestamp: number;
+    rows: any[];
+}
+
+/**
+ * Metadata for the last successful prayer-times payload of a mosque/month.
+ * Used by the offline banner to show a friendly "last updated" timestamp.
+ */
+export function getPrayerCacheMeta(locationId: string, month: string): PrayerCacheMeta | null {
+    if (!locationId || !month) return null;
+    const key = getCacheKey(locationId, month);
+    const mem = memoryCache.get(key);
+    if (mem) return { timestamp: mem.timestamp, rows: mem.data || [] };
+    try {
+        const stored = localStorage.getItem(key);
+        if (!stored) return null;
+        const cached: CachedPrayerData = JSON.parse(stored);
+        if (!cached?.timestamp) return null;
+        return { timestamp: cached.timestamp, rows: cached.data || [] };
+    } catch {
+        return null;
+    }
+}
