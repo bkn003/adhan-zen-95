@@ -235,6 +235,28 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
   const canGoBack = selectedMonthIndex > 0;
   const canGoForward = selectedMonthIndex < 11;
 
+  /** Download the visible month's schedule as a PDF or .ics calendar. */
+  const runExport = (kind: 'pdf' | 'ics') => {
+    const meta = {
+      mosqueName: location.mosque_name,
+      district: location.district || undefined,
+      month: selectedMonth,
+      monthIndex: selectedMonthIndex,
+      year: now.getFullYear(),
+      isRamadan,
+      hijriLabel: hijri ? `${hijri.date} ${hijri.month} ${hijri.year} ${hijri.designation}` : undefined,
+    };
+    try {
+      if (kind === 'pdf') exportSchedulePdf(sortedPrayerTimes as any, meta);
+      else exportScheduleIcs(sortedPrayerTimes as any, meta);
+      toast({ title: 'Export ready', description: `${selectedMonth} schedule downloaded.` });
+    } catch {
+      toast({ title: 'Export failed', description: 'Please try again.', variant: 'destructive' });
+    }
+  };
+
+
+
   const getIshraqTime = (sunriseTime: string | null | undefined) => {
     if (!sunriseTime) return null;
     const [h, m] = sunriseTime.split(':').map(Number);
