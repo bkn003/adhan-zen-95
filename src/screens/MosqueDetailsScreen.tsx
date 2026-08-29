@@ -529,6 +529,19 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
             </button>
           </div>
 
+          {/* Export the visible month as a PDF or calendar file */}
+          {sortedPrayerTimes.length > 0 && (
+            <div className="flex gap-2 mb-4">
+              <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => runExport('pdf')}>
+                <FileDown className="w-3.5 h-3.5 mr-1.5" /> PDF
+              </Button>
+              <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => runExport('ics')}>
+                <CalendarPlus className="w-3.5 h-3.5 mr-1.5" /> Calendar (.ics)
+              </Button>
+            </div>
+          )}
+
+
           {timesLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map(i => (
