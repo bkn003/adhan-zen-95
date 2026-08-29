@@ -167,6 +167,10 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
     return [...prayerTimes].sort((a, b) => parseDateRangeStart(a.date_range) - parseDateRangeStart(b.date_range));
   }, [prayerTimes]);
 
+  const { data: hijri } = useHijriDate();
+
+
+
   if (!location) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 pb-28 flex items-center justify-center">
