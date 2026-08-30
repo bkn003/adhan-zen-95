@@ -48,8 +48,11 @@ export const PrayerNotificationToggles: React.FC = () => {
   const toggle = (phase: 'adhan' | 'iqamah', key: PrayerKey, value: boolean) =>
     setPrefs((p) => ({ ...p, [phase]: { ...p[phase], [key]: value } }));
 
+  const setLead = (minutes: number) => setPrefs((p) => ({ ...p, preMinutes: minutes }));
+
   const togglePeriod = (key: keyof PeriodPrefs, value: boolean) =>
     setPrefs((p) => ({ ...p, periods: { ...p.periods, [key]: value } }));
+
 
   const runTest = async () => {
     setTesting(true);
