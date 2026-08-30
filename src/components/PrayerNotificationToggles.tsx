@@ -10,6 +10,7 @@ import {
   type PeriodPrefs,
 } from '@/native/prayerNotificationPrefs';
 import { sendTestNotification, type TestNotificationResult } from '@/utils/testNotification';
+import { NotificationPermissionCard } from '@/components/NotificationPermissionCard';
 
 const ICONS: Record<PrayerKey, React.ElementType> = {
   fajr: Sunrise,
@@ -67,6 +68,8 @@ export const PrayerNotificationToggles: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      <NotificationPermissionCard />
+
       {/* Per-period toggles */}
       <div className="space-y-2">
         <p className="px-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Notification periods</p>
