@@ -10,6 +10,7 @@ import {
   type PeriodPrefs,
 } from '@/native/prayerNotificationPrefs';
 import { sendTestNotification, type TestNotificationResult } from '@/utils/testNotification';
+import { NotificationPermissionCard } from '@/components/NotificationPermissionCard';
 
 const ICONS: Record<PrayerKey, React.ElementType> = {
   fajr: Sunrise,
@@ -48,8 +49,11 @@ export const PrayerNotificationToggles: React.FC = () => {
   const toggle = (phase: 'adhan' | 'iqamah', key: PrayerKey, value: boolean) =>
     setPrefs((p) => ({ ...p, [phase]: { ...p[phase], [key]: value } }));
 
+  const setLead = (minutes: number) => setPrefs((p) => ({ ...p, preMinutes: minutes }));
+
   const togglePeriod = (key: keyof PeriodPrefs, value: boolean) =>
     setPrefs((p) => ({ ...p, periods: { ...p.periods, [key]: value } }));
+
 
   const runTest = async () => {
     setTesting(true);
@@ -64,6 +68,8 @@ export const PrayerNotificationToggles: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      <NotificationPermissionCard />
+
       {/* Per-period toggles */}
       <div className="space-y-2">
         <p className="px-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Notification periods</p>
@@ -98,11 +104,31 @@ export const PrayerNotificationToggles: React.FC = () => {
               max={45}
               step={5}
               value={prefs.preMinutes}
-              onChange={(e) => setPrefs((p) => ({ ...p, preMinutes: Number(e.target.value) }))}
+              onChange={(e) => setLead(Number(e.target.value))}
               className="mt-2 w-full accent-amber-500"
             />
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {[5, 10, 15, 20, 30, 45].map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setLead(m)}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors ${
+                    prefs.preMinutes === m
+                      ? 'bg-amber-500 text-white border-amber-500'
+                      : 'bg-white text-gray-600 border-gray-200'
+                  }`}
+                >
+                  {m}m
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-emerald-700 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 shrink-0" />
+              Saved — you'll be alerted {prefs.preMinutes} minutes before each adhan.
+            </p>
           </div>
         )}
+
       </div>
 
       {/* Per-prayer toggles */}
