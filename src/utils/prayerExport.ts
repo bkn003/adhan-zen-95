@@ -166,3 +166,126 @@ export function exportScheduleIcs(rows: ExportRow[], meta: Meta) {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+export interface EidTiming {
+  label: string;
+  /** ISO date (yyyy-mm-dd) when known. */
+  date?: string | null;
+  /** HH:MM time of the jamaat. */
+  time?: string | null;
+  note?: string | null;
+}
+
+interface RamadanMeta extends Meta {
+  eid?: EidTiming[];
+}
+
+/** Ramadan-only schedule: fasting (sahar/iftar), taraweeh and Eid jamaat times. */
+export function exportRamadanPdf(rows: ExportRow[], meta: RamadanMeta) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+
+  doc.setFontSize(16);
+  doc.text(`${meta.mosqueName} — Ramadan ${meta.year}`, 40, 40);
+  doc.setFontSize(10);
+  const sub = [meta.district, `${meta.month} ${meta.year}`, meta.hijriLabel ? `Hijri: ${meta.hijriLabel}` : null]
+    .filter(Boolean)
+    .join('  •  ');
+  if (sub) doc.text(sub, 40, 58);
+
+  autoTable(doc, {
+    head: [['Dates', 'Sahar ends', 'Fajr Jamaat', 'Iftar (Maghrib)', 'Isha Jamaat', 'Taraweeh']],
+    body: rows.map((r) => [
+      `${rangeLabel(r.date_range, meta.monthIndex, meta.year)} ${meta.month}`,
+      hm(r.sahar_end),
+      hm(r.fajr_ramadan_iqamah || r.fajr_iqamah),
+      hm(r.ifthar_time || r.maghrib_adhan),
+      hm(r.isha_ramadan_iqamah || r.isha_iqamah),
+      hm(r.tharaweeh),
+    ]),
+    startY: 72,
+    styles: { fontSize: 9, cellPadding: 4 },
+    headStyles: { fillColor: [124, 58, 237], textColor: 255 },
+    alternateRowStyles: { fillColor: [245, 243, 255] },
+  });
+
+  if (meta.eid?.length) {
+    const y = (doc as any).lastAutoTable?.finalY ?? 100;
+    doc.setFontSize(12);
+    doc.text('Eid timings', 40, y + 28);
+    autoTable(doc, {
+      head: [['Prayer', 'Date', 'Jamaat', 'Note']],
+      body: meta.eid.map((e) => [e.label, e.date ?? '—', hm(e.time), e.note ?? '—']),
+      startY: y + 38,
+      styles: { fontSize: 9, cellPadding: 4 },
+      headStyles: { fillColor: [16, 122, 87], textColor: 255 },
+    });
+  }
+
+  doc.setFontSize(8);
+  doc.text(
+    `Generated ${new Date().toLocaleString()} — Adhan Zen. Times set by the mosque admin.`,
+    40,
+    doc.internal.pageSize.getHeight() - 20,
+  );
+
+  doc.save(`${meta.mosqueName.replace(/\s+/g, '_')}_Ramadan_${meta.year}.pdf`);
+}
+
+/** Ramadan calendar (.ics): sahar end, iftar, taraweeh per day plus Eid jamaat. */
+export function exportRamadanIcs(rows: ExportRow[], meta: RamadanMeta) {
+  const lines: string[] = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Adhan Zen//Ramadan Schedule//EN',
+    'CALSCALE:GREGORIAN',
+  ];
+  const monthEnd = new Date(meta.year, meta.monthIndex + 1, 0).getDate();
+
+  const push = (name: string, start: Date, minutes = 20) => {
+    const end = new Date(start.getTime() + minutes * 60 * 1000);
+    lines.push(
+      'BEGIN:VEVENT',
+      `UID:${meta.mosqueName}-${name}-${icsStamp(start)}@adhanzen`.replace(/\s+/g, '_'),
+      `DTSTAMP:${icsStamp(new Date())}`,
+      `DTSTART:${icsStamp(start)}`,
+      `DTEND:${icsStamp(end)}`,
+      `SUMMARY:${esc(`${name} — ${meta.mosqueName}`)}`,
+      `DESCRIPTION:${esc(`Ramadan ${meta.year} at ${meta.mosqueName}${meta.district ? `, ${meta.district}` : ''}`)}`,
+      'END:VEVENT',
+    );
+  };
+
+  rows.forEach((r) => {
+    const [fromStr, toStr] = r.date_range.split('-');
+    const from = Number(fromStr);
+    const to = Math.min(Number(toStr) || monthEnd, monthEnd);
+    if (!Number.isFinite(from)) return;
+    for (let day = from; day <= to; day++) {
+      ([
+        ['Sahar ends (start fasting)', r.sahar_end, 5],
+        ['Iftar (break fast)', r.ifthar_time || r.maghrib_adhan, 15],
+        ['Taraweeh', r.tharaweeh, 60],
+      ] as [string, string | null | undefined, number][]).forEach(([name, time, mins]) => {
+        if (!time) return;
+        const [h, m] = time.split(':').map(Number);
+        push(name, new Date(meta.year, meta.monthIndex, day, h || 0, m || 0), mins);
+      });
+    }
+  });
+
+  meta.eid?.forEach((e) => {
+    if (!e.time || !e.date) return;
+    const [y, mo, d] = e.date.split('-').map(Number);
+    const [h, m] = e.time.split(':').map(Number);
+    push(e.label, new Date(y, (mo || 1) - 1, d || 1, h || 0, m || 0), 60);
+  });
+
+  lines.push('END:VCALENDAR');
+  const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${meta.mosqueName.replace(/\s+/g, '_')}_Ramadan_${meta.year}.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
