@@ -7,7 +7,7 @@ import { LocationSelector } from '@/components/LocationSelector';
 import { useLocations } from '@/hooks/useLocations';
 import { useHijriDate } from '@/hooks/useHijriDate';
 import { exportRamadanPdf, exportRamadanIcs, rangeLabel, type EidTiming } from '@/utils/prayerExport';
-import { formatTime12h } from '@/utils/timeFormat';
+import { formatTo12Hour } from '@/utils/timeFormat';
 import type { Location } from '@/types/prayer.types';
 
 const MONTHS = [
@@ -16,7 +16,7 @@ const MONTHS = [
 ];
 
 const rangeStart = (dr: string) => Number(dr.split('-')[0]) || 0;
-const t12 = (v?: string | null) => (v ? formatTime12h(v.slice(0, 5)) : '—');
+const t12 = (v?: string | null) => (v ? formatTo12Hour(v.slice(0, 5)) : '—');
 
 /**
  * Ramadan-only view for one mosque: fasting window (sahar/iftar), taraweeh and
@@ -79,7 +79,7 @@ export const RamadanScheduleScreen: React.FC<{ onBack: () => void }> = ({ onBack
       monthIndex,
       year,
       isRamadan: true,
-      hijriLabel: hijri ? `${hijri.day} ${hijri.monthName} ${hijri.year}` : undefined,
+      hijriLabel: hijri ? hijri.adjustedDate : undefined,
       eid: eid ?? [],
     }),
     [selected, month, monthIndex, year, hijri, eid],
@@ -200,7 +200,7 @@ export const RamadanScheduleScreen: React.FC<{ onBack: () => void }> = ({ onBack
                 <div key={`${e.label}-${i}`} className="p-2 rounded-xl bg-emerald-50/70 border border-emerald-100">
                   <p className="text-sm font-bold text-emerald-800">{e.label}</p>
                   <p className="text-xs text-emerald-700">
-                    {e.date ?? 'Date to be announced'}{e.time ? ` • ${formatTime12h(e.time)}` : ''}
+                    {e.date ?? 'Date to be announced'}{e.time ? ` • ${formatTo12Hour(e.time)}` : ''}
                   </p>
                   {e.note && <p className="text-[11px] text-emerald-700/80 mt-0.5">{e.note}</p>}
                 </div>
