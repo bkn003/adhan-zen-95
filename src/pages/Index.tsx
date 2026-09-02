@@ -174,7 +174,13 @@ const Index = () => {
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       e.preventDefault();
-      if (showFeed) {
+      if (showSupport) {
+        setShowSupport(false);
+      } else if (showRamadanSchedule) {
+        setShowRamadanSchedule(false);
+      } else if (showMap) {
+        setShowMap(false);
+      } else if (showFeed) {
         setShowFeed(false);
       } else if (showTransparency) {
         setShowTransparency(false);
