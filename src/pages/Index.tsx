@@ -20,6 +20,9 @@ import { MosqueCompareScreen } from '@/screens/MosqueCompareScreen';
 import { NotificationSettingsScreen } from '@/screens/NotificationSettingsScreen';
 import { PrivacyScreen } from '@/screens/PrivacyScreen';
 import { FeedScreen } from '@/screens/FeedScreen';
+import { SupportScreen } from '@/screens/SupportScreen';
+import { RamadanScheduleScreen } from '@/screens/RamadanScheduleScreen';
+import { MosqueMapScreen } from '@/screens/MosqueMapScreen';
 import { useEventReminders } from '@/components/MosqueEvents';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { useAdaptiveTimezone } from '@/hooks/useAdaptiveTimezone';
@@ -52,6 +55,10 @@ const Index = () => {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showTransparency, setShowTransparency] = useState(false);
   const [showFeed, setShowFeed] = useState(false);
+  const [showSupport, setShowSupport] = useState(false);
+  const [showRamadanSchedule, setShowRamadanSchedule] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+
 
   // Enable realtime sync for locations & prayer_times
   useRealtimeSync();
@@ -117,6 +124,9 @@ const Index = () => {
     const privacyHandler = () => setShowPrivacy(true);
     const transparencyHandler = () => setShowTransparency(true);
     const feedHandler = () => setShowFeed(true);
+    const supportHandler = () => setShowSupport(true);
+    const ramadanScheduleHandler = () => setShowRamadanSchedule(true);
+    const mapHandler = () => setShowMap(true);
     window.addEventListener('navigate-admin', handler);
     window.addEventListener('navigate-super-admin', superHandler);
     window.addEventListener('navigate-zakat', zakatHandler);
@@ -128,6 +138,9 @@ const Index = () => {
     window.addEventListener('navigate-privacy', privacyHandler);
     window.addEventListener('navigate-transparency', transparencyHandler);
     window.addEventListener('navigate-feed', feedHandler);
+    window.addEventListener('navigate-support', supportHandler);
+    window.addEventListener('navigate-ramadan-schedule', ramadanScheduleHandler);
+    window.addEventListener('navigate-map', mapHandler);
     return () => {
       window.removeEventListener('navigate-admin', handler);
       window.removeEventListener('navigate-super-admin', superHandler);
@@ -140,6 +153,9 @@ const Index = () => {
       window.removeEventListener('navigate-privacy', privacyHandler);
       window.removeEventListener('navigate-transparency', transparencyHandler);
       window.removeEventListener('navigate-feed', feedHandler);
+      window.removeEventListener('navigate-support', supportHandler);
+      window.removeEventListener('navigate-ramadan-schedule', ramadanScheduleHandler);
+      window.removeEventListener('navigate-map', mapHandler);
     };
   }, []);
 
@@ -158,7 +174,13 @@ const Index = () => {
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       e.preventDefault();
-      if (showFeed) {
+      if (showSupport) {
+        setShowSupport(false);
+      } else if (showRamadanSchedule) {
+        setShowRamadanSchedule(false);
+      } else if (showMap) {
+        setShowMap(false);
+      } else if (showFeed) {
         setShowFeed(false);
       } else if (showTransparency) {
         setShowTransparency(false);
@@ -193,7 +215,7 @@ const Index = () => {
     window.history.pushState(null, '', window.location.href);
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [showFeed, showTransparency, showPrivacy, showNotifSettings, showCompare, showQuran, showSyncChanges, showTasbeeh, showZakat, showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
+  }, [showSupport, showRamadanSchedule, showMap, showFeed, showTransparency, showPrivacy, showNotifSettings, showCompare, showQuran, showSyncChanges, showTasbeeh, showZakat, showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
 
   // Persist current screen
   useEffect(() => {
@@ -282,6 +304,24 @@ const Index = () => {
   };
 
   const renderScreen = () => {
+    if (showSupport) {
+      return <SupportScreen onBack={() => setShowSupport(false)} />;
+    }
+    if (showRamadanSchedule) {
+      return <RamadanScheduleScreen onBack={() => setShowRamadanSchedule(false)} />;
+    }
+    if (showMap) {
+      return (
+        <MosqueMapScreen
+          onBack={() => setShowMap(false)}
+          onOpenMosque={(id) => {
+            setShowMap(false);
+            setCurrentScreen('nearby');
+            setMosqueDetailsId(id);
+          }}
+        />
+      );
+    }
     if (showFeed) {
       return <FeedScreen onBack={() => setShowFeed(false)} />;
     }
