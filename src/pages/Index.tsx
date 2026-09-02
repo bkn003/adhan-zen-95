@@ -304,6 +304,24 @@ const Index = () => {
   };
 
   const renderScreen = () => {
+    if (showSupport) {
+      return <SupportScreen onBack={() => setShowSupport(false)} />;
+    }
+    if (showRamadanSchedule) {
+      return <RamadanScheduleScreen onBack={() => setShowRamadanSchedule(false)} />;
+    }
+    if (showMap) {
+      return (
+        <MosqueMapScreen
+          onBack={() => setShowMap(false)}
+          onOpenMosque={(id) => {
+            setShowMap(false);
+            setCurrentScreen('nearby');
+            setMosqueDetailsId(id);
+          }}
+        />
+      );
+    }
     if (showFeed) {
       return <FeedScreen onBack={() => setShowFeed(false)} />;
     }
