@@ -572,9 +572,31 @@ export const SettingsScreen = () => {
             <span className="flex items-center gap-2">🛡️ Privacy &amp; Data Controls</span>
             <ChevronRight className="w-4 h-4" />
           </button>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate-map'))}
+            className="w-full py-2.5 px-3 bg-gradient-to-r from-sky-600 to-cyan-600 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">🗺️ Mosque Map &amp; Directions</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate-ramadan-schedule'))}
+            className="w-full py-2.5 px-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">🌙 Ramadan Schedule &amp; Export</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate-support'))}
+            className="w-full py-2.5 px-3 bg-gradient-to-r from-rose-600 to-red-600 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">🛟 Report an Issue / My Tickets</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
           <p className="text-[11px] text-gray-500 px-1">
             Tip: Install the app, then long-press its icon for quick Widget / Qibla / Tracker shortcuts.
           </p>
+
         </div>
       </SettingsCard>
 
