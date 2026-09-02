@@ -138,6 +138,9 @@ const Index = () => {
     window.addEventListener('navigate-privacy', privacyHandler);
     window.addEventListener('navigate-transparency', transparencyHandler);
     window.addEventListener('navigate-feed', feedHandler);
+    window.addEventListener('navigate-support', supportHandler);
+    window.addEventListener('navigate-ramadan-schedule', ramadanScheduleHandler);
+    window.addEventListener('navigate-map', mapHandler);
     return () => {
       window.removeEventListener('navigate-admin', handler);
       window.removeEventListener('navigate-super-admin', superHandler);
