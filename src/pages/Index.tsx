@@ -124,6 +124,9 @@ const Index = () => {
     const privacyHandler = () => setShowPrivacy(true);
     const transparencyHandler = () => setShowTransparency(true);
     const feedHandler = () => setShowFeed(true);
+    const supportHandler = () => setShowSupport(true);
+    const ramadanScheduleHandler = () => setShowRamadanSchedule(true);
+    const mapHandler = () => setShowMap(true);
     window.addEventListener('navigate-admin', handler);
     window.addEventListener('navigate-super-admin', superHandler);
     window.addEventListener('navigate-zakat', zakatHandler);
