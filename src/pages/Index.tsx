@@ -153,6 +153,9 @@ const Index = () => {
       window.removeEventListener('navigate-privacy', privacyHandler);
       window.removeEventListener('navigate-transparency', transparencyHandler);
       window.removeEventListener('navigate-feed', feedHandler);
+      window.removeEventListener('navigate-support', supportHandler);
+      window.removeEventListener('navigate-ramadan-schedule', ramadanScheduleHandler);
+      window.removeEventListener('navigate-map', mapHandler);
     };
   }, []);
 
