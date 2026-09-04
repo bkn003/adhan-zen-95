@@ -22,6 +22,7 @@ import { PrivacyScreen } from '@/screens/PrivacyScreen';
 import { FeedScreen } from '@/screens/FeedScreen';
 import { SupportScreen } from '@/screens/SupportScreen';
 import { RamadanScheduleScreen } from '@/screens/RamadanScheduleScreen';
+import { PrayerHistoryScreen } from '@/screens/PrayerHistoryScreen';
 import { MosqueMapScreen } from '@/screens/MosqueMapScreen';
 import { useEventReminders } from '@/components/MosqueEvents';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
@@ -127,6 +128,7 @@ const Index = () => {
     const supportHandler = () => setShowSupport(true);
     const ramadanScheduleHandler = () => setShowRamadanSchedule(true);
     const mapHandler = () => setShowMap(true);
+    const historyHandler = () => setShowHistory(true);
     window.addEventListener('navigate-admin', handler);
     window.addEventListener('navigate-super-admin', superHandler);
     window.addEventListener('navigate-zakat', zakatHandler);
@@ -141,6 +143,7 @@ const Index = () => {
     window.addEventListener('navigate-support', supportHandler);
     window.addEventListener('navigate-ramadan-schedule', ramadanScheduleHandler);
     window.addEventListener('navigate-map', mapHandler);
+    window.addEventListener('navigate-prayer-history', historyHandler);
     return () => {
       window.removeEventListener('navigate-admin', handler);
       window.removeEventListener('navigate-super-admin', superHandler);
@@ -156,6 +159,7 @@ const Index = () => {
       window.removeEventListener('navigate-support', supportHandler);
       window.removeEventListener('navigate-ramadan-schedule', ramadanScheduleHandler);
       window.removeEventListener('navigate-map', mapHandler);
+      window.removeEventListener('navigate-prayer-history', historyHandler);
     };
   }, []);
 
@@ -306,6 +310,9 @@ const Index = () => {
   const renderScreen = () => {
     if (showSupport) {
       return <SupportScreen onBack={() => setShowSupport(false)} />;
+    }
+    if (showHistory) {
+      return <PrayerHistoryScreen onBack={() => setShowHistory(false)} />;
     }
     if (showRamadanSchedule) {
       return <RamadanScheduleScreen onBack={() => setShowRamadanSchedule(false)} />;
