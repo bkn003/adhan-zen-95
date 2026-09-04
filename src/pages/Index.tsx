@@ -179,7 +179,9 @@ const Index = () => {
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       e.preventDefault();
-      if (showSupport) {
+      if (showHistory) {
+        setShowHistory(false);
+      } else if (showSupport) {
         setShowSupport(false);
       } else if (showRamadanSchedule) {
         setShowRamadanSchedule(false);
@@ -220,7 +222,7 @@ const Index = () => {
     window.history.pushState(null, '', window.location.href);
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [showSupport, showRamadanSchedule, showMap, showFeed, showTransparency, showPrivacy, showNotifSettings, showCompare, showQuran, showSyncChanges, showTasbeeh, showZakat, showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
+  }, [showHistory, showSupport, showRamadanSchedule, showMap, showFeed, showTransparency, showPrivacy, showNotifSettings, showCompare, showQuran, showSyncChanges, showTasbeeh, showZakat, showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
 
   // Persist current screen
   useEffect(() => {

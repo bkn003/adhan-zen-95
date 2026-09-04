@@ -581,6 +581,13 @@ export const SettingsScreen = () => {
             <ChevronRight className="w-4 h-4" />
           </button>
           <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate-prayer-history'))}
+            className="w-full py-2.5 px-3 bg-gradient-to-r from-slate-700 to-indigo-700 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">🕰️ Prayer Time History</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
             onClick={() => window.dispatchEvent(new CustomEvent('navigate-ramadan-schedule'))}
             className="w-full py-2.5 px-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
           >
