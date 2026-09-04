@@ -19,12 +19,6 @@ interface ServerChange {
   detected_at: string;
 }
 
-const prettyDate = (iso: string) => {
-  const d = new Date(iso + 'T00:00:00');
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
-};
-
 /** Schedule date range a day belongs to, clamped to the real month end. */
 const rangeOfDay = (day: number, monthIndex: number, year: number) => {
   const end = new Date(year, monthIndex + 1, 0).getDate();
