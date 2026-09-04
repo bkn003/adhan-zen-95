@@ -115,8 +115,49 @@ export function hasVoiceFor(ttsLang: string): boolean {
   return voices.some((v) => v.lang?.toLowerCase().startsWith(base));
 }
 
-/** Speaks text in the given language; resolves when finished or cancelled. */
-export function speakTranslation(text: string, ttsLang: string, rate = 0.9): Promise<void> {
+const MALE_HINTS = /\b(male|man|#male|_m\b|-m\b|kumar|ravi|arjun|hemant|madhur|rishi|prabhat|daniel|george|rushi|niranjan|hamed|aarav|deepak)\b/i;
+const FEMALE_HINTS = /\b(female|woman|#female|_f\b|-f\b|priya|kalpana|swara|aditi|heera|meera|sara|zira|susan|karen|veena|lekha|shruti|neerja|pallavi)\b/i;
+const RICH_HINTS = /(enhanced|premium|neural|natural|network|wavenet|google|siri)/i;
+
+/**
+ * Pick the strongest, most natural male voice available for a language.
+ * Deterministic: voices are scored, then ties break on name so the same device
+ * always recites with the same voice.
+ */
+export function pickBestVoice(ttsLang: string): SpeechSynthesisVoice | null {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+  const base = ttsLang.split('-')[0].toLowerCase();
+  const candidates = window.speechSynthesis
+    .getVoices()
+    .filter((v) => v.lang?.toLowerCase().startsWith(base));
+  if (!candidates.length) return null;
+
+  const score = (v: SpeechSynthesisVoice) => {
+    const label = `${v.name} ${v.voiceURI}`;
+    let s = 0;
+    if (MALE_HINTS.test(label)) s += 60;
+    if (FEMALE_HINTS.test(label)) s -= 40;
+    if (RICH_HINTS.test(label)) s += 25;
+    if (!v.localService) s += 10; // server voices are usually higher fidelity
+    if (v.lang?.toLowerCase() === ttsLang.toLowerCase()) s += 8;
+    if (v.default) s += 2;
+    return s;
+  };
+
+  return [...candidates].sort((a, b) => score(b) - score(a) || a.name.localeCompare(b.name))[0];
+}
+
+/** True when a clearly male voice exists for the language. */
+export const hasMaleVoiceFor = (ttsLang: string) => {
+  const v = pickBestVoice(ttsLang);
+  return !!v && MALE_HINTS.test(`${v.name} ${v.voiceURI}`);
+};
+
+/**
+ * Speaks text in the given language with a bold, unhurried recitation cadence
+ * (slightly slower rate and lower pitch), preferring a natural male voice.
+ */
+export function speakTranslation(text: string, ttsLang: string, rate = 0.82): Promise<void> {
   return new Promise((resolve) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window) || !text) {
       resolve();
@@ -125,11 +166,12 @@ export function speakTranslation(text: string, ttsLang: string, rate = 0.9): Pro
     const synth = window.speechSynthesis;
     synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    const base = ttsLang.split('-')[0];
-    const match = synth.getVoices().find((v) => v.lang?.toLowerCase().startsWith(base));
+    const match = pickBestVoice(ttsLang);
     if (match) u.voice = match;
     u.lang = match?.lang || ttsLang;
     u.rate = rate;
+    u.pitch = 0.85; // deeper, stronger delivery
+    u.volume = 1;
     u.onend = () => resolve();
     u.onerror = () => resolve();
     synth.speak(u);
