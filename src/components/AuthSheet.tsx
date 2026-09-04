@@ -43,11 +43,21 @@ export const AuthSheet: React.FC = () => {
       await clearAnonSession();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.origin },
+        options: {
+          // Return to the exact page the user started from and keep the session.
+          redirectTo: `${window.location.origin}${window.location.pathname}`,
+          queryParams: { prompt: 'select_account' },
+        },
       });
       if (error) throw error;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Google sign-in failed');
+      const msg = e instanceof Error ? e.message : 'Google sign-in failed';
+      // Supabase returns "Unsupported provider" when Google is not configured.
+      toast.error(
+        /unsupported provider|provider is not enabled/i.test(msg)
+          ? 'Google sign-in is not enabled yet. Please sign in with your email and password for now.'
+          : msg,
+      );
       setBusy(false);
     }
   };

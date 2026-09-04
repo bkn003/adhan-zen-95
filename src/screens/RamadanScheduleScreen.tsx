@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Moon, FileDown, CalendarPlus, Sunrise, Sunset, Sparkles, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -7,6 +7,7 @@ import { LocationSelector } from '@/components/LocationSelector';
 import { useLocations } from '@/hooks/useLocations';
 import { useHijriDate } from '@/hooks/useHijriDate';
 import { exportRamadanPdf, exportRamadanIcs, rangeLabel, type EidTiming } from '@/utils/prayerExport';
+import { getHijriMonthLabel } from '@/utils/hijriMonth';
 import { formatTo12Hour } from '@/utils/timeFormat';
 import type { Location } from '@/types/prayer.types';
 
@@ -71,6 +72,13 @@ export const RamadanScheduleScreen: React.FC<{ onBack: () => void }> = ({ onBack
     },
   });
 
+  const [hijriMonthLabel, setHijriMonthLabel] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    getHijriMonthLabel(monthIndex, year).then((l) => { if (!cancelled) setHijriMonthLabel(l); });
+    return () => { cancelled = true; };
+  }, [monthIndex, year]);
+
   const meta = useMemo(
     () => ({
       mosqueName: selected?.mosque_name ?? 'Mosque',
@@ -79,10 +87,10 @@ export const RamadanScheduleScreen: React.FC<{ onBack: () => void }> = ({ onBack
       monthIndex,
       year,
       isRamadan: true,
-      hijriLabel: hijri ? hijri.adjustedDate : undefined,
+      hijriLabel: hijriMonthLabel || undefined,
       eid: eid ?? [],
     }),
-    [selected, month, monthIndex, year, hijri, eid],
+    [selected, month, monthIndex, year, hijriMonthLabel, eid],
   );
 
   const doExport = (kind: 'pdf' | 'ics') => {

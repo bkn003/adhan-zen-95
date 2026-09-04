@@ -8,7 +8,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import {
   QURAN_LANGUAGES, ARABIC_RECITERS, getQuranLanguage,
   fetchArabicSurah, fetchTranslationSurah, fetchAudioUrls,
-  speakTranslation, cancelSpeech, hasVoiceFor,
+  speakTranslation, cancelSpeech, hasVoiceFor, hasMaleVoiceFor, pickBestVoice,
   type QuranAyah, type QuranLanguage,
 } from '@/utils/quranEditions';
 import {
@@ -382,6 +382,8 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
 
   const activeAyah = activeIdx !== null ? arabic[activeIdx] : null;
   const voiceMissing = useSpeech && !hasVoiceFor(lang.ttsLang);
+  const chosenVoice = useSpeech ? pickBestVoice(lang.ttsLang) : null;
+  const maleVoice = useSpeech && hasMaleVoiceFor(lang.ttsLang);
 
   return (
     <div className={`min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-white ${activeAyah ? 'pb-44' : 'pb-24'}`}>
@@ -610,7 +612,9 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
                         ? `Human-voice ${lang.englishLabel} recitation`
                         : voiceMissing
                           ? `${lang.englishLabel} voice not installed on this device — add it in your phone's text-to-speech settings.`
-                          : `Read aloud by your device's ${lang.englishLabel} voice`}
+                          : maleVoice
+                            ? `Recited by ${chosenVoice?.name ?? 'a natural male voice'} on this device`
+                            : `Using your device's ${lang.englishLabel} voice${chosenVoice ? ` (${chosenVoice.name})` : ''} — install a male ${lang.englishLabel} voice in your phone's text-to-speech settings for a stronger recitation.`}
                     </p>
                   )}
                 </div>

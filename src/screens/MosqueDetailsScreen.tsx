@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { ArrowLeft, MapPin, Clock, Navigation, Users, Utensils, Phone, Share2, ChevronLeft, ChevronRight, Car, Wind, Accessibility, Camera, ImageIcon, FileDown, CalendarPlus } from 'lucide-react';
 import { exportSchedulePdf, exportScheduleIcs } from '@/utils/prayerExport';
+import { getHijriMonthLabel } from '@/utils/hijriMonth';
 import { useHijriDate } from '@/hooks/useHijriDate';
 import { toast } from '@/hooks/use-toast';
 
@@ -236,15 +237,17 @@ export const MosqueDetailsScreen = ({ locationId, onBack, onSelectForPrayer }: M
   const canGoForward = selectedMonthIndex < 11;
 
   /** Download the visible month's schedule as a PDF or .ics calendar. */
-  const runExport = (kind: 'pdf' | 'ics') => {
+  const runExport = async (kind: 'pdf' | 'ics') => {
+    const year = now.getFullYear();
+    const hijriLabel = await getHijriMonthLabel(selectedMonthIndex, year);
     const meta = {
       mosqueName: location.mosque_name,
       district: location.district || undefined,
       month: selectedMonth,
       monthIndex: selectedMonthIndex,
-      year: now.getFullYear(),
+      year,
       isRamadan,
-      hijriLabel: hijri ? `${hijri.date} ${hijri.month} ${hijri.year} ${hijri.designation}` : undefined,
+      hijriLabel: hijriLabel || undefined,
     };
     try {
       if (kind === 'pdf') exportSchedulePdf(sortedPrayerTimes as any, meta);

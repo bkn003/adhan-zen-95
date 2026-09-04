@@ -21,7 +21,16 @@ export interface ExportRow {
   tharaweeh?: string | null;
 }
 
-const hm = (t?: string | null) => (t ? t.slice(0, 5) : '—');
+/** 12-hour AM/PM label for a HH:MM[:SS] database time. */
+const hm = (t?: string | null) => {
+  if (!t) return '—';
+  const [hStr, mStr] = t.split(':');
+  const h = Number(hStr);
+  if (!Number.isFinite(h)) return '—';
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${(mStr ?? '00').padStart(2, '0')} ${period}`;
+};
 
 /** Human date-range label, clamped to the real month end (e.g. Feb 24-28). */
 export const rangeLabel = (dateRange: string, monthIndex: number, year: number) => {
@@ -46,13 +55,16 @@ interface Meta {
 export function exportSchedulePdf(rows: ExportRow[], meta: Meta) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
 
-  doc.setFontSize(16);
-  doc.text(`${meta.mosqueName} — ${meta.month} ${meta.year}`, 40, 40);
+  doc.setFontSize(14);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const titleLines = doc.splitTextToSize(`${meta.mosqueName} — ${meta.month} ${meta.year}`, pageWidth - 80);
+  doc.text(titleLines, 40, 40);
   doc.setFontSize(10);
   const sub = [meta.district, meta.hijriLabel ? `Hijri: ${meta.hijriLabel}` : null, meta.isRamadan ? 'Ramadan timings included' : null]
     .filter(Boolean)
     .join('  •  ');
-  if (sub) doc.text(sub, 40, 58);
+  const subY = 40 + titleLines.length * 16;
+  if (sub) doc.text(doc.splitTextToSize(sub, pageWidth - 80), 40, subY);
 
   const head = [[
     'Dates', 'Fajr Adhan', 'Fajr Jamaat', 'Zuhr Adhan', 'Zuhr Jamaat',
@@ -77,10 +89,12 @@ export function exportSchedulePdf(rows: ExportRow[], meta: Meta) {
   autoTable(doc, {
     head,
     body,
-    startY: 72,
-    styles: { fontSize: 9, cellPadding: 4 },
-    headStyles: { fillColor: [16, 122, 87], textColor: 255 },
+    startY: subY + 18,
+    styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
+    headStyles: { fillColor: [16, 122, 87], textColor: 255, fontSize: 8 },
     alternateRowStyles: { fillColor: [240, 250, 245] },
+    margin: { left: 30, right: 30 },
+    tableWidth: 'auto',
   });
 
   doc.setFontSize(8);

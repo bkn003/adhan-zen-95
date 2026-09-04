@@ -16,6 +16,10 @@ export interface StoredLocation {
   lastUsed: number;
 }
 
+/** Local calendar date key — toISOString() would shift the day in IST. */
+const localISO = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 const KEY_PREFIX = 'adhan_schedule_';
 const LOCATION_KEY = 'adhan_selected_location';
 const LOCATIONS_CACHE_KEY = 'adhan_locations_cache';
@@ -27,7 +31,7 @@ export async function saveDailySchedule(
   prayers: Prayer[], 
   locationName?: string
 ): Promise<void> {
-  const dateISO = date.toISOString().slice(0, 10);
+  const dateISO = localISO(date);
   const key = `${KEY_PREFIX}${locationId}_${dateISO}`;
   const payload: StoredSchedule = { 
     locationId, 
@@ -42,7 +46,7 @@ export async function saveDailySchedule(
 
 // Load daily prayer schedule from offline storage
 export async function loadDailySchedule(locationId: string, date: Date): Promise<StoredSchedule | undefined> {
-  const dateISO = date.toISOString().slice(0, 10);
+  const dateISO = localISO(date);
   const key = `${KEY_PREFIX}${locationId}_${dateISO}`;
   const data = await get(key);
   if (data) {

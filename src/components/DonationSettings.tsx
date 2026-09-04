@@ -3,13 +3,15 @@ import { HandCoins, Info, ShieldAlert } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { loadShowMosqueDonations, saveShowMosqueDonations } from '@/utils/donationPrefs';
+import { MosqueDonate } from '@/components/MosqueDonate';
+import type { Location } from '@/types/prayer.types';
 
 /**
  * Settings control for mosque donation visibility. When the super admin turns the
  * platform-wide switch off, donations are hidden everywhere and the reason is
  * stated clearly here instead of silently disappearing.
  */
-export const DonationSettings: React.FC = () => {
+export const DonationSettings: React.FC<{ location?: Location | null }> = ({ location }) => {
   const [show, setShow] = useState(loadShowMosqueDonations());
   const [platformEnabled, setPlatformEnabled] = useState<boolean | null>(null);
 
@@ -50,6 +52,17 @@ export const DonationSettings: React.FC = () => {
           className="data-[state=checked]:bg-amber-500 shrink-0 ml-2"
         />
       </div>
+
+      {/* Real donation page for the mosque currently selected. */}
+      {show && platformEnabled !== false && location && (
+        <MosqueDonate mosqueName={location.mosque_name} locationId={location.id} variant="compact" />
+      )}
+
+      {show && platformEnabled !== false && !location && (
+        <p className="text-xs text-gray-500 px-1">
+          Select a mosque above to see its donation details.
+        </p>
+      )}
 
       {platformEnabled === false && (
         <div className="flex gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">

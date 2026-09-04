@@ -145,7 +145,8 @@ export const SettingsScreen = () => {
   const [prayerAlarmEnabled, setPrayerAlarmEnabled] = useState(false);
 
   // Only one settings group is expanded at a time to keep the page short.
-  const [openSection, setOpenSection] = useState<string | null>('mosque');
+  // Every section starts collapsed, including Mosque & Location.
+  const [openSection, setOpenSection] = useState<string | null>(null);
   const toggle = (key: string) => setOpenSection((current) => (current === key ? null : key));
 
   // DND Settings
@@ -352,7 +353,7 @@ export const SettingsScreen = () => {
 
       {/* Mosque donation visibility */}
       <SettingsCard title="Donations" icon={ShieldCheck} gradient="from-amber-50/50 to-white">
-        <DonationSettings />
+        <DonationSettings location={selectedLocation} />
       </SettingsCard>
 
 
@@ -577,6 +578,13 @@ export const SettingsScreen = () => {
             className="w-full py-2.5 px-3 bg-gradient-to-r from-sky-600 to-cyan-600 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
           >
             <span className="flex items-center gap-2">🗺️ Mosque Map &amp; Directions</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate-prayer-history'))}
+            className="w-full py-2.5 px-3 bg-gradient-to-r from-slate-700 to-indigo-700 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">🕰️ Prayer Time History</span>
             <ChevronRight className="w-4 h-4" />
           </button>
           <button

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Heart, Smartphone, QrCode, Copy, Check, X, Info, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
+import { buildUpiUrl, openUpiApp, upiQrSrc } from '@/utils/upi';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface AppDonationConfig {
@@ -69,34 +70,28 @@ export const AppSupportCard: React.FC<Props> = ({ variant = 'compact' }) => {
 
   if (!cfg?.enabled || !cfg.upiId) return null;
 
-  const link = (scheme = 'upi://pay') => {
-    const p = new URLSearchParams({
+  const link = (scheme = 'upi://pay') =>
+    buildUpiUrl(scheme, {
       pa: cfg.upiId,
       pn: cfg.payee || 'Adhan Zen',
-      cu: 'INR',
-      tn: 'Support Adhan Zen app development',
+      amount,
+      note: 'Adhan Zen app support',
     });
-    if (amount && Number(amount) > 0) p.set('am', String(amount));
-    return `${scheme}?${p.toString()}`;
-  };
 
   const payWith = (scheme: string) => {
-    if (!isMobile()) {
-      // Desktop browsers cannot handle UPI app schemes — open the QR/copy sheet instead.
-      setOpen(true);
-      toast.info('UPI apps only open on a phone. Scan the QR or copy the UPI ID.');
+    const url = link(scheme);
+    if (!url) {
+      toast.error('The support UPI ID is not configured correctly.');
       return;
     }
-    const url = link(scheme);
-    const start = Date.now();
-    window.location.href = url;
-    setTimeout(() => {
-      // Still here and no app switch happened → likely no handler installed.
-      if (document.visibilityState === 'visible' && Date.now() - start < 4000) {
-        toast.info('No UPI app opened? Copy the UPI ID and pay manually.');
-        setOpen(true);
-      }
-    }, 2500);
+    const launched = openUpiApp(url, () => {
+      toast.info('No UPI app opened? Scan the QR or copy the UPI ID.');
+      setOpen(true);
+    });
+    if (!launched) {
+      setOpen(true);
+      toast.info('UPI apps only open on a phone. Scan the QR or copy the UPI ID.');
+    }
   };
 
 
@@ -234,7 +229,7 @@ export const AppSupportCard: React.FC<Props> = ({ variant = 'compact' }) => {
               {!isMobile() && (
                 <div className="flex flex-col items-center bg-gradient-to-br from-indigo-50 to-sky-50 rounded-2xl p-4 border border-indigo-100">
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(link())}`}
+                    src={upiQrSrc(link())}
                     alt="UPI QR for app support"
                     className="w-44 h-44 rounded-xl bg-white p-2 shadow"
                   />

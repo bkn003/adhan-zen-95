@@ -19,10 +19,22 @@ interface ServerChange {
   detected_at: string;
 }
 
-const prettyDate = (iso: string) => {
+/** Schedule date range a day belongs to, clamped to the real month end. */
+const rangeOfDay = (day: number, monthIndex: number, year: number) => {
+  const end = new Date(year, monthIndex + 1, 0).getDate();
+  if (day <= 5) return '1-5';
+  if (day <= 11) return '6-11';
+  if (day <= 17) return '12-17';
+  if (day <= 23) return '18-23';
+  return `24-${end}`;
+};
+
+/** "18-23 Sep" style key for one schedule range, so a range appears once. */
+const rangeKey = (iso: string) => {
   const d = new Date(iso + 'T00:00:00');
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  const month = d.toLocaleDateString(undefined, { month: 'short' });
+  return `${rangeOfDay(d.getDate(), d.getMonth(), d.getFullYear())} ${month}`;
 };
 
 /** Weekly change history recorded server-side for my mosque + my mohalla. */
@@ -65,11 +77,15 @@ export const SyncChangesScreen: React.FC<Props> = ({ onBack }) => {
     return acc;
   }, {});
 
+  // One schedule range = one card. The sync engine reports per-day rows, so
+  // identical label/from/to entries inside a range are collapsed into one.
   const grouped = state.changes.reduce<Record<string, SyncState['changes']>>((acc, c) => {
-    (acc[c.date] ||= []).push(c);
+    const key = rangeKey(c.date);
+    const list = (acc[key] ||= []);
+    if (!list.some((x) => x.label === c.label && x.from === c.from && x.to === c.to)) list.push(c);
     return acc;
   }, {});
-  const dates = Object.keys(grouped).sort();
+  const dates = Object.keys(grouped);
 
 
   return (
@@ -143,7 +159,7 @@ export const SyncChangesScreen: React.FC<Props> = ({ onBack }) => {
           <div key={date} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-sky-50 to-white border-b border-gray-100">
               <CalendarClock className="w-4 h-4 text-sky-600" />
-              <span className="text-sm font-bold text-gray-800">{prettyDate(date)}</span>
+              <span className="text-sm font-bold text-gray-800">{date}</span>
               <span className="ml-auto text-[11px] text-gray-500">{grouped[date].length} change(s)</span>
             </div>
             <div className="divide-y divide-gray-50">
