@@ -145,7 +145,8 @@ export const SettingsScreen = () => {
   const [prayerAlarmEnabled, setPrayerAlarmEnabled] = useState(false);
 
   // Only one settings group is expanded at a time to keep the page short.
-  const [openSection, setOpenSection] = useState<string | null>('mosque');
+  // Every section starts collapsed, including Mosque & Location.
+  const [openSection, setOpenSection] = useState<string | null>(null);
   const toggle = (key: string) => setOpenSection((current) => (current === key ? null : key));
 
   // DND Settings
