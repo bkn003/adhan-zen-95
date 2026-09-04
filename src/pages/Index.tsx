@@ -59,6 +59,7 @@ const Index = () => {
   const [showSupport, setShowSupport] = useState(false);
   const [showRamadanSchedule, setShowRamadanSchedule] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
 
   // Enable realtime sync for locations & prayer_times
