@@ -118,32 +118,31 @@ export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: ba
   const hasBank = !!(info.donation_account_number && info.donation_ifsc);
   if (!hasUpi && !hasBank) return null;
 
-  const upiParams = () => {
-    const p = new URLSearchParams({
+  const upiLink = (scheme = 'upi://pay') =>
+    buildUpiUrl(scheme, {
       pa: info.donation_upi_id || '',
       pn: info.donation_account_holder || mosqueName,
-      cu: 'INR',
-      tn: `Donation to ${mosqueName}`,
+      amount,
+      note: `Donation ${mosqueName}`,
     });
-    if (amount && Number(amount) > 0) p.set('am', String(amount));
-    return p.toString();
-  };
-
-  const upiLink = (scheme = 'upi://pay') => (info.donation_upi_id ? `${scheme}?${upiParams()}` : '');
 
   const payWith = (scheme: string) => {
     const link = upiLink(scheme);
-    if (!link) return;
-    window.location.href = link;
-    // If no UPI app handles the scheme, nothing happens — hint the user.
-    setTimeout(() => toast.info('No UPI app opened? Copy the UPI ID and pay manually.'), 2500);
+    if (!link) {
+      toast.error('This mosque has not saved a valid UPI ID yet.');
+      return;
+    }
+    const launched = openUpiApp(link, () => {
+      toast.info('No UPI app opened? Scan the QR or copy the UPI ID.');
+      setOpen(true);
+    });
+    if (!launched) {
+      setOpen(true);
+      toast.info('UPI apps only open on a phone. Scan the QR or copy the UPI ID.');
+    }
   };
 
-  const qrSrc = () => {
-    const link = upiLink();
-    if (!link) return '';
-    return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(link)}`;
-  };
+  const qrSrc = () => upiQrSrc(upiLink());
 
   const share = async () => {
     const text = `Donate to ${mosqueName}${info.donation_upi_id ? `\nUPI: ${info.donation_upi_id}` : ''}${info.donation_account_number ? `\nA/c: ${info.donation_account_number}\nIFSC: ${info.donation_ifsc}` : ''}`;
