@@ -353,7 +353,7 @@ export const SettingsScreen = () => {
 
       {/* Mosque donation visibility */}
       <SettingsCard title="Donations" icon={ShieldCheck} gradient="from-amber-50/50 to-white">
-        <DonationSettings />
+        <DonationSettings location={selectedLocation} />
       </SettingsCard>
 
 
