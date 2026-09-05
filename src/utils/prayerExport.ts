@@ -138,7 +138,6 @@ export function exportScheduleIcs(rows: ExportRow[], meta: Meta) {
     'CALSCALE:GREGORIAN',
   ];
 
-  const monthEnd = new Date(meta.year, meta.monthIndex + 1, 0).getDate();
 
   const prayers = (r: ExportRow): { name: string; time?: string | null }[] => [
     { name: 'Fajr', time: meta.isRamadan && r.fajr_ramadan_iqamah ? r.fajr_ramadan_iqamah : r.fajr_iqamah },
@@ -267,7 +266,6 @@ export function exportRamadanIcs(rows: ExportRow[], meta: RamadanMeta) {
     'PRODID:-//Adhan Zen//Ramadan Schedule//EN',
     'CALSCALE:GREGORIAN',
   ];
-  const monthEnd = new Date(meta.year, meta.monthIndex + 1, 0).getDate();
 
   const push = (name: string, start: Date, minutes = 20) => {
     const end = new Date(start.getTime() + minutes * 60 * 1000);

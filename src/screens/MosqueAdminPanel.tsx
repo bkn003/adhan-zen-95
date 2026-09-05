@@ -42,17 +42,8 @@ function getMonthEndDay(monthName: string): number {
  */
 function formatDateRangeDisplay(dateRange: string, monthName: string): string {
   if (!dateRange) return dateRange;
-  const parts = dateRange.split('-');
-  if (parts.length === 2) {
-    const start = parseInt(parts[0]);
-    const end = parseInt(parts[1]);
-    const monthEnd = getMonthEndDay(monthName);
-    // If range end >= 28 (i.e. near month end), cap to actual month end
-    if (end >= 28) {
-      return `${start}-${monthEnd}`;
-    }
-  }
-  return dateRange;
+  const idx = MONTHS.indexOf(monthName);
+  return rangeLabel(dateRange, idx === -1 ? new Date().getMonth() : idx, new Date().getFullYear());
 }
 
 const SUPABASE_URL = "https://lhufqnokmdqkvzcxqwkl.supabase.co";
