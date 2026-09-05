@@ -225,17 +225,22 @@ export const HomeScreen = ({
   // AND save to IndexedDB for offline use
   useEffect(() => {
     if (!selectedLocation || finalPrayerTimes.length === 0) return;
-    if (!Capacitor.isNativePlatform()) return;
 
     (async () => {
       try {
-        // Save to IndexedDB for offline use
+        // Save to IndexedDB for offline use (all platforms, incl. PWA)
         await saveDailySchedule(
           selectedLocation.id,
           selectedDate,
           finalPrayerTimes,
           selectedLocation.mosque_name
         );
+        await saveSelectedLocation({
+          id: selectedLocation.id,
+          mosque_name: selectedLocation.mosque_name,
+          district: selectedLocation.district,
+        });
+        if (!Capacitor.isNativePlatform()) return;
 
         // Schedule notifications
         await scheduleTodayAdhanNotifications(finalPrayerTimes, selectedDate);
