@@ -101,7 +101,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
   // New mosque with prayer times wizard
   const [showAddMosque, setShowAddMosque] = useState(false);
   const [addMosqueStep, setAddMosqueStep] = useState<'info' | 'prayer-times'>('info');
-  const [newMosque, setNewMosque] = useState({ mosque_name: '', district: '', latitude: '', longitude: '' });
+  const [newMosque, setNewMosque] = useState({ mosque_name: '', district: '', latitude: '', longitude: '', timings_source: '', ramadan_start_date: '', ramadan_end_date: '', donation_link: '' });
   const [newMosqueId, setNewMosqueId] = useState<string | null>(null);
   const [addingMosque, setAddingMosque] = useState(false);
   const [wizardMonth, setWizardMonth] = useState(monthNames[new Date().getMonth()]);
@@ -372,6 +372,10 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
             district: newMosque.district,
             latitude: parseFloat(newMosque.latitude),
             longitude: parseFloat(newMosque.longitude),
+            timings_source: newMosque.timings_source || null,
+            ramadan_start_date: newMosque.ramadan_start_date || null,
+            ramadan_end_date: newMosque.ramadan_end_date || null,
+            donation_link: newMosque.donation_link || null,
           }
         }),
       });
@@ -428,7 +432,7 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
         toast.success('All prayer times saved!');
         setShowAddMosque(false);
         setAddMosqueStep('info');
-        setNewMosque({ mosque_name: '', district: '', latitude: '', longitude: '' });
+        setNewMosque({ mosque_name: '', district: '', latitude: '', longitude: '', timings_source: '', ramadan_start_date: '', ramadan_end_date: '', donation_link: '' });
         setNewMosqueId(null);
         setWizardRangeIndex(0);
         setWizardPrayerTimes({});
@@ -784,6 +788,22 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
                 <input type="number" step="any" placeholder="Latitude" value={newMosque.latitude} onChange={e => setNewMosque(p => ({ ...p, latitude: e.target.value }))} className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm text-white placeholder-gray-500" />
                 <input type="number" step="any" placeholder="Longitude" value={newMosque.longitude} onChange={e => setNewMosque(p => ({ ...p, longitude: e.target.value }))} className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm text-white placeholder-gray-500" />
               </div>
+              <select value={newMosque.timings_source} onChange={e => setNewMosque(p => ({ ...p, timings_source: e.target.value }))} className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm text-white">
+                <option value="">Timings source (optional)</option>
+                <option value="Mosque notice board">Mosque notice board</option>
+                <option value="Mosque committee">Mosque committee</option>
+                <option value="Imam confirmed">Imam confirmed</option>
+                <option value="Calculated (Aladhan)">Calculated (Aladhan)</option>
+              </select>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="text-[10px] text-gray-400">Ramadan starts
+                  <input type="date" value={newMosque.ramadan_start_date} onChange={e => setNewMosque(p => ({ ...p, ramadan_start_date: e.target.value }))} className="w-full mt-1 px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm text-white" />
+                </label>
+                <label className="text-[10px] text-gray-400">Ramadan ends
+                  <input type="date" value={newMosque.ramadan_end_date} onChange={e => setNewMosque(p => ({ ...p, ramadan_end_date: e.target.value }))} className="w-full mt-1 px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm text-white" />
+                </label>
+              </div>
+              <input type="url" placeholder="Donation link (optional)" value={newMosque.donation_link} onChange={e => setNewMosque(p => ({ ...p, donation_link: e.target.value }))} className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm text-white placeholder-gray-500" />
               <div className="flex gap-2">
                 <Button onClick={handleAddMosqueInfo} disabled={addingMosque} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs h-9">
                   {addingMosque ? 'Adding...' : 'Next: Add Prayer Times →'}

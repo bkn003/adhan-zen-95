@@ -795,6 +795,10 @@ serve(async (req) => {
           district: mosqueData.district,
           latitude: mosqueData.latitude,
           longitude: mosqueData.longitude,
+          timings_source: mosqueData.timings_source || null,
+          ramadan_start_date: mosqueData.ramadan_start_date || null,
+          ramadan_end_date: mosqueData.ramadan_end_date || null,
+          donation_link: mosqueData.donation_link || null,
         });
 
       if (error) {
