@@ -32,14 +32,21 @@ const hm = (t?: string | null) => {
   return `${h12}:${(mStr ?? '00').padStart(2, '0')} ${period}`;
 };
 
-/** Human date-range label, clamped to the real month end (e.g. Feb 24-28). */
+/**
+ * Human date-range label for a stored `date_range` value, which may carry a
+ * month suffix ("1-5 Apr", "24-31 Aug"). Always snaps to the canonical
+ * schedule buckets 1-5, 6-11, 12-17, 18-23, 24-<month end>.
+ */
 export const rangeLabel = (dateRange: string, monthIndex: number, year: number) => {
-  const end = new Date(year, monthIndex + 1, 0).getDate();
-  const [from, to] = dateRange.split('-');
-  const toNum = Number(to);
-  if (!to || !Number.isFinite(toNum) || toNum > end) return `${from}-${end}`;
+  const monthEnd = new Date(year, monthIndex + 1, 0).getDate();
+  const m = String(dateRange || '').match(/(\d{1,2})\s*[-–]\s*(\d{1,2})/);
+  if (!m) return String(dateRange || '');
+  const from = parseInt(m[1], 10);
+  const canonical: Record<number, number> = { 1: 5, 6: 11, 12: 17, 18: 23 };
+  const to = from >= 24 ? monthEnd : Math.min(canonical[from] ?? parseInt(m[2], 10), monthEnd);
   return `${from}-${to}`;
 };
+
 
 interface Meta {
   mosqueName: string;
