@@ -11,3 +11,10 @@
 - [x] Google sign-in: correct redirect + clear message when provider is disabled
       (still needs Google enabled with credentials in Supabase Auth Providers)
 - [ ] Validate real mosque Ramadan schedule, map, and exports on device data
+
+## 2026-09-05
+- [x] Fix date-range labels everywhere (PDF/ICS exports, prayer history, Ramadan schedule, mosque details, admin panel, offline banner) — stored values carry a month suffix ("1-5 Apr") which broke parsing; now snapped to 1-5 / 6-11 / 12-17 / 18-23 / 24-month end.
+- [x] Mosque database fields: timings source, Ramadan start/end dates, donation link on locations + super admin add-mosque form + edge function.
+- [x] Offline-first: cache today's schedule and preferred mosque on all platforms (was native-only).
+- [x] Verified Android alarm chain (exact alarms, boot/upgrade reschedule, +24h self-perpetuation, daily sync worker).
+- [ ] Editing the new mosque fields for existing mosques in the admin panel.
