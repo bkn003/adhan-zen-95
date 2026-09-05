@@ -182,6 +182,7 @@ export type Database = {
           ac_available: boolean | null
           created_at: string | null
           district: string
+          donation_link: string | null
           id: string
           is_paused: boolean | null
           is_visible: boolean | null
@@ -190,10 +191,13 @@ export type Database = {
           mosque_capacity: string | null
           mosque_name: string
           parking_available: boolean | null
+          ramadan_end_date: string | null
+          ramadan_start_date: string | null
           sahar_food_availability: boolean | null
           sahar_food_contact_number: string | null
           sahar_food_time: string | null
           show_month_schedule: boolean | null
+          timings_source: string | null
           updated_at: string | null
           wheelchair_accessible: boolean | null
           women_prayer_hall: boolean | null
@@ -202,6 +206,7 @@ export type Database = {
           ac_available?: boolean | null
           created_at?: string | null
           district: string
+          donation_link?: string | null
           id?: string
           is_paused?: boolean | null
           is_visible?: boolean | null
@@ -210,10 +215,13 @@ export type Database = {
           mosque_capacity?: string | null
           mosque_name: string
           parking_available?: boolean | null
+          ramadan_end_date?: string | null
+          ramadan_start_date?: string | null
           sahar_food_availability?: boolean | null
           sahar_food_contact_number?: string | null
           sahar_food_time?: string | null
           show_month_schedule?: boolean | null
+          timings_source?: string | null
           updated_at?: string | null
           wheelchair_accessible?: boolean | null
           women_prayer_hall?: boolean | null
@@ -222,6 +230,7 @@ export type Database = {
           ac_available?: boolean | null
           created_at?: string | null
           district?: string
+          donation_link?: string | null
           id?: string
           is_paused?: boolean | null
           is_visible?: boolean | null
@@ -230,10 +239,13 @@ export type Database = {
           mosque_capacity?: string | null
           mosque_name?: string
           parking_available?: boolean | null
+          ramadan_end_date?: string | null
+          ramadan_start_date?: string | null
           sahar_food_availability?: boolean | null
           sahar_food_contact_number?: string | null
           sahar_food_time?: string | null
           show_month_schedule?: boolean | null
+          timings_source?: string | null
           updated_at?: string | null
           wheelchair_accessible?: boolean | null
           women_prayer_hall?: boolean | null
