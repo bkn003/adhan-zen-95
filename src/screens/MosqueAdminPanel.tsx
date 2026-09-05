@@ -19,6 +19,7 @@ import { AdminAuthCard } from '@/components/admin/AdminAuthCard';
 import { BulkCopyTimings } from '@/components/admin/BulkCopyTimings';
 import { KhutbahAdmin } from '@/components/admin/KhutbahAdmin';
 import { AttendanceTrends } from '@/components/admin/AttendanceTrends';
+import { rangeLabel } from '@/utils/prayerExport';
 import { authHeaders, fetchAdminScope, adminSignOut, canManageSection, type AdminScope, type AdminSectionKey } from '@/utils/adminApi';
 
 
@@ -42,7 +43,7 @@ function getMonthEndDay(monthName: string): number {
  */
 function formatDateRangeDisplay(dateRange: string, monthName: string): string {
   if (!dateRange) return dateRange;
-  const idx = MONTHS.indexOf(monthName);
+  const idx = ['January','February','March','April','May','June','July','August','September','October','November','December'].indexOf(monthName);
   return rangeLabel(dateRange, idx === -1 ? new Date().getMonth() : idx, new Date().getFullYear());
 }
 
