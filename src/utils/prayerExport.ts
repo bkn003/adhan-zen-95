@@ -48,6 +48,14 @@ export const rangeLabel = (dateRange: string, monthIndex: number, year: number) 
 };
 
 
+/** Canonical from/to days for a stored `date_range`, clamped to the month end. */
+export const rangeDays = (dateRange: string, monthIndex: number, year: number) => {
+  const label = rangeLabel(dateRange, monthIndex, year);
+  const m = label.match(/(\d{1,2})-(\d{1,2})/);
+  if (!m) return null;
+  return { from: parseInt(m[1], 10), to: parseInt(m[2], 10) };
+};
+
 interface Meta {
   mosqueName: string;
   district?: string;
@@ -148,10 +156,9 @@ export function exportScheduleIcs(rows: ExportRow[], meta: Meta) {
   ];
 
   rows.forEach((r) => {
-    const [fromStr, toStr] = r.date_range.split('-');
-    const from = Number(fromStr);
-    const to = Math.min(Number(toStr) || monthEnd, monthEnd);
-    if (!Number.isFinite(from)) return;
+    const days = rangeDays(r.date_range, meta.monthIndex, meta.year);
+    if (!days) return;
+    const { from, to } = days;
 
     for (let day = from; day <= to; day++) {
       prayers(r).forEach(({ name, time }) => {
@@ -277,10 +284,9 @@ export function exportRamadanIcs(rows: ExportRow[], meta: RamadanMeta) {
   };
 
   rows.forEach((r) => {
-    const [fromStr, toStr] = r.date_range.split('-');
-    const from = Number(fromStr);
-    const to = Math.min(Number(toStr) || monthEnd, monthEnd);
-    if (!Number.isFinite(from)) return;
+    const days = rangeDays(r.date_range, meta.monthIndex, meta.year);
+    if (!days) return;
+    const { from, to } = days;
     for (let day = from; day <= to; day++) {
       ([
         ['Sahar ends (start fasting)', r.sahar_end, 5],
