@@ -32,13 +32,28 @@ const hm = (t?: string | null) => {
   return `${h12}:${(mStr ?? '00').padStart(2, '0')} ${period}`;
 };
 
-/** Human date-range label, clamped to the real month end (e.g. Feb 24-28). */
+/**
+ * Human date-range label for a stored `date_range` value, which may carry a
+ * month suffix ("1-5 Apr", "24-31 Aug"). Always snaps to the canonical
+ * schedule buckets 1-5, 6-11, 12-17, 18-23, 24-<month end>.
+ */
 export const rangeLabel = (dateRange: string, monthIndex: number, year: number) => {
-  const end = new Date(year, monthIndex + 1, 0).getDate();
-  const [from, to] = dateRange.split('-');
-  const toNum = Number(to);
-  if (!to || !Number.isFinite(toNum) || toNum > end) return `${from}-${end}`;
+  const monthEnd = new Date(year, monthIndex + 1, 0).getDate();
+  const m = String(dateRange || '').match(/(\d{1,2})\s*[-–]\s*(\d{1,2})/);
+  if (!m) return String(dateRange || '');
+  const from = parseInt(m[1], 10);
+  const canonical: Record<number, number> = { 1: 5, 6: 11, 12: 17, 18: 23 };
+  const to = from >= 24 ? monthEnd : Math.min(canonical[from] ?? parseInt(m[2], 10), monthEnd);
   return `${from}-${to}`;
+};
+
+
+/** Canonical from/to days for a stored `date_range`, clamped to the month end. */
+export const rangeDays = (dateRange: string, monthIndex: number, year: number) => {
+  const label = rangeLabel(dateRange, monthIndex, year);
+  const m = label.match(/(\d{1,2})-(\d{1,2})/);
+  if (!m) return null;
+  return { from: parseInt(m[1], 10), to: parseInt(m[2], 10) };
 };
 
 interface Meta {
@@ -123,7 +138,6 @@ export function exportScheduleIcs(rows: ExportRow[], meta: Meta) {
     'CALSCALE:GREGORIAN',
   ];
 
-  const monthEnd = new Date(meta.year, meta.monthIndex + 1, 0).getDate();
 
   const prayers = (r: ExportRow): { name: string; time?: string | null }[] => [
     { name: 'Fajr', time: meta.isRamadan && r.fajr_ramadan_iqamah ? r.fajr_ramadan_iqamah : r.fajr_iqamah },
@@ -141,10 +155,9 @@ export function exportScheduleIcs(rows: ExportRow[], meta: Meta) {
   ];
 
   rows.forEach((r) => {
-    const [fromStr, toStr] = r.date_range.split('-');
-    const from = Number(fromStr);
-    const to = Math.min(Number(toStr) || monthEnd, monthEnd);
-    if (!Number.isFinite(from)) return;
+    const days = rangeDays(r.date_range, meta.monthIndex, meta.year);
+    if (!days) return;
+    const { from, to } = days;
 
     for (let day = from; day <= to; day++) {
       prayers(r).forEach(({ name, time }) => {
@@ -253,7 +266,6 @@ export function exportRamadanIcs(rows: ExportRow[], meta: RamadanMeta) {
     'PRODID:-//Adhan Zen//Ramadan Schedule//EN',
     'CALSCALE:GREGORIAN',
   ];
-  const monthEnd = new Date(meta.year, meta.monthIndex + 1, 0).getDate();
 
   const push = (name: string, start: Date, minutes = 20) => {
     const end = new Date(start.getTime() + minutes * 60 * 1000);
@@ -270,10 +282,9 @@ export function exportRamadanIcs(rows: ExportRow[], meta: RamadanMeta) {
   };
 
   rows.forEach((r) => {
-    const [fromStr, toStr] = r.date_range.split('-');
-    const from = Number(fromStr);
-    const to = Math.min(Number(toStr) || monthEnd, monthEnd);
-    if (!Number.isFinite(from)) return;
+    const days = rangeDays(r.date_range, meta.monthIndex, meta.year);
+    if (!days) return;
+    const { from, to } = days;
     for (let day = from; day <= to; day++) {
       ([
         ['Sahar ends (start fasting)', r.sahar_end, 5],

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { ArrowLeft, MapPin, Clock, Navigation, Users, Utensils, Phone, Share2, ChevronLeft, ChevronRight, Car, Wind, Accessibility, Camera, ImageIcon, FileDown, CalendarPlus } from 'lucide-react';
 import { exportSchedulePdf, exportScheduleIcs } from '@/utils/prayerExport';
+import { rangeLabel } from '@/utils/prayerExport';
 import { getHijriMonthLabel } from '@/utils/hijriMonth';
 import { useHijriDate } from '@/hooks/useHijriDate';
 import { toast } from '@/hooks/use-toast';
@@ -57,13 +58,8 @@ const getMonthEndDay = (monthIndex: number): number => {
   return new Date(year, monthIndex + 1, 0).getDate();
 };
 
-const formatDateRange = (dateRange: string, monthIndex: number): string => {
-  const endDay = getMonthEndDay(monthIndex);
-  if (dateRange.startsWith('24-') || dateRange.startsWith('24 ')) {
-    return `24-${endDay}`;
-  }
-  return dateRange;
-};
+const formatDateRange = (dateRange: string, monthIndex: number): string =>
+  rangeLabel(dateRange, monthIndex, new Date().getFullYear());
 
 // Image carousel component
 const ImageCarousel = ({ photos }: { photos: any[] }) => {

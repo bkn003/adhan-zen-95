@@ -2,7 +2,7 @@ import { WifiOff, CalendarRange } from 'lucide-react';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { getPrayerCacheMeta } from '@/utils/prayerCache';
-import { rangeLabel } from '@/utils/prayerExport';
+import { rangeLabel, rangeDays } from '@/utils/prayerExport';
 
 interface OfflineBannerProps {
     /** Selected mosque — enables the detailed "last updated" line. */
@@ -32,10 +32,9 @@ export const OfflineBanner = ({ locationId, mosqueName, date }: OfflineBannerPro
 
     // Which date-range row covers the day we are displaying?
     const covering = meta?.rows?.find((r: any) => {
-        const [from, to] = String(r?.date_range || '').split('-').map(Number);
-        if (!Number.isFinite(from)) return false;
-        const monthEnd = new Date(day.getFullYear(), day.getMonth() + 1, 0).getDate();
-        return day.getDate() >= from && day.getDate() <= Math.min(to || monthEnd, monthEnd);
+        const days = rangeDays(String(r?.date_range || ''), day.getMonth(), day.getFullYear());
+        if (!days) return false;
+        return day.getDate() >= days.from && day.getDate() <= days.to;
     });
     const range = covering
         ? `${rangeLabel(covering.date_range, day.getMonth(), day.getFullYear())} ${month}`
