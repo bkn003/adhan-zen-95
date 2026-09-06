@@ -18,3 +18,7 @@
 - [x] Offline-first: cache today's schedule and preferred mosque on all platforms (was native-only).
 - [x] Verified Android alarm chain (exact alarms, boot/upgrade reschedule, +24h self-perpetuation, daily sync worker).
 - [ ] Editing the new mosque fields for existing mosques in the admin panel.
+
+## 2026-09-06
+- [x] Instant startup: preferred mosque + today's times mirrored to a synchronous local snapshot (first paint works with no internet).
+- [x] Adhan AND Iqamah in-app alarm/notification now respect the per-prayer, per-phase notification preferences.
