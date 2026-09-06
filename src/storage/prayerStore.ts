@@ -102,3 +102,51 @@ export async function cleanOldSchedules(): Promise<void> {
     }
   }
 }
+
+/* ------------------------------------------------------------------ *
+ * Synchronous snapshots (localStorage)
+ * IndexedDB is async, so the very first paint would still be empty.
+ * These mirrors let the app render the preferred mosque + today's
+ * times instantly on startup, with or without internet.
+ * ------------------------------------------------------------------ */
+
+const SNAP_LOCATION = 'adhan_snapshot_location';
+const SNAP_SCHEDULE = 'adhan_snapshot_schedule';
+
+export function saveLocationSnapshot(location: any): void {
+  try {
+    localStorage.setItem(SNAP_LOCATION, JSON.stringify(location));
+  } catch { /* quota */ }
+}
+
+export function readLocationSnapshot<T = any>(): T | null {
+  try {
+    const raw = localStorage.getItem(SNAP_LOCATION);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveScheduleSnapshot(locationId: string, date: Date, prayers: Prayer[], locationName?: string): void {
+  try {
+    localStorage.setItem(
+      SNAP_SCHEDULE,
+      JSON.stringify({ locationId, dateISO: localISO(date), prayers, locationName, timestamp: Date.now() })
+    );
+  } catch { /* quota */ }
+}
+
+/** Today's cached prayers for this mosque, or null when the snapshot is for another day/mosque. */
+export function readScheduleSnapshot(locationId: string | undefined, date: Date): StoredSchedule | null {
+  try {
+    const raw = localStorage.getItem(SNAP_SCHEDULE);
+    if (!raw) return null;
+    const snap = JSON.parse(raw) as StoredSchedule;
+    if (snap.dateISO !== localISO(date)) return null;
+    if (locationId && snap.locationId !== locationId) return null;
+    return snap.prayers?.length ? snap : null;
+  } catch {
+    return null;
+  }
+}
