@@ -32,7 +32,7 @@ import { OfflineBanner } from '@/components/OfflineBanner';
 import type { Location, Prayer } from '@/types/prayer.types';
 import { Capacitor } from '@capacitor/core';
 import { scheduleTodayAdhanNotifications } from '@/native/useNativeAdhanScheduler';
-import { saveDailySchedule, saveSelectedLocation, cacheLocations, cleanOldSchedules, loadDailySchedule } from '@/storage/prayerStore';
+import { saveDailySchedule, saveSelectedLocation, cacheLocations, cleanOldSchedules, loadDailySchedule, saveLocationSnapshot, readLocationSnapshot, saveScheduleSnapshot, readScheduleSnapshot } from '@/storage/prayerStore';
 import { initializeOfflineAdhanService } from '@/native/offlineAdhanService';
 import { scheduleAdhanWithMedian, savePrayerTimesForBoot, registerMedianPrayerTimesSaver, isMedianApp } from '@/native/medianBridge';
 import { useRamadanContext } from '@/contexts/RamadanContext';
@@ -47,7 +47,9 @@ export const HomeScreen = ({
   selectedLocationId,
   onLocationSelect
 }: HomeScreenProps) => {
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  // Hydrate instantly from the local snapshot so the preferred mosque and its
+  // times paint on the first frame, with or without internet.
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(() => readLocationSnapshot<Location>());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const {
     data: locations,
@@ -57,7 +59,9 @@ export const HomeScreen = ({
   // Initialize Adhan system (download audio, setup offline support)
   const { isInitialized, audioReady } = useAdhanInitializer();
 
-  const [offlineFallbackTimes, setOfflineFallbackTimes] = useState<Prayer[]>([]);
+  const [offlineFallbackTimes, setOfflineFallbackTimes] = useState<Prayer[]>(
+    () => (readScheduleSnapshot(readLocationSnapshot<Location>()?.id, new Date())?.prayers as Prayer[]) || []
+  );
 
   // Load selected date from sessionStorage or use current date
   useEffect(() => {
@@ -176,7 +180,7 @@ export const HomeScreen = ({
       ? prayerTimes
       : !prayerTimesLoading && processedPrayerTimes.length > 0
         ? processedPrayerTimes
-        : !prayerTimesLoading ? offlineFallbackTimes : [];
+        : offlineFallbackTimes;
   const finalForbiddenTimes = forbiddenTimes.length > 0 ? forbiddenTimes : !prayerTimesLoading && processedForbiddenTimes.length > 0 ? processedForbiddenTimes : [];
 
   // Enhanced Median.co Adhan scheduling integration
@@ -240,6 +244,8 @@ export const HomeScreen = ({
           mosque_name: selectedLocation.mosque_name,
           district: selectedLocation.district,
         });
+        saveLocationSnapshot(selectedLocation);
+        saveScheduleSnapshot(selectedLocation.id, selectedDate, finalPrayerTimes, selectedLocation.mosque_name);
         if (!Capacitor.isNativePlatform()) return;
 
         // Schedule notifications
@@ -322,6 +328,7 @@ export const HomeScreen = ({
     console.log('Location changed to:', location);
     setSelectedLocation(location);
     localStorage.setItem('selectedLocationId', location.id);
+    saveLocationSnapshot(location);
 
     // Save to IndexedDB for offline access
     saveSelectedLocation({
