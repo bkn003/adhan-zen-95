@@ -8,7 +8,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import {
   QURAN_LANGUAGES, ARABIC_RECITERS, getQuranLanguage,
   fetchArabicSurah, fetchTranslationSurah, fetchAudioUrls,
-  speakTranslation, cancelSpeech, hasVoiceFor, hasMaleVoiceFor, pickBestVoice,
+  speakTranslation, cancelSpeech, hasVoiceFor, hasNaturalVoiceFor, pickBestVoice,
   type QuranAyah, type QuranLanguage,
 } from '@/utils/quranEditions';
 import {
@@ -34,6 +34,7 @@ const LAST_READ_KEY = 'quran_last_read_v1';
 const LANG_KEY = 'quran_lang_v1';
 const RECITER_KEY = 'quran_reciter_v1';
 const MODE_KEY = 'quran_recite_mode_v1';
+const RATE_KEY = 'quran_speech_rate_v1';
 
 type ReciteMode = 'arabic' | 'translation';
 
@@ -52,6 +53,10 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
 
   const [surahs, setSurahs] = useState<Surah[]>([]);
   const [query, setQuery] = useState('');
+  const [speechRate, setSpeechRate] = useState<number>(() => {
+    const raw = Number(localStorage.getItem(RATE_KEY));
+    return raw >= 0.5 && raw <= 1.5 ? raw : 0.85;
+  });
   const [openSurah, setOpenSurah] = useState<number | null>(() => {
     try {
       const raw = localStorage.getItem(LAST_READ_KEY);
@@ -249,7 +254,7 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
           document.getElementById(`ayah-${ayah.numberInSurah}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 120);
       }
-      await speakTranslation(text, lang.ttsLang);
+      await speakTranslation(text, lang.ttsLang, speechRate);
       // continue unless something else took over
       setActiveIdx((cur) => {
         if (cur !== idx) return cur;
@@ -299,7 +304,7 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
         document.getElementById(`ayah-${ayah.numberInSurah}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 120);
     }
-  }, [arabic, translation, repeatVerse, autoScroll, stopAudio, useSpeech, lang, audioEdition, audioUrls, offline]);
+  }, [arabic, translation, repeatVerse, autoScroll, stopAudio, useSpeech, lang, speechRate, audioEdition, audioUrls, offline]);
 
   useEffect(() => { playIndexRef.current = playIndex; }, [playIndex]);
 
@@ -383,7 +388,7 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
   const activeAyah = activeIdx !== null ? arabic[activeIdx] : null;
   const voiceMissing = useSpeech && !hasVoiceFor(lang.ttsLang);
   const chosenVoice = useSpeech ? pickBestVoice(lang.ttsLang) : null;
-  const maleVoice = useSpeech && hasMaleVoiceFor(lang.ttsLang);
+  const naturalVoice = useSpeech && hasNaturalVoiceFor(lang.ttsLang);
 
   return (
     <div className={`min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-white ${activeAyah ? 'pb-44' : 'pb-24'}`}>
