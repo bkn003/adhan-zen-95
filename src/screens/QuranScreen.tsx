@@ -606,16 +606,40 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
                       ))}
                     </select>
                   ) : (
-                    <p className="mt-2 px-1 text-[10px] text-muted-foreground flex items-center gap-1">
-                      <Volume2 className="w-3 h-3 shrink-0" />
-                      {lang.audioEdition
-                        ? `Human-voice ${lang.englishLabel} recitation`
-                        : voiceMissing
-                          ? `${lang.englishLabel} voice not installed on this device — add it in your phone's text-to-speech settings.`
-                          : maleVoice
-                            ? `Recited by ${chosenVoice?.name ?? 'a natural male voice'} on this device`
-                            : `Using your device's ${lang.englishLabel} voice${chosenVoice ? ` (${chosenVoice.name})` : ''} — install a male ${lang.englishLabel} voice in your phone's text-to-speech settings for a stronger recitation.`}
-                    </p>
+                    <div className="mt-2 space-y-2">
+                      <p className="px-1 text-[10px] text-muted-foreground flex items-center gap-1">
+                        <Volume2 className="w-3 h-3 shrink-0" />
+                        {lang.audioEdition
+                          ? `Human-voice ${lang.englishLabel} recitation`
+                          : voiceMissing
+                            ? `${lang.englishLabel} voice not installed on this device — add it in your phone's text-to-speech settings.`
+                            : naturalVoice
+                              ? `Recited by ${chosenVoice?.name ?? 'a natural voice'} on this device`
+                              : `Using your device's ${lang.englishLabel} voice${chosenVoice ? ` (${chosenVoice.name})` : ''} — install the enhanced ${lang.englishLabel} voice in your phone's text-to-speech settings for a clearer recitation.`}
+                      </p>
+                      {!lang.audioEdition && (
+                        <div className="flex items-center gap-1.5 px-1">
+                          <span className="text-[10px] font-semibold text-muted-foreground">Speed</span>
+                          {[
+                            { label: 'Slow', value: 0.7 },
+                            { label: 'Normal', value: 0.85 },
+                            { label: 'Fast', value: 1 },
+                          ].map((opt) => (
+                            <button
+                              key={opt.label}
+                              onClick={() => { setSpeechRate(opt.value); localStorage.setItem(RATE_KEY, String(opt.value)); }}
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-semibold transition-colors ${
+                                speechRate === opt.value
+                                  ? 'bg-emerald-600 text-primary-foreground'
+                                  : 'bg-muted text-muted-foreground'
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
 
