@@ -106,17 +106,8 @@ export async function fetchAudioUrls(surah: number, edition: string): Promise<Re
   return map;
 }
 
-/** Does the device have a voice that can read this language aloud? */
-export function hasVoiceFor(ttsLang: string): boolean {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return false;
-  const base = ttsLang.split('-')[0];
-  const voices = window.speechSynthesis.getVoices();
-  if (!voices.length) return true; // voices load async — assume yes until known
-  return voices.some((v) => v.lang?.toLowerCase().startsWith(base));
-}
-
 /** Voices that sound natural rather than the old robotic default engines. */
-const RICH_HINTS = /(enhanced|premium|neural|natural|enhanced|network|wavenet|studio|journey|google|siri|eloquence|multilingual)/i;
+const RICH_HINTS = /(enhanced|premium|neural|natural|network|wavenet|studio|journey|google|siri|eloquence|multilingual)/i;
 const POOR_HINTS = /(compact|espeak|pico|robot|legacy)/i;
 
 /** Does the device have a voice that can read this language aloud? */
