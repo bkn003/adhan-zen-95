@@ -8,7 +8,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import {
   QURAN_LANGUAGES, ARABIC_RECITERS, getQuranLanguage,
   fetchArabicSurah, fetchTranslationSurah, fetchAudioUrls,
-  speakTranslation, cancelSpeech, hasVoiceFor, hasMaleVoiceFor, pickBestVoice,
+  speakTranslation, cancelSpeech, hasVoiceFor, hasNaturalVoiceFor, pickBestVoice,
   type QuranAyah, type QuranLanguage,
 } from '@/utils/quranEditions';
 import {
@@ -34,6 +34,7 @@ const LAST_READ_KEY = 'quran_last_read_v1';
 const LANG_KEY = 'quran_lang_v1';
 const RECITER_KEY = 'quran_reciter_v1';
 const MODE_KEY = 'quran_recite_mode_v1';
+const RATE_KEY = 'quran_speech_rate_v1';
 
 type ReciteMode = 'arabic' | 'translation';
 
@@ -52,6 +53,10 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
 
   const [surahs, setSurahs] = useState<Surah[]>([]);
   const [query, setQuery] = useState('');
+  const [speechRate, setSpeechRate] = useState<number>(() => {
+    const raw = Number(localStorage.getItem(RATE_KEY));
+    return raw >= 0.5 && raw <= 1.5 ? raw : 0.85;
+  });
   const [openSurah, setOpenSurah] = useState<number | null>(() => {
     try {
       const raw = localStorage.getItem(LAST_READ_KEY);
@@ -249,7 +254,7 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
           document.getElementById(`ayah-${ayah.numberInSurah}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 120);
       }
-      await speakTranslation(text, lang.ttsLang);
+      await speakTranslation(text, lang.ttsLang, speechRate);
       // continue unless something else took over
       setActiveIdx((cur) => {
         if (cur !== idx) return cur;
@@ -299,7 +304,7 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
         document.getElementById(`ayah-${ayah.numberInSurah}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 120);
     }
-  }, [arabic, translation, repeatVerse, autoScroll, stopAudio, useSpeech, lang, audioEdition, audioUrls, offline]);
+  }, [arabic, translation, repeatVerse, autoScroll, stopAudio, useSpeech, lang, speechRate, audioEdition, audioUrls, offline]);
 
   useEffect(() => { playIndexRef.current = playIndex; }, [playIndex]);
 
@@ -383,7 +388,7 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
   const activeAyah = activeIdx !== null ? arabic[activeIdx] : null;
   const voiceMissing = useSpeech && !hasVoiceFor(lang.ttsLang);
   const chosenVoice = useSpeech ? pickBestVoice(lang.ttsLang) : null;
-  const maleVoice = useSpeech && hasMaleVoiceFor(lang.ttsLang);
+  const naturalVoice = useSpeech && hasNaturalVoiceFor(lang.ttsLang);
 
   return (
     <div className={`min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-white ${activeAyah ? 'pb-44' : 'pb-24'}`}>
@@ -606,16 +611,40 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
                       ))}
                     </select>
                   ) : (
-                    <p className="mt-2 px-1 text-[10px] text-muted-foreground flex items-center gap-1">
-                      <Volume2 className="w-3 h-3 shrink-0" />
-                      {lang.audioEdition
-                        ? `Human-voice ${lang.englishLabel} recitation`
-                        : voiceMissing
-                          ? `${lang.englishLabel} voice not installed on this device — add it in your phone's text-to-speech settings.`
-                          : maleVoice
-                            ? `Recited by ${chosenVoice?.name ?? 'a natural male voice'} on this device`
-                            : `Using your device's ${lang.englishLabel} voice${chosenVoice ? ` (${chosenVoice.name})` : ''} — install a male ${lang.englishLabel} voice in your phone's text-to-speech settings for a stronger recitation.`}
-                    </p>
+                    <div className="mt-2 space-y-2">
+                      <p className="px-1 text-[10px] text-muted-foreground flex items-center gap-1">
+                        <Volume2 className="w-3 h-3 shrink-0" />
+                        {lang.audioEdition
+                          ? `Human-voice ${lang.englishLabel} recitation`
+                          : voiceMissing
+                            ? `${lang.englishLabel} voice not installed on this device — add it in your phone's text-to-speech settings.`
+                            : naturalVoice
+                              ? `Recited by ${chosenVoice?.name ?? 'a natural voice'} on this device`
+                              : `Using your device's ${lang.englishLabel} voice${chosenVoice ? ` (${chosenVoice.name})` : ''} — install the enhanced ${lang.englishLabel} voice in your phone's text-to-speech settings for a clearer recitation.`}
+                      </p>
+                      {!lang.audioEdition && (
+                        <div className="flex items-center gap-1.5 px-1">
+                          <span className="text-[10px] font-semibold text-muted-foreground">Speed</span>
+                          {[
+                            { label: 'Slow', value: 0.7 },
+                            { label: 'Normal', value: 0.85 },
+                            { label: 'Fast', value: 1 },
+                          ].map((opt) => (
+                            <button
+                              key={opt.label}
+                              onClick={() => { setSpeechRate(opt.value); localStorage.setItem(RATE_KEY, String(opt.value)); }}
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-semibold transition-colors ${
+                                speechRate === opt.value
+                                  ? 'bg-emerald-600 text-primary-foreground'
+                                  : 'bg-muted text-muted-foreground'
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
 

@@ -106,6 +106,10 @@ export async function fetchAudioUrls(surah: number, edition: string): Promise<Re
   return map;
 }
 
+/** Voices that sound natural rather than the old robotic default engines. */
+const RICH_HINTS = /(enhanced|premium|neural|natural|network|wavenet|studio|journey|google|siri|eloquence|multilingual)/i;
+const POOR_HINTS = /(compact|espeak|pico|robot|legacy)/i;
+
 /** Does the device have a voice that can read this language aloud? */
 export function hasVoiceFor(ttsLang: string): boolean {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return false;
@@ -115,12 +119,8 @@ export function hasVoiceFor(ttsLang: string): boolean {
   return voices.some((v) => v.lang?.toLowerCase().startsWith(base));
 }
 
-const MALE_HINTS = /\b(male|man|#male|_m\b|-m\b|kumar|ravi|arjun|hemant|madhur|rishi|prabhat|daniel|george|rushi|niranjan|hamed|aarav|deepak)\b/i;
-const FEMALE_HINTS = /\b(female|woman|#female|_f\b|-f\b|priya|kalpana|swara|aditi|heera|meera|sara|zira|susan|karen|veena|lekha|shruti|neerja|pallavi)\b/i;
-const RICH_HINTS = /(enhanced|premium|neural|natural|network|wavenet|google|siri)/i;
-
 /**
- * Pick the strongest, most natural male voice available for a language.
+ * Pick the highest-quality voice available for a language.
  * Deterministic: voices are scored, then ties break on name so the same device
  * always recites with the same voice.
  */
@@ -135,10 +135,9 @@ export function pickBestVoice(ttsLang: string): SpeechSynthesisVoice | null {
   const score = (v: SpeechSynthesisVoice) => {
     const label = `${v.name} ${v.voiceURI}`;
     let s = 0;
-    if (MALE_HINTS.test(label)) s += 60;
-    if (FEMALE_HINTS.test(label)) s -= 40;
-    if (RICH_HINTS.test(label)) s += 25;
-    if (!v.localService) s += 10; // server voices are usually higher fidelity
+    if (RICH_HINTS.test(label)) s += 60;
+    if (POOR_HINTS.test(label)) s -= 50;
+    if (!v.localService) s += 20; // server voices are usually higher fidelity
     if (v.lang?.toLowerCase() === ttsLang.toLowerCase()) s += 8;
     if (v.default) s += 2;
     return s;
@@ -147,34 +146,87 @@ export function pickBestVoice(ttsLang: string): SpeechSynthesisVoice | null {
   return [...candidates].sort((a, b) => score(b) - score(a) || a.name.localeCompare(b.name))[0];
 }
 
-/** True when a clearly male voice exists for the language. */
-export const hasMaleVoiceFor = (ttsLang: string) => {
+/** True when the chosen voice is one of the device's natural/enhanced voices. */
+export const hasNaturalVoiceFor = (ttsLang: string) => {
   const v = pickBestVoice(ttsLang);
-  return !!v && MALE_HINTS.test(`${v.name} ${v.voiceURI}`);
+  return !!v && RICH_HINTS.test(`${v.name} ${v.voiceURI}`);
 };
 
 /**
- * Speaks text in the given language with a bold, unhurried recitation cadence
- * (slightly slower rate and lower pitch), preferring a natural male voice.
+ * Strips everything a speech engine would read out as noise:
+ * verse numbers, footnote markers, bracketed glosses, asterisks, quotes,
+ * dashes, ellipses and repeated punctuation. Sentence-ending punctuation is
+ * kept so the engine still pauses naturally.
  */
-export function speakTranslation(text: string, ttsLang: string, rate = 0.82): Promise<void> {
+export function sanitizeForSpeech(raw: string): string {
+  let t = String(raw ?? '');
+  t = t.replace(/<[^>]+>/g, ' ');                     // any leftover markup
+  t = t.replace(/\[[^\]]*\]/g, ' ');                  // [1], [see note]
+  t = t.replace(/\{[^}]*\}/g, ' ');                   // {…}
+  t = t.replace(/\([^)]{0,60}\)/g, ' ');              // short parenthetical glosses
+  t = t.replace(/[*_#~^`|/\\<>=+°•·¶§©™]/g, ' ');     // symbol characters
+  t = t.replace(/["“”‘’«»]/g, ' ');                   // quote marks
+  t = t.replace(/[–—-]{1,}/g, ' ');                   // dashes
+  t = t.replace(/\.{2,}/g, '.');                      // ellipses -> single stop
+  t = t.replace(/\s*:\s*/g, ', ');                    // colons read badly
+  t = t.replace(/\s*;\s*/g, ', ');
+  t = t.replace(/^\s*\d+\s*[.)]?\s*/g, '');           // leading verse number
+  t = t.replace(/\s+\d{1,4}\s*$/g, '');               // trailing verse number
+  t = t.replace(/([.,!?])\1+/g, '$1');                // duplicated punctuation
+  t = t.replace(/\s+([.,!?])/g, '$1');
+  t = t.replace(/\s{2,}/g, ' ').trim();
+  return t;
+}
+
+/**
+ * Speaks text with an unhurried recitation cadence, using the device's best
+ * voice for the language. Long verses are split into clauses and queued so the
+ * engine breathes between them instead of racing through one block.
+ */
+export function speakTranslation(text: string, ttsLang: string, rate = 0.85): Promise<void> {
   return new Promise((resolve) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window) || !text) {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      resolve();
+      return;
+    }
+    const clean = sanitizeForSpeech(text);
+    if (!clean) {
       resolve();
       return;
     }
     const synth = window.speechSynthesis;
     synth.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    const match = pickBestVoice(ttsLang);
-    if (match) u.voice = match;
-    u.lang = match?.lang || ttsLang;
-    u.rate = rate;
-    u.pitch = 0.85; // deeper, stronger delivery
-    u.volume = 1;
-    u.onend = () => resolve();
-    u.onerror = () => resolve();
-    synth.speak(u);
+
+    const voice = pickBestVoice(ttsLang);
+    // Split on sentence ends / commas, keeping chunks speakable in one breath.
+    const chunks = clean
+      .split(/(?<=[.!?])\s+|,\s+/)
+      .map((c) => c.trim())
+      .filter(Boolean)
+      .reduce<string[]>((acc, part) => {
+        const last = acc[acc.length - 1];
+        if (last && (last + ' ' + part).length < 140) acc[acc.length - 1] = `${last} ${part}`;
+        else acc.push(part);
+        return acc;
+      }, []);
+
+    let i = 0;
+    const speakNext = () => {
+      if (i >= chunks.length) {
+        resolve();
+        return;
+      }
+      const u = new SpeechSynthesisUtterance(chunks[i++]);
+      if (voice) u.voice = voice;
+      u.lang = voice?.lang || ttsLang;
+      u.rate = rate;
+      u.pitch = 1;
+      u.volume = 1;
+      u.onend = () => setTimeout(speakNext, 180); // natural pause between clauses
+      u.onerror = () => resolve();
+      synth.speak(u);
+    };
+    speakNext();
   });
 }
 
