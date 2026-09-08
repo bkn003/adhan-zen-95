@@ -525,6 +525,13 @@ export const SettingsScreen = () => {
             <ChevronRight className="w-4 h-4" />
           </button>
           <button
+            onClick={() => window.dispatchEvent(new CustomEvent('navigate-hadith'))}
+            className="w-full py-2.5 px-3 bg-gradient-to-r from-green-700 to-emerald-800 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">📚 Hadith Library (Bukhari, Muslim…)</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
             onClick={() => window.dispatchEvent(new CustomEvent('navigate-feed'))}
             className="w-full py-2.5 px-3 bg-gradient-to-r from-teal-600 to-emerald-700 text-white rounded-xl text-sm font-semibold flex items-center justify-between"
           >
