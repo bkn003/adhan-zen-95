@@ -16,6 +16,7 @@ import { TasbeehScreen } from '@/screens/TasbeehScreen';
 import { SyncChangesScreen } from '@/screens/SyncChangesScreen';
 import { TransparencyScreen } from '@/screens/TransparencyScreen';
 import { QuranScreen } from '@/screens/QuranScreen';
+import { HadithScreen } from '@/screens/HadithScreen';
 import { MosqueCompareScreen } from '@/screens/MosqueCompareScreen';
 import { NotificationSettingsScreen } from '@/screens/NotificationSettingsScreen';
 import { PrivacyScreen } from '@/screens/PrivacyScreen';
@@ -51,6 +52,7 @@ const Index = () => {
   const [showTasbeeh, setShowTasbeeh] = useState(false);
   const [showSyncChanges, setShowSyncChanges] = useState(false);
   const [showQuran, setShowQuran] = useState(false);
+  const [showHadith, setShowHadith] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
   const [showNotifSettings, setShowNotifSettings] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
@@ -121,6 +123,7 @@ const Index = () => {
     const tasbeehHandler = () => setShowTasbeeh(true);
     const syncHandler = () => setShowSyncChanges(true);
     const quranHandler = () => setShowQuran(true);
+    const hadithHandler = () => setShowHadith(true);
     const compareHandler = () => setShowCompare(true);
     const notifHandler = () => setShowNotifSettings(true);
     const privacyHandler = () => setShowPrivacy(true);
@@ -136,6 +139,7 @@ const Index = () => {
     window.addEventListener('navigate-tasbeeh', tasbeehHandler);
     window.addEventListener('navigate-sync-changes', syncHandler);
     window.addEventListener('navigate-quran', quranHandler);
+    window.addEventListener('navigate-hadith', hadithHandler);
     window.addEventListener('navigate-compare', compareHandler);
     window.addEventListener('navigate-notifications', notifHandler);
     window.addEventListener('navigate-privacy', privacyHandler);
@@ -152,6 +156,7 @@ const Index = () => {
       window.removeEventListener('navigate-tasbeeh', tasbeehHandler);
       window.removeEventListener('navigate-sync-changes', syncHandler);
       window.removeEventListener('navigate-quran', quranHandler);
+      window.removeEventListener('navigate-hadith', hadithHandler);
       window.removeEventListener('navigate-compare', compareHandler);
       window.removeEventListener('navigate-notifications', notifHandler);
       window.removeEventListener('navigate-privacy', privacyHandler);
@@ -197,6 +202,8 @@ const Index = () => {
         setShowNotifSettings(false);
       } else if (showCompare) {
         setShowCompare(false);
+      } else if (showHadith) {
+        setShowHadith(false);
       } else if (showQuran) {
         setShowQuran(false);
       } else if (showSyncChanges) {
@@ -222,7 +229,7 @@ const Index = () => {
     window.history.pushState(null, '', window.location.href);
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [showHistory, showSupport, showRamadanSchedule, showMap, showFeed, showTransparency, showPrivacy, showNotifSettings, showCompare, showQuran, showSyncChanges, showTasbeeh, showZakat, showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
+  }, [showHistory, showSupport, showRamadanSchedule, showMap, showFeed, showTransparency, showPrivacy, showNotifSettings, showCompare, showQuran, showHadith, showSyncChanges, showTasbeeh, showZakat, showSuperAdmin, showAdminPanel, mosqueDetailsId, currentScreen]);
 
   // Persist current screen
   useEffect(() => {
@@ -337,6 +344,9 @@ const Index = () => {
     }
     if (showQuran) {
       return <QuranScreen onBack={() => setShowQuran(false)} />;
+    }
+    if (showHadith) {
+      return <HadithScreen onBack={() => setShowHadith(false)} />;
     }
     if (showCompare) {
       return <MosqueCompareScreen onBack={() => setShowCompare(false)} />;
