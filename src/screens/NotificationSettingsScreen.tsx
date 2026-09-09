@@ -7,6 +7,7 @@ import { useLocations } from '@/hooks/useLocations';
 import { loadQuietHours, saveQuietHours, type QuietHours } from '@/utils/quietHours';
 import { isPushEnabled, setPushEnabled, pushSupported } from '@/native/pushRegistration';
 import { syncYearAlarms, readYearAlarmStatus } from '@/native/yearAlarms';
+import { readLocationSnapshot } from '@/storage/prayerStore';
 
 interface Props { onBack: () => void }
 
@@ -20,7 +21,7 @@ export const NotificationSettingsScreen: React.FC<Props> = ({ onBack }) => {
   const myMosque = localStorage.getItem('selectedLocationId') || undefined;
   const selectedMosqueName =
     locations.find((l: any) => l.id === myMosque)?.mosque_name ||
-    localStorage.getItem('selectedMosqueName') ||
+    readLocationSnapshot<any>()?.mosque_name ||
     '';
   const [yearBusy, setYearBusy] = useState(false);
   const [yearStatus, setYearStatus] = useState(readYearAlarmStatus());
