@@ -270,4 +270,48 @@ public class AdhanNativePlugin extends Plugin {
         call.resolve(r);
     }
     @PluginMethod public void setVibrationSettings(PluginCall call) { call.resolve(); }
+
+    // -------- Year-long offline alarms --------
+
+    @PluginMethod
+    public void setYearSchedule(PluginCall call) {
+        JSObject days = call.getObject("days");
+        if (days == null) { call.reject("Missing 'days'"); return; }
+        try {
+            NotifChannels.ensure(getContext());
+            JSONObject payload = new JSONObject();
+            payload.put("savedAt", System.currentTimeMillis());
+            payload.put("days", new JSONObject(days.toString()));
+            YearAlarmPlanner.saveYear(getContext(), payload);
+            int armed = YearAlarmPlanner.refillWindow(getContext());
+            JSObject ret = new JSObject();
+            ret.put("storedDays", YearAlarmPlanner.storedDayCount(getContext()));
+            ret.put("armedAlarms", armed);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("Failed to store year schedule: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void refillYearAlarms(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("armedAlarms", YearAlarmPlanner.refillWindow(getContext()));
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void getYearAlarmStatus(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("storedDays", YearAlarmPlanner.storedDayCount(getContext()));
+        ret.put("savedAt", YearAlarmPlanner.savedAt(getContext()));
+        ret.put("windowDays", YearAlarmPlanner.WINDOW_DAYS);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void clearYearAlarms(PluginCall call) {
+        YearAlarmPlanner.cancelWindow(getContext());
+        call.resolve();
+    }
 }
