@@ -120,6 +120,8 @@ public class PrayerSyncWorker extends Worker {
             if (!changes.isEmpty()) {
                 postChangeNotification(ctx, mosqueName, changes);
             }
+            // Top the rolling 30-day alarm window back up from the stored year
+            try { YearAlarmPlanner.refillWindow(ctx); } catch (Throwable ignored) {}
             return Result.success();
         } catch (Exception e) {
             prefs.edit()
