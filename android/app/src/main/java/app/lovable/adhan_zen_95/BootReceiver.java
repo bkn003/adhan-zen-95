@@ -15,6 +15,10 @@ public class BootReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         NotifChannels.ensure(context);
         AlarmScheduler.rescheduleFromPersisted(context);
+        // Re-arm the rolling 30-day window from the persisted year of timings
+        try {
+            YearAlarmPlanner.refillWindow(context);
+        } catch (Throwable ignored) {}
         // Re-enqueue background sync so notifications keep firing without opening the app
         try {
             SyncScheduler.enqueueDaily(context);

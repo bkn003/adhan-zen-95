@@ -155,6 +155,11 @@ public class AlarmScheduler {
         prefs(ctx).edit().putStringSet(KEY_ALARM_IDS, ids).apply();
     }
 
+    /** Public wrapper used by YearAlarmPlanner. */
+    public static void setExactPublic(AlarmManager am, long triggerAtMs, PendingIntent pi) {
+        setExact(am, triggerAtMs, pi);
+    }
+
     private static void setExact(AlarmManager am, long triggerAtMs, PendingIntent pi) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
