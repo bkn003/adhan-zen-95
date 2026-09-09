@@ -67,10 +67,20 @@ public class AlarmReceiver extends BroadcastReceiver {
         int notifId = ("notif_" + prayerName + "_" + phase).hashCode();
         if (nm != null) nm.notify(notifId, b.build());
 
-        // === Self-perpetuation: re-schedule the SAME slot for +24h ===
-        // Ensures unlimited-day reliability even if the app is never opened again.
-        long nextTrigger = System.currentTimeMillis() + 24L * 60L * 60L * 1000L;
-        AlarmScheduler.scheduleAt(context, prayerName, phase, adhan, iqamah, type, nextTrigger);
+        // === Self-perpetuation ===
+        // Preferred: top the rolling window back up from the stored year of timings,
+        // so exact per-day times stay correct for years with no internet.
+        boolean refilled = false;
+        try {
+            refilled = YearAlarmPlanner.refillWindow(context) > 0;
+        } catch (Exception ignored) {}
+
+        // Fallback when no year data is stored: repeat the same slot in +24h.
+        if (!refilled) {
+            long nextTrigger = System.currentTimeMillis() + 24L * 60L * 60L * 1000L;
+            AlarmScheduler.scheduleAt(context, prayerName, phase, adhan, iqamah, type, nextTrigger);
+        }
+    
     
         // Keep widget + lock-screen countdown in sync with the new "next prayer"
         try { PrayerWidgetProvider.refresh(context); } catch (Exception ignored) {}
