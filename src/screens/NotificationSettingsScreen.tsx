@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Bell, BellOff, Moon, Loader2, Megaphone } from 'lucide-react';
+import { ArrowLeft, Bell, BellOff, Moon, Loader2, Megaphone, CloudDownload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useLocations } from '@/hooks/useLocations';
 import { loadQuietHours, saveQuietHours, type QuietHours } from '@/utils/quietHours';
 import { isPushEnabled, setPushEnabled, pushSupported } from '@/native/pushRegistration';
+import { syncYearAlarms, readYearAlarmStatus } from '@/native/yearAlarms';
 
 interface Props { onBack: () => void }
 
@@ -17,6 +18,26 @@ export const NotificationSettingsScreen: React.FC<Props> = ({ onBack }) => {
   const [quiet, setQuiet] = useState<QuietHours>(loadQuietHours());
 
   const myMosque = localStorage.getItem('selectedLocationId') || undefined;
+  const selectedMosqueName =
+    locations.find((l: any) => l.id === myMosque)?.mosque_name ||
+    localStorage.getItem('selectedMosqueName') ||
+    '';
+  const [yearBusy, setYearBusy] = useState(false);
+  const [yearStatus, setYearStatus] = useState(readYearAlarmStatus());
+
+  const downloadYear = async () => {
+    if (!selectedMosqueName) return;
+    setYearBusy(true);
+    try {
+      const res = await syncYearAlarms(selectedMosqueName, myMosque ?? null);
+      setYearStatus({ ...res, mosqueName: selectedMosqueName });
+      toast.success(`Saved ${res.storedDays} days of timings for offline alarms`);
+    } catch (e: any) {
+      toast.error(e?.message || 'Could not download timings. Try again when online.');
+    } finally {
+      setYearBusy(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
