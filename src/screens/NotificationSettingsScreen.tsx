@@ -95,6 +95,39 @@ export const NotificationSettingsScreen: React.FC<Props> = ({ onBack }) => {
           )}
         </div>
 
+        {/* Year of offline timings */}
+        <div className="rounded-2xl bg-white border border-teal-100 p-3 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+                <CloudDownload className="w-4 h-4 text-teal-600" /> Download a year of timings
+              </p>
+              <p className="text-[11px] text-gray-500">
+                Keeps Adhan and Jamaat alarms ringing for a year with no internet, even if the app is never opened.
+              </p>
+            </div>
+            <button
+              onClick={downloadYear}
+              disabled={yearBusy || !selectedMosqueName}
+              className="shrink-0 px-3 py-2 rounded-xl bg-teal-600 text-white text-xs font-bold active:scale-95 disabled:opacity-50"
+            >
+              {yearBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Download'}
+            </button>
+          </div>
+          {!selectedMosqueName && (
+            <p className="mt-2 text-[10px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-2">
+              Choose your mosque first in Settings, then download.
+            </p>
+          )}
+          {yearStatus && (
+            <p className="mt-2 text-[10px] text-gray-600 bg-teal-50 border border-teal-100 rounded-lg p-2">
+              {yearStatus.storedDays} days saved for {yearStatus.mosqueName || 'your mosque'} · last synced{' '}
+              {new Date(yearStatus.syncedAt).toLocaleString()}
+              {yearStatus.native ? ` · ${yearStatus.armedAlarms} alarms armed` : ' · alarms ring in the installed Android app'}
+            </p>
+          )}
+        </div>
+
         {/* Quiet hours */}
         <div className="rounded-2xl bg-white border border-indigo-100 p-3 shadow-sm space-y-3">
           <div className="flex items-center justify-between gap-3">
