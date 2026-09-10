@@ -43,6 +43,13 @@ export function useAdhanInitializer() {
         rescheduleAfterBoot();
       }
 
+      // Keep the year of offline alarms topped up for the preferred mosque
+      const snap = readLocationSnapshot<any>();
+      void autoMaintainYearAlarms(
+        snap?.mosque_name,
+        localStorage.getItem('selectedLocationId') || snap?.id || null
+      );
+
       setIsInitialized(true);
       console.log('✅ Adhan system initialized successfully');
     } catch (err) {
