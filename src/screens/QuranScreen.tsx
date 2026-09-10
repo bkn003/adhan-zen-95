@@ -9,7 +9,8 @@ import {
   QURAN_LANGUAGES, ARABIC_RECITERS, getQuranLanguage,
   fetchArabicSurah, fetchTranslationSurah, fetchAudioUrls,
   speakTranslation, cancelSpeech, hasVoiceFor, hasNaturalVoiceFor, pickBestVoice,
-  type QuranAyah, type QuranLanguage,
+  hasGenderedVoiceFor, voiceGenderOf,
+  type QuranAyah, type QuranLanguage, type VoiceGender,
 } from '@/utils/quranEditions';
 import {
   saveSurahList, loadSurahList, saveText, loadText,
@@ -35,6 +36,7 @@ const LANG_KEY = 'quran_lang_v1';
 const RECITER_KEY = 'quran_reciter_v1';
 const MODE_KEY = 'quran_recite_mode_v1';
 const RATE_KEY = 'quran_speech_rate_v1';
+const GENDER_KEY = 'quran_voice_gender_v1';
 
 type ReciteMode = 'arabic' | 'translation';
 
@@ -91,6 +93,15 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
       return ARABIC_RECITERS[0].id;
     }
   });
+  const [voiceGender, setVoiceGender] = useState<VoiceGender>(() => {
+    try {
+      return (localStorage.getItem(GENDER_KEY) as VoiceGender) || 'male';
+    } catch {
+      return 'male';
+    }
+  });
+  /** Bumped when the device finishes loading its voice list. */
+  const [voicesReady, setVoicesReady] = useState(0);
 
   const [loadingList, setLoadingList] = useState(true);
   const [loadingSurah, setLoadingSurah] = useState(false);

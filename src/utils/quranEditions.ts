@@ -110,6 +110,23 @@ export async function fetchAudioUrls(surah: number, edition: string): Promise<Re
 const RICH_HINTS = /(enhanced|premium|neural|natural|network|wavenet|studio|journey|google|siri|eloquence|multilingual)/i;
 const POOR_HINTS = /(compact|espeak|pico|robot|legacy)/i;
 
+/**
+ * Male / female hints. Android's Google voices are named "xx-IN-language#male_1-local"
+ * etc., iOS uses given names, so both patterns are covered.
+ */
+const MALE_HINTS = /(#male|_male|\bmale\b|man\b|hombre|masculin|aaron|alex|arthur|daniel|david|diego|fred|gordon|hemant|jorge|juan|liam|male[-_ ]?[0-9]|oliver|rishi|thomas|tom\b|xander|yannick)/i;
+const FEMALE_HINTS = /(#female|_female|\bfemale\b|woman|mujer|f[eé]minin|alice|amelie|anna|carmit|catherine|fiona|joana|karen|kate|lekha|luciana|martha|moira|monica|nicky|nora|paulina|rishi_female|samantha|sara|serena|susan|tessa|veena|victoria|zosia|zuzana)/i;
+
+export type VoiceGender = 'male' | 'female' | 'any';
+
+/** Best guess at a voice's gender from its name — undefined when unknown. */
+export function voiceGenderOf(v: SpeechSynthesisVoice): VoiceGender | undefined {
+  const label = `${v.name} ${v.voiceURI}`;
+  if (MALE_HINTS.test(label)) return 'male';
+  if (FEMALE_HINTS.test(label)) return 'female';
+  return undefined;
+}
+
 /** Does the device have a voice that can read this language aloud? */
 export function hasVoiceFor(ttsLang: string): boolean {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return false;
@@ -120,11 +137,12 @@ export function hasVoiceFor(ttsLang: string): boolean {
 }
 
 /**
- * Pick the highest-quality voice available for a language.
+ * Pick the highest-quality voice available for a language, preferring the
+ * requested gender (male by default, to match a reciter's voice).
  * Deterministic: voices are scored, then ties break on name so the same device
  * always recites with the same voice.
  */
-export function pickBestVoice(ttsLang: string): SpeechSynthesisVoice | null {
+export function pickBestVoice(ttsLang: string, prefer: VoiceGender = 'male'): SpeechSynthesisVoice | null {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
   const base = ttsLang.split('-')[0].toLowerCase();
   const candidates = window.speechSynthesis
@@ -135,6 +153,12 @@ export function pickBestVoice(ttsLang: string): SpeechSynthesisVoice | null {
   const score = (v: SpeechSynthesisVoice) => {
     const label = `${v.name} ${v.voiceURI}`;
     let s = 0;
+    const gender = voiceGenderOf(v);
+    if (prefer !== 'any') {
+      // Gender outweighs fidelity: a male voice is the point of the setting.
+      if (gender === prefer) s += 140;
+      else if (gender && gender !== prefer) s -= 90;
+    }
     if (RICH_HINTS.test(label)) s += 60;
     if (POOR_HINTS.test(label)) s -= 50;
     if (!v.localService) s += 20; // server voices are usually higher fidelity
@@ -147,10 +171,21 @@ export function pickBestVoice(ttsLang: string): SpeechSynthesisVoice | null {
 }
 
 /** True when the chosen voice is one of the device's natural/enhanced voices. */
-export const hasNaturalVoiceFor = (ttsLang: string) => {
-  const v = pickBestVoice(ttsLang);
+export const hasNaturalVoiceFor = (ttsLang: string, prefer: VoiceGender = 'male') => {
+  const v = pickBestVoice(ttsLang, prefer);
   return !!v && RICH_HINTS.test(`${v.name} ${v.voiceURI}`);
 };
+
+/** True when a voice of the requested gender actually exists for this language. */
+export function hasGenderedVoiceFor(ttsLang: string, prefer: VoiceGender): boolean {
+  if (prefer === 'any') return hasVoiceFor(ttsLang);
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return false;
+  const base = ttsLang.split('-')[0].toLowerCase();
+  return window.speechSynthesis
+    .getVoices()
+    .filter((v) => v.lang?.toLowerCase().startsWith(base))
+    .some((v) => voiceGenderOf(v) === prefer);
+}
 
 /**
  * Strips everything a speech engine would read out as noise:
@@ -183,7 +218,12 @@ export function sanitizeForSpeech(raw: string): string {
  * voice for the language. Long verses are split into clauses and queued so the
  * engine breathes between them instead of racing through one block.
  */
-export function speakTranslation(text: string, ttsLang: string, rate = 0.85): Promise<void> {
+export function speakTranslation(
+  text: string,
+  ttsLang: string,
+  rate = 0.85,
+  prefer: VoiceGender = 'male',
+): Promise<void> {
   return new Promise((resolve) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       resolve();
@@ -197,7 +237,7 @@ export function speakTranslation(text: string, ttsLang: string, rate = 0.85): Pr
     const synth = window.speechSynthesis;
     synth.cancel();
 
-    const voice = pickBestVoice(ttsLang);
+    const voice = pickBestVoice(ttsLang, prefer);
     // Split on sentence ends / commas, keeping chunks speakable in one breath.
     const chunks = clean
       .split(/(?<=[.!?])\s+|,\s+/)
