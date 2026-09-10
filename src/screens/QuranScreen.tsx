@@ -36,6 +36,7 @@ const LANG_KEY = 'quran_lang_v1';
 const RECITER_KEY = 'quran_reciter_v1';
 const MODE_KEY = 'quran_recite_mode_v1';
 const RATE_KEY = 'quran_speech_rate_v1';
+const GENDER_KEY = 'quran_voice_gender_v1';
 
 type ReciteMode = 'arabic' | 'translation';
 
