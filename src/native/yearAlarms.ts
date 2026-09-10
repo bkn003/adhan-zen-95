@@ -164,3 +164,30 @@ export async function refillYearAlarms(): Promise<number> {
     return 0;
   }
 }
+
+const STALE_MS = 45 * 24 * 60 * 60 * 1000; // refresh the year roughly every 6 weeks
+
+/**
+ * Startup maintenance: always top up the native alarm window, and quietly
+ * re-download the year when it is missing or getting old. Never throws.
+ */
+export async function autoMaintainYearAlarms(
+  mosqueName?: string | null,
+  locationId?: string | null
+): Promise<void> {
+  try {
+    await refillYearAlarms();
+    if (!mosqueName) return;
+    const status = readYearAlarmStatus();
+    const stale =
+      !status ||
+      status.mosqueName !== mosqueName ||
+      Date.now() - (status.syncedAt ?? 0) > STALE_MS;
+    if (!stale) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    const res = await syncYearAlarms(mosqueName, locationId ?? null);
+    console.log(`🗓️ Year alarms refreshed: ${res.storedDays} days, ${res.armedAlarms} armed`);
+  } catch (e) {
+    console.warn('Year alarm maintenance skipped:', e);
+  }
+}
