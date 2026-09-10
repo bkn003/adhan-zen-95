@@ -237,7 +237,7 @@ export function speakTranslation(
     const synth = window.speechSynthesis;
     synth.cancel();
 
-    const voice = pickBestVoice(ttsLang);
+    const voice = pickBestVoice(ttsLang, prefer);
     // Split on sentence ends / commas, keeping chunks speakable in one breath.
     const chunks = clean
       .split(/(?<=[.!?])\s+|,\s+/)
