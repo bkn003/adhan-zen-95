@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { storeAdhanAudio, getAdhanAudio } from '@/storage/audioStore';
 import { isMedianApp, rescheduleAfterBoot } from '@/native/medianBridge';
+import { autoMaintainYearAlarms } from '@/native/yearAlarms';
+import { readLocationSnapshot } from '@/storage/prayerStore';
 
 const ADHAN_AUDIO_URL = 'https://86147f9e-50fb-489a-a685-0e1bedcaa3b4.supabase.co/functions/v1/adhan-audio';
 const FALLBACK_URL = 'https://www.islamcan.com/audio/adhan/azan1.mp3';
@@ -40,6 +42,13 @@ export function useAdhanInitializer() {
         console.log('📱 Median app detected, checking boot recovery...');
         rescheduleAfterBoot();
       }
+
+      // Keep the year of offline alarms topped up for the preferred mosque
+      const snap = readLocationSnapshot<any>();
+      void autoMaintainYearAlarms(
+        snap?.mosque_name,
+        localStorage.getItem('selectedLocationId') || snap?.id || null
+      );
 
       setIsInitialized(true);
       console.log('✅ Adhan system initialized successfully');
