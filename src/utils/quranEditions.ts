@@ -218,7 +218,12 @@ export function sanitizeForSpeech(raw: string): string {
  * voice for the language. Long verses are split into clauses and queued so the
  * engine breathes between them instead of racing through one block.
  */
-export function speakTranslation(text: string, ttsLang: string, rate = 0.85): Promise<void> {
+export function speakTranslation(
+  text: string,
+  ttsLang: string,
+  rate = 0.85,
+  prefer: VoiceGender = 'male',
+): Promise<void> {
   return new Promise((resolve) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       resolve();
