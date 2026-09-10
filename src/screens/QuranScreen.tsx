@@ -93,6 +93,15 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
       return ARABIC_RECITERS[0].id;
     }
   });
+  const [voiceGender, setVoiceGender] = useState<VoiceGender>(() => {
+    try {
+      return (localStorage.getItem(GENDER_KEY) as VoiceGender) || 'male';
+    } catch {
+      return 'male';
+    }
+  });
+  /** Bumped when the device finishes loading its voice list. */
+  const [voicesReady, setVoicesReady] = useState(0);
 
   const [loadingList, setLoadingList] = useState(true);
   const [loadingSurah, setLoadingSurah] = useState(false);
