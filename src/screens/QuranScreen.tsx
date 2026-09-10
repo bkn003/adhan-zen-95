@@ -9,7 +9,8 @@ import {
   QURAN_LANGUAGES, ARABIC_RECITERS, getQuranLanguage,
   fetchArabicSurah, fetchTranslationSurah, fetchAudioUrls,
   speakTranslation, cancelSpeech, hasVoiceFor, hasNaturalVoiceFor, pickBestVoice,
-  type QuranAyah, type QuranLanguage,
+  hasGenderedVoiceFor, voiceGenderOf,
+  type QuranAyah, type QuranLanguage, type VoiceGender,
 } from '@/utils/quranEditions';
 import {
   saveSurahList, loadSurahList, saveText, loadText,
