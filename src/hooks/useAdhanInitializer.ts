@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { storeAdhanAudio, getAdhanAudio } from '@/storage/audioStore';
 import { isMedianApp, rescheduleAfterBoot } from '@/native/medianBridge';
+import { autoMaintainYearAlarms } from '@/native/yearAlarms';
+import { readLocationSnapshot } from '@/storage/prayerStore';
 
 const ADHAN_AUDIO_URL = 'https://86147f9e-50fb-489a-a685-0e1bedcaa3b4.supabase.co/functions/v1/adhan-audio';
 const FALLBACK_URL = 'https://www.islamcan.com/audio/adhan/azan1.mp3';
