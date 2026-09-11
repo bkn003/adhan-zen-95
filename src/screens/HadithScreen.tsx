@@ -49,6 +49,9 @@ export const HadithScreen = ({ onBack }: HadithScreenProps) => {
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [speakingId, setSpeakingId] = useState<number | null>(null);
   const [rate, setRate] = useState<number>(() => Number(localStorage.getItem(RATE_KEY)) || 0.85);
+  /** Arabic original of the same book, for Arabic recitation of each hadith. */
+  const [arabicEdition, setArabicEdition] = useState<HadithEdition | null>(null);
+  const [speakingArabicId, setSpeakingArabicId] = useState<number | null>(null);
 
   useEffect(() => { loadHadithBookmarks().then(setBookmarks); }, []);
   useEffect(() => { localStorage.setItem(RATE_KEY, String(rate)); }, [rate]);
@@ -61,6 +64,21 @@ export const HadithScreen = ({ onBack }: HadithScreenProps) => {
     setSection(null);
     setQuery('');
     setEdition(null);
+    setArabicEdition(null);
+
+    // Arabic original in the background — used for Arabic recitation.
+    if (b.langs.includes('ara')) {
+      (async () => {
+        try {
+          const cachedAra = await loadEdition(b.id, 'ara');
+          if (cachedAra) { setArabicEdition(cachedAra); return; }
+          if (chosen === 'ara') return; // the main edition already is Arabic
+          const fresh = await fetchHadithEdition(b.id, 'ara');
+          setArabicEdition(fresh);
+          await saveEdition(fresh);
+        } catch { /* Arabic recitation stays unavailable */ }
+      })();
+    }
 
     const cached = await loadEdition(b.id, chosen);
     if (cached) { setEdition(cached); return; }
