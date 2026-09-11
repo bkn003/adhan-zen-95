@@ -9,8 +9,7 @@ import {
   QURAN_LANGUAGES, ARABIC_RECITERS, getQuranLanguage,
   fetchArabicSurah, fetchTranslationSurah, fetchAudioUrls,
   speakTranslation, cancelSpeech, hasVoiceFor, hasNaturalVoiceFor, pickBestVoice,
-  hasGenderedVoiceFor, voiceGenderOf,
-  type QuranAyah, type QuranLanguage, type VoiceGender,
+  type QuranAyah, type QuranLanguage,
 } from '@/utils/quranEditions';
 import {
   saveSurahList, loadSurahList, saveText, loadText,
@@ -36,7 +35,7 @@ const LANG_KEY = 'quran_lang_v1';
 const RECITER_KEY = 'quran_reciter_v1';
 const MODE_KEY = 'quran_recite_mode_v1';
 const RATE_KEY = 'quran_speech_rate_v1';
-const GENDER_KEY = 'quran_voice_gender_v1';
+
 
 type ReciteMode = 'arabic' | 'translation';
 
@@ -93,13 +92,6 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
       return ARABIC_RECITERS[0].id;
     }
   });
-  const [voiceGender, setVoiceGender] = useState<VoiceGender>(() => {
-    try {
-      return (localStorage.getItem(GENDER_KEY) as VoiceGender) || 'male';
-    } catch {
-      return 'male';
-    }
-  });
   /** Bumped when the device finishes loading its voice list. */
   const [voicesReady, setVoicesReady] = useState(0);
 
@@ -144,7 +136,7 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
   useEffect(() => { try { localStorage.setItem(LANG_KEY, langCode); } catch { /* ignore */ } }, [langCode]);
   useEffect(() => { try { localStorage.setItem(MODE_KEY, mode); } catch { /* ignore */ } }, [mode]);
   useEffect(() => { try { localStorage.setItem(RECITER_KEY, reciter); } catch { /* ignore */ } }, [reciter]);
-  useEffect(() => { try { localStorage.setItem(GENDER_KEY, voiceGender); } catch { /* ignore */ } }, [voiceGender]);
+  
 
   // Android/Chrome load the voice list asynchronously — re-render once ready.
   useEffect(() => {
@@ -278,7 +270,7 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
           document.getElementById(`ayah-${ayah.numberInSurah}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 120);
       }
-      await speakTranslation(text, lang.ttsLang, speechRate, voiceGender);
+      await speakTranslation(text, lang.ttsLang, speechRate);
       // continue unless something else took over
       setActiveIdx((cur) => {
         if (cur !== idx) return cur;
@@ -328,7 +320,7 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
         document.getElementById(`ayah-${ayah.numberInSurah}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 120);
     }
-  }, [arabic, translation, repeatVerse, autoScroll, stopAudio, useSpeech, lang, speechRate, voiceGender, audioEdition, audioUrls, offline]);
+  }, [arabic, translation, repeatVerse, autoScroll, stopAudio, useSpeech, lang, speechRate, audioEdition, audioUrls, offline]);
 
   useEffect(() => { playIndexRef.current = playIndex; }, [playIndex]);
 
@@ -411,10 +403,8 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
 
   const activeAyah = activeIdx !== null ? arabic[activeIdx] : null;
   const voiceMissing = useSpeech && !hasVoiceFor(lang.ttsLang);
-  const chosenVoice = useSpeech ? pickBestVoice(lang.ttsLang, voiceGender) : null;
+  const chosenVoice = useSpeech ? pickBestVoice(lang.ttsLang) : null;
   const naturalVoice = useSpeech && hasNaturalVoiceFor(lang.ttsLang);
-  const genderAvailable = useSpeech && hasGenderedVoiceFor(lang.ttsLang, voiceGender);
-  const chosenVoiceGender = chosenVoice ? voiceGenderOf(chosenVoice) : undefined;
   void voicesReady; // re-evaluated when the device voice list loads
 
   return (
@@ -649,30 +639,25 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
                               ? `Recited by ${chosenVoice?.name ?? 'a natural voice'} on this device`
                               : `Using your device's ${lang.englishLabel} voice${chosenVoice ? ` (${chosenVoice.name})` : ''} — install the enhanced ${lang.englishLabel} voice in your phone's text-to-speech settings for a clearer recitation.`}
                       </p>
-                      {!lang.audioEdition && !voiceMissing && (
-                        <div className="flex items-center gap-1.5 px-1">
-                          <span className="text-[10px] font-semibold text-muted-foreground">Voice</span>
-                          {(['male', 'female'] as VoiceGender[]).map((g) => (
-                            <button
-                              key={g}
-                              onClick={() => { cancelSpeech(); setVoiceGender(g); }}
-                              className={`px-2.5 py-1 rounded-full text-[10px] font-semibold capitalize transition-colors ${
-                                voiceGender === g
-                                  ? 'bg-emerald-600 text-primary-foreground'
-                                  : 'bg-muted text-muted-foreground'
-                              }`}
-                            >
-                              {g}
-                            </button>
+                      <div className="px-1 space-y-1.5">
+                        <span className="text-[10px] font-semibold text-muted-foreground">Arabic reciter (real voice)</span>
+                        <select
+                          value={reciter}
+                          onChange={(e) => { stopAudio(); setReciter(e.target.value); }}
+                          className="w-full px-3 py-2 rounded-xl bg-muted border border-border text-[11px] font-medium outline-none"
+                          aria-label="Arabic reciter"
+                        >
+                          {ARABIC_RECITERS.map((r) => (
+                            <option key={r.id} value={r.id}>{r.label}</option>
                           ))}
-                          {!genderAvailable && (
-                            <span className="text-[9px] text-muted-foreground">
-                              no {voiceGender} {lang.englishLabel} voice on this phone
-                              {chosenVoiceGender ? ` — using a ${chosenVoiceGender} one` : ''}
-                            </span>
-                          )}
-                        </div>
-                      )}
+                        </select>
+                        <button
+                          onClick={() => { stopAudio(); setMode('arabic'); }}
+                          className="w-full px-3 py-2 rounded-xl bg-emerald-600 text-primary-foreground text-[11px] font-semibold active:scale-[0.99]"
+                        >
+                          Play Arabic recitation
+                        </button>
+                      </div>
                       {!lang.audioEdition && (
                         <div className="flex items-center gap-1.5 px-1">
                           <span className="text-[10px] font-semibold text-muted-foreground">Speed</span>
