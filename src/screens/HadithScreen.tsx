@@ -156,6 +156,32 @@ export const HadithScreen = ({ onBack }: HadithScreenProps) => {
     try { await speakTranslation(h.text, ttsLang, rate); } finally { setSpeakingId(null); }
   };
 
+  /** Arabic original text of a hadith, when the Arabic edition is available. */
+  const arabicTextOf = (n: number): string | null => {
+    if (lang === 'ara') return null; // already showing Arabic
+    const found = arabicEdition?.hadiths?.find((a) => a.hadithnumber === n);
+    return found?.text || null;
+  };
+
+  const onSpeakArabic = async (h: HadithItem) => {
+    if (speakingArabicId === h.hadithnumber) {
+      window.speechSynthesis?.cancel();
+      setSpeakingArabicId(null);
+      return;
+    }
+    const text = arabicTextOf(h.hadithnumber);
+    if (!text) return;
+    window.speechSynthesis?.cancel();
+    if (!hasNaturalVoiceFor('ar-SA')) {
+      toast({
+        title: 'No Arabic voice installed',
+        description: 'Add an Arabic voice from Settings › Language & input › Text-to-speech for a clear recitation.',
+      });
+    }
+    setSpeakingArabicId(h.hadithnumber);
+    try { await speakTranslation(text, 'ar-SA', rate); } finally { setSpeakingArabicId(null); }
+  };
+
   const rtl = isRtlHadithLang(lang);
 
   const hadithCard = (h: HadithItem) => (
@@ -183,6 +209,24 @@ export const HadithScreen = ({ onBack }: HadithScreenProps) => {
       >
         {h.text}
       </p>
+      {arabicTextOf(h.hadithnumber) && (
+        <div className="mt-2 pt-2 border-t border-emerald-50">
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <span className="text-[10px] font-semibold text-emerald-700">العربية</span>
+            <button
+              onClick={() => onSpeakArabic(h)}
+              className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold active:scale-95"
+            >
+              {speakingArabicId === h.hadithnumber
+                ? <><Square className="w-3 h-3" /> Stop</>
+                : <><Volume2 className="w-3 h-3" /> Arabic</>}
+            </button>
+          </div>
+          <p className="text-right text-gray-800" dir="rtl" style={{ fontSize: '1rem', lineHeight: 2 }}>
+            {arabicTextOf(h.hadithnumber)}
+          </p>
+        </div>
+      )}
       {h.grades?.length ? (
         <p className="mt-2 text-[10px] text-gray-500">
           {h.grades.map((g) => `${g.name}: ${g.grade}`).join(' · ')}
