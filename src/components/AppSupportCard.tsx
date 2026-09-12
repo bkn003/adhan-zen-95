@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Heart, Smartphone, QrCode, Copy, Check, X, Info, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
-import { buildUpiUrl, openUpiApp, upiQrSrc } from '@/utils/upi';
+import { buildUpiUrl, buildUpiQrUrl, openUpiApp, upiQrSrc } from '@/utils/upi';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface AppDonationConfig {
@@ -229,7 +229,7 @@ export const AppSupportCard: React.FC<Props> = ({ variant = 'compact' }) => {
               {!isMobile() && (
                 <div className="flex flex-col items-center bg-gradient-to-br from-indigo-50 to-sky-50 rounded-2xl p-4 border border-indigo-100">
                   <img
-                    src={upiQrSrc(link())}
+                    src={upiQrSrc(buildUpiQrUrl({ pa: cfg.upiId, pn: cfg.payee || 'Adhan Zen', amount, note: 'Adhan Zen app support' }))}
                     alt="UPI QR for app support"
                     className="w-44 h-44 rounded-xl bg-white p-2 shadow"
                   />
