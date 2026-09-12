@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { HandCoins, Copy, Check, X, Smartphone, Building2, QrCode, Share2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { buildUpiUrl, openUpiApp, upiQrSrc } from '@/utils/upi';
+import { buildUpiUrl, buildUpiQrUrl, openUpiApp, upiQrSrc } from '@/utils/upi';
 
 
 interface DonationInfo {
@@ -143,7 +143,15 @@ export const MosqueDonate: React.FC<Props> = ({ mosqueName, locationId, info: ba
     }
   };
 
-  const qrSrc = () => upiQrSrc(upiLink());
+  const qrSrc = () =>
+    upiQrSrc(
+      buildUpiQrUrl({
+        pa: info.donation_upi_id || '',
+        pn: info.donation_account_holder || mosqueName,
+        amount,
+        note: `Donation ${mosqueName}`,
+      }),
+    );
 
   const share = async () => {
     const text = `Donate to ${mosqueName}${info.donation_upi_id ? `\nUPI: ${info.donation_upi_id}` : ''}${info.donation_account_number ? `\nA/c: ${info.donation_account_number}\nIFSC: ${info.donation_ifsc}` : ''}`;
