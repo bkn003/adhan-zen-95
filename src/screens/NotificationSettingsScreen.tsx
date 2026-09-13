@@ -17,6 +17,27 @@ export const NotificationSettingsScreen: React.FC<Props> = ({ onBack }) => {
   const [saving, setSaving] = useState<string | null>(null);
   const [push, setPush] = useState(isPushEnabled());
   const [quiet, setQuiet] = useState<QuietHours>(loadQuietHours());
+  const [volume, setVolume] = useState<number>(() => getAlarmVolume());
+  const [snooze, setSnooze] = useState<number>(() => getSnoozeMinutes());
+
+  const pushAlarmOptions = (v: number, m: number) => {
+    try {
+      const plugin = (window as any).Capacitor?.Plugins?.AdhanNative;
+      plugin?.setAlarmOptions?.({ volume: v, snoozeMinutes: m });
+    } catch {}
+  };
+
+  const updateVolume = (v: number) => {
+    setVolume(v);
+    setAlarmVolume(v);
+    pushAlarmOptions(v, snooze);
+  };
+
+  const updateSnooze = (m: number) => {
+    setSnooze(m);
+    setSnoozeMinutes(m);
+    pushAlarmOptions(volume, m);
+  };
 
   const myMosque = localStorage.getItem('selectedLocationId') || undefined;
   const selectedMosqueName =
