@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Bell, BellOff, Moon, Loader2, Megaphone, CloudDownload } from 'lucide-react';
+import { ArrowLeft, Bell, BellOff, Moon, Loader2, Megaphone, CloudDownload, Volume2 } from 'lucide-react';
+import { getAlarmVolume, setAlarmVolume, getSnoozeMinutes, setSnoozeMinutes, SNOOZE_CHOICES } from '@/utils/alarmPrefs';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
