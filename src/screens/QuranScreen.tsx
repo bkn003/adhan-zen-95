@@ -16,6 +16,9 @@ import {
   cachedAudioUrl, downloadSurahAudio, isDownloaded, removeDownload,
   estimateCacheSize, clearQuranCache,
 } from '@/storage/quranStore';
+import {
+  speakWithAiVoice, cancelAiVoice, isAiVoiceEnabled, setAiVoiceEnabled, aiVoiceHelpsFor,
+} from '@/utils/aiVoice';
 
 interface QuranScreenProps {
   onBack: () => void;
