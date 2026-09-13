@@ -312,6 +312,10 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
             <EditableField label="Mosque Name" value={mosque.mosque_name} onSave={v => handleUpdateMosque('mosque_name', v)} />
             <EditableField label="District" value={mosque.district} onSave={v => handleUpdateMosque('district', v)} />
             <EditableField label="Capacity" value={mosque.mosque_capacity || ''} onSave={v => handleUpdateMosque('mosque_capacity', v)} />
+            <EditableField label="Timings Source (committee, printed calendar, website)" value={(mosque as any).timings_source || ''} onSave={v => handleUpdateMosque('timings_source', v)} />
+            <EditableField label="Ramadan Start Date (YYYY-MM-DD)" value={(mosque as any).ramadan_start_date || ''} onSave={v => handleUpdateMosque('ramadan_start_date', v || null)} />
+            <EditableField label="Ramadan End Date (YYYY-MM-DD)" value={(mosque as any).ramadan_end_date || ''} onSave={v => handleUpdateMosque('ramadan_end_date', v || null)} />
+            <EditableField label="Donation Link" value={(mosque as any).donation_link || ''} onSave={v => handleUpdateMosque('donation_link', v || null)} />
             <EditableField label="Sahar Food Contact" value={mosque.sahar_food_contact_number || ''} onSave={v => handleUpdateMosque('sahar_food_contact_number', v)} />
             <EditableField label="Sahar Food Time" value={mosque.sahar_food_time || ''} onSave={v => handleUpdateMosque('sahar_food_time', v)} />
             <ToggleField label="Women Prayer Hall" value={!!mosque.women_prayer_hall} onSave={v => handleUpdateMosque('women_prayer_hall', v)} />
