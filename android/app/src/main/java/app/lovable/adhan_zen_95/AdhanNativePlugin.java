@@ -137,6 +137,21 @@ public class AdhanNativePlugin extends Plugin {
         call.resolve(ret);
     }
 
+    /** Alarm loudness (0-1) and snooze delay (minutes) pushed from JS. */
+    @PluginMethod
+    public void setAlarmOptions(PluginCall call) {
+        Integer snooze = call.getInt("snoozeMinutes");
+        Double volume = call.getDouble("volume");
+        SharedPreferences.Editor e = AlarmScheduler.prefs(getContext()).edit();
+        if (snooze != null && snooze >= 1 && snooze <= 60) e.putInt(SnoozeReceiver.KEY_SNOOZE_MINUTES, snooze);
+        if (volume != null) e.putFloat(SnoozeReceiver.KEY_ALARM_VOLUME, (float) Math.max(0, Math.min(1, volume)));
+        e.apply();
+        JSObject ret = new JSObject();
+        ret.put("success", true);
+        call.resolve(ret);
+    }
+
+
     /** Last background sync timestamp, status and detected changes. */
     @PluginMethod
     public void getSyncStatus(PluginCall call) {
