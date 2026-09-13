@@ -15,6 +15,7 @@ import {
   type HadithBookmark,
 } from '@/storage/hadithStore';
 import { speakTranslation, hasNaturalVoiceFor } from '@/utils/quranEditions';
+import { speakWithAiVoice, cancelAiVoice } from '@/utils/aiVoice';
 
 interface HadithScreenProps {
   onBack: () => void;
