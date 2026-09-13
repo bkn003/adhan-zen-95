@@ -516,6 +516,7 @@ export const HomeScreen = ({
         prayerName={alarm.prayerName}
         prayerTime={alarm.prayerTime}
         onDismiss={dismissAlarm}
+        onSnooze={snoozeAlarm}
       />
     )}
   </div>;
