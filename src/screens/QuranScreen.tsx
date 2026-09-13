@@ -267,7 +267,7 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
     setPosition(startAt);
     setDuration(0);
 
-    // Device-voice recitation of the translation (languages without an audio edition)
+    // Recitation of the translation (languages without a human audio edition)
     if (useSpeech) {
       const text = translation[idx]?.text;
       if (!text) { stopAudio(); return; }
@@ -277,7 +277,18 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
           document.getElementById(`ayah-${ayah.numberInSurah}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 120);
       }
-      await speakTranslation(text, lang.ttsLang, speechRate);
+      let spoken = false;
+      if (aiVoice && aiVoiceHelpsFor(lang.code)) {
+        try {
+          await speakWithAiVoice(text, { language: lang.englishLabel, rate: speechRate });
+          setAiVoiceNote(null);
+          spoken = true;
+        } catch (e: any) {
+          setAiVoiceNote(e?.message || 'Natural voice unavailable — using your phone voice.');
+        }
+      }
+      if (!spoken) await speakTranslation(text, lang.ttsLang, speechRate);
+
       // continue unless something else took over
       setActiveIdx((cur) => {
         if (cur !== idx) return cur;
