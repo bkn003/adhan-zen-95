@@ -17,6 +17,11 @@ const config: CapacitorConfig = {
     allowMixedContent: true,
     backgroundColor: '#FFFFFF',
   },
+  ios: {
+    contentInset: 'always',
+    backgroundColor: '#FFFFFF',
+    limitsNavigationsToAppBoundDomains: false,
+  },
 };
 
 export default config;
