@@ -189,6 +189,46 @@ export const NotificationSettingsScreen: React.FC<Props> = ({ onBack }) => {
           )}
         </div>
 
+        {/* Alarm loudness & snooze */}
+        <div className="rounded-2xl bg-white border border-amber-100 p-3 shadow-sm space-y-3">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+              <Volume2 className="w-4 h-4 text-amber-600" /> Adhan loudness &amp; snooze
+            </p>
+            <p className="text-[11px] text-gray-500">How loud the Adhan plays, and how long Snooze waits.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={volume}
+              onChange={(e) => updateVolume(parseFloat(e.target.value))}
+              className="flex-1 accent-amber-500"
+              aria-label="Adhan volume"
+            />
+            <span className="text-xs font-bold text-gray-600 w-10 text-right">{Math.round(volume * 100)}%</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {SNOOZE_CHOICES.map((m) => (
+              <button
+                key={m}
+                onClick={() => updateSnooze(m)}
+                className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${
+                  snooze === m
+                    ? 'bg-amber-500 text-white border-transparent'
+                    : 'bg-amber-50 text-amber-700 border-amber-100'
+                }`}
+              >
+                {m} min
+              </button>
+            ))}
+          </div>
+        </div>
+
+
+
         {/* Per-mosque toggles */}
         <div className="rounded-2xl bg-white border border-gray-100 p-3 shadow-sm">
           <h2 className="text-sm font-bold text-gray-800 mb-2">Per-mosque announcements</h2>
