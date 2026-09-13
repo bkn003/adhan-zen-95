@@ -15,6 +15,7 @@ import {
   type HadithBookmark,
 } from '@/storage/hadithStore';
 import { speakTranslation, hasNaturalVoiceFor } from '@/utils/quranEditions';
+import { speakWithAiVoice, cancelAiVoice } from '@/utils/aiVoice';
 
 interface HadithScreenProps {
   onBack: () => void;
@@ -33,7 +34,16 @@ const LANG_TTS: Record<string, string> = {
   rus: 'ru-RU',
 };
 
+/** Languages recited with the natural (generated) voice — phone voices sound robotic here. */
+const AI_LANG_NAMES: Record<string, string> = {
+  ara: 'Arabic',
+  tam: 'Tamil',
+  urd: 'Urdu',
+  ben: 'Bengali',
+};
+
 const RATE_KEY = 'hadithSpeechRate';
+
 
 export const HadithScreen = ({ onBack }: HadithScreenProps) => {
   const { language } = useLanguage();
@@ -141,19 +151,33 @@ export const HadithScreen = ({ onBack }: HadithScreenProps) => {
   const onSpeak = async (h: HadithItem) => {
     if (speakingId === h.hadithnumber) {
       window.speechSynthesis?.cancel();
+      cancelAiVoice();
       setSpeakingId(null);
       return;
     }
     window.speechSynthesis?.cancel();
+    cancelAiVoice();
     const ttsLang = LANG_TTS[lang] || 'en-IN';
-    if (!hasNaturalVoiceFor(ttsLang)) {
-      toast({
-        title: 'Basic voice only',
-        description: 'Your phone has no natural voice for this language yet. Install one from Settings › Language & input › Text-to-speech.',
-      });
-    }
     setSpeakingId(h.hadithnumber);
-    try { await speakTranslation(h.text, ttsLang, rate); } finally { setSpeakingId(null); }
+    try {
+      if (AI_LANG_NAMES[lang]) {
+        try {
+          await speakWithAiVoice(h.text, { language: AI_LANG_NAMES[lang], rate });
+          return;
+        } catch (e: any) {
+          toast({ title: 'Natural voice unavailable', description: e?.message || 'Using your phone voice instead.' });
+        }
+      }
+      if (!hasNaturalVoiceFor(ttsLang)) {
+        toast({
+          title: 'Basic voice only',
+          description: 'Your phone has no natural voice for this language yet. Install one from Settings › Language & input › Text-to-speech.',
+        });
+      }
+      await speakTranslation(h.text, ttsLang, rate);
+    } finally {
+      setSpeakingId(null);
+    }
   };
 
   /** Arabic original text of a hadith, when the Arabic edition is available. */
@@ -166,21 +190,34 @@ export const HadithScreen = ({ onBack }: HadithScreenProps) => {
   const onSpeakArabic = async (h: HadithItem) => {
     if (speakingArabicId === h.hadithnumber) {
       window.speechSynthesis?.cancel();
+      cancelAiVoice();
       setSpeakingArabicId(null);
       return;
     }
     const text = arabicTextOf(h.hadithnumber);
     if (!text) return;
     window.speechSynthesis?.cancel();
-    if (!hasNaturalVoiceFor('ar-SA')) {
-      toast({
-        title: 'No Arabic voice installed',
-        description: 'Add an Arabic voice from Settings › Language & input › Text-to-speech for a clear recitation.',
-      });
-    }
+    cancelAiVoice();
     setSpeakingArabicId(h.hadithnumber);
-    try { await speakTranslation(text, 'ar-SA', rate); } finally { setSpeakingArabicId(null); }
+    try {
+      try {
+        await speakWithAiVoice(text, { language: 'Arabic', rate });
+        return;
+      } catch (e: any) {
+        toast({ title: 'Natural Arabic voice unavailable', description: e?.message || 'Using your phone voice instead.' });
+      }
+      if (!hasNaturalVoiceFor('ar-SA')) {
+        toast({
+          title: 'No Arabic voice installed',
+          description: 'Add an Arabic voice from Settings › Language & input › Text-to-speech for a clear recitation.',
+        });
+      }
+      await speakTranslation(text, 'ar-SA', rate);
+    } finally {
+      setSpeakingArabicId(null);
+    }
   };
+
 
   const rtl = isRtlHadithLang(lang);
 

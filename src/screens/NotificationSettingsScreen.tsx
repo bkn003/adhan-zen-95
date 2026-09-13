@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Bell, BellOff, Moon, Loader2, Megaphone, CloudDownload } from 'lucide-react';
+import { ArrowLeft, Bell, BellOff, Moon, Loader2, Megaphone, CloudDownload, Volume2 } from 'lucide-react';
+import { getAlarmVolume, setAlarmVolume, getSnoozeMinutes, setSnoozeMinutes, SNOOZE_CHOICES } from '@/utils/alarmPrefs';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +18,27 @@ export const NotificationSettingsScreen: React.FC<Props> = ({ onBack }) => {
   const [saving, setSaving] = useState<string | null>(null);
   const [push, setPush] = useState(isPushEnabled());
   const [quiet, setQuiet] = useState<QuietHours>(loadQuietHours());
+  const [volume, setVolume] = useState<number>(() => getAlarmVolume());
+  const [snooze, setSnooze] = useState<number>(() => getSnoozeMinutes());
+
+  const pushAlarmOptions = (v: number, m: number) => {
+    try {
+      const plugin = (window as any).Capacitor?.Plugins?.AdhanNative;
+      plugin?.setAlarmOptions?.({ volume: v, snoozeMinutes: m });
+    } catch {}
+  };
+
+  const updateVolume = (v: number) => {
+    setVolume(v);
+    setAlarmVolume(v);
+    pushAlarmOptions(v, snooze);
+  };
+
+  const updateSnooze = (m: number) => {
+    setSnooze(m);
+    setSnoozeMinutes(m);
+    pushAlarmOptions(volume, m);
+  };
 
   const myMosque = localStorage.getItem('selectedLocationId') || undefined;
   const selectedMosqueName =
@@ -188,6 +210,46 @@ export const NotificationSettingsScreen: React.FC<Props> = ({ onBack }) => {
             </div>
           )}
         </div>
+
+        {/* Alarm loudness & snooze */}
+        <div className="rounded-2xl bg-white border border-amber-100 p-3 shadow-sm space-y-3">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+              <Volume2 className="w-4 h-4 text-amber-600" /> Adhan loudness &amp; snooze
+            </p>
+            <p className="text-[11px] text-gray-500">How loud the Adhan plays, and how long Snooze waits.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={volume}
+              onChange={(e) => updateVolume(parseFloat(e.target.value))}
+              className="flex-1 accent-amber-500"
+              aria-label="Adhan volume"
+            />
+            <span className="text-xs font-bold text-gray-600 w-10 text-right">{Math.round(volume * 100)}%</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {SNOOZE_CHOICES.map((m) => (
+              <button
+                key={m}
+                onClick={() => updateSnooze(m)}
+                className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${
+                  snooze === m
+                    ? 'bg-amber-500 text-white border-transparent'
+                    : 'bg-amber-50 text-amber-700 border-amber-100'
+                }`}
+              >
+                {m} min
+              </button>
+            ))}
+          </div>
+        </div>
+
+
 
         {/* Per-mosque toggles */}
         <div className="rounded-2xl bg-white border border-gray-100 p-3 shadow-sm">

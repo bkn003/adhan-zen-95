@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.prayer-reminders]
 verify_jwt = false
+
+[functions.ai-voice]
+verify_jwt = false

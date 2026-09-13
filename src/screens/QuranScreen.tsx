@@ -16,6 +16,9 @@ import {
   cachedAudioUrl, downloadSurahAudio, isDownloaded, removeDownload,
   estimateCacheSize, clearQuranCache,
 } from '@/storage/quranStore';
+import {
+  speakWithAiVoice, cancelAiVoice, isAiVoiceEnabled, setAiVoiceEnabled, aiVoiceHelpsFor,
+} from '@/utils/aiVoice';
 
 interface QuranScreenProps {
   onBack: () => void;
@@ -58,6 +61,8 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
     const raw = Number(localStorage.getItem(RATE_KEY));
     return raw >= 0.5 && raw <= 1.5 ? raw : 0.85;
   });
+  const [aiVoice, setAiVoice] = useState<boolean>(() => isAiVoiceEnabled());
+  const [aiVoiceNote, setAiVoiceNote] = useState<string | null>(null);
   const [openSurah, setOpenSurah] = useState<number | null>(() => {
     try {
       const raw = localStorage.getItem(LAST_READ_KEY);
@@ -237,13 +242,15 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
     audioRef.current = null;
     releaseObjectUrl();
     cancelSpeech();
+    cancelAiVoice();
     setIsPlaying(false);
     setActiveIdx(null);
     setPosition(0);
     setDuration(0);
   }, []);
 
-  useEffect(() => () => { audioRef.current?.pause(); releaseObjectUrl(); cancelSpeech(); }, []);
+  useEffect(() => () => { audioRef.current?.pause(); releaseObjectUrl(); cancelSpeech(); cancelAiVoice(); }, []);
+
 
   const currentSurah = surahs.find((s) => s.number === openSurah);
 
@@ -260,7 +267,7 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
     setPosition(startAt);
     setDuration(0);
 
-    // Device-voice recitation of the translation (languages without an audio edition)
+    // Recitation of the translation (languages without a human audio edition)
     if (useSpeech) {
       const text = translation[idx]?.text;
       if (!text) { stopAudio(); return; }
@@ -270,7 +277,18 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
           document.getElementById(`ayah-${ayah.numberInSurah}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 120);
       }
-      await speakTranslation(text, lang.ttsLang, speechRate);
+      let spoken = false;
+      if (aiVoice && aiVoiceHelpsFor(lang.code)) {
+        try {
+          await speakWithAiVoice(text, { language: lang.englishLabel, rate: speechRate });
+          setAiVoiceNote(null);
+          spoken = true;
+        } catch (e: any) {
+          setAiVoiceNote(e?.message || 'Natural voice unavailable — using your phone voice.');
+        }
+      }
+      if (!spoken) await speakTranslation(text, lang.ttsLang, speechRate);
+
       // continue unless something else took over
       setActiveIdx((cur) => {
         if (cur !== idx) return cur;
@@ -320,7 +338,7 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
         document.getElementById(`ayah-${ayah.numberInSurah}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 120);
     }
-  }, [arabic, translation, repeatVerse, autoScroll, stopAudio, useSpeech, lang, speechRate, audioEdition, audioUrls, offline]);
+  }, [arabic, translation, repeatVerse, autoScroll, stopAudio, useSpeech, lang, speechRate, audioEdition, audioUrls, offline, aiVoice]);
 
   useEffect(() => { playIndexRef.current = playIndex; }, [playIndex]);
 
@@ -629,16 +647,48 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
                     </select>
                   ) : (
                     <div className="mt-2 space-y-2">
+                      {!lang.audioEdition && aiVoiceHelpsFor(lang.code) && (
+                        <div className="px-1 space-y-1">
+                          <button
+                            onClick={() => {
+                              stopAudio();
+                              const next = !aiVoice;
+                              setAiVoice(next);
+                              setAiVoiceEnabled(next);
+                              setAiVoiceNote(null);
+                            }}
+                            className={`w-full px-3 py-2 rounded-xl text-[11px] font-semibold border active:scale-[0.99] ${
+                              aiVoice
+                                ? 'bg-emerald-600 text-primary-foreground border-transparent'
+                                : 'bg-muted border-border text-muted-foreground'
+                            }`}
+                          >
+                            {aiVoice
+                              ? `Natural ${lang.englishLabel} reciter · on`
+                              : `Natural ${lang.englishLabel} reciter · off`}
+                          </button>
+                          <p className="text-[10px] text-muted-foreground">
+                            {aiVoiceNote
+                              ? aiVoiceNote
+                              : aiVoice
+                                ? `A clear ${lang.englishLabel} reciting voice is created once and saved on this phone for offline replay.`
+                                : `Your phone's own ${lang.englishLabel} voice will be used.`}
+                          </p>
+                        </div>
+                      )}
                       <p className="px-1 text-[10px] text-muted-foreground flex items-center gap-1">
                         <Volume2 className="w-3 h-3 shrink-0" />
                         {lang.audioEdition
                           ? `Human-voice ${lang.englishLabel} recitation`
-                          : voiceMissing
-                            ? `${lang.englishLabel} voice not installed on this device — add it in your phone's text-to-speech settings.`
-                            : naturalVoice
-                              ? `Recited by ${chosenVoice?.name ?? 'a natural voice'} on this device`
-                              : `Using your device's ${lang.englishLabel} voice${chosenVoice ? ` (${chosenVoice.name})` : ''} — install the enhanced ${lang.englishLabel} voice in your phone's text-to-speech settings for a clearer recitation.`}
+                          : aiVoice && aiVoiceHelpsFor(lang.code)
+                            ? `Reciting in ${lang.englishLabel} with the natural voice`
+                            : voiceMissing
+                              ? `${lang.englishLabel} voice not installed on this device — add it in your phone's text-to-speech settings.`
+                              : naturalVoice
+                                ? `Recited by ${chosenVoice?.name ?? 'a natural voice'} on this device`
+                                : `Using your device's ${lang.englishLabel} voice${chosenVoice ? ` (${chosenVoice.name})` : ''} — install the enhanced ${lang.englishLabel} voice in your phone's text-to-speech settings for a clearer recitation.`}
                       </p>
+
                       <div className="px-1 space-y-1.5">
                         <span className="text-[10px] font-semibold text-muted-foreground">Arabic reciter (real voice)</span>
                         <select

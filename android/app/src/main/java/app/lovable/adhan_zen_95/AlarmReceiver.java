@@ -50,6 +50,22 @@ public class AlarmReceiver extends BroadcastReceiver {
 
         Uri sound = Uri.parse("android.resource://" + context.getPackageName() + "/raw/azan1");
 
+        int notifId = ("notif_" + prayerName + "_" + phase).hashCode();
+
+        // "Snooze" action: rings this prayer again after the user's snooze delay.
+        Intent snooze = new Intent(context, SnoozeReceiver.class);
+        snooze.setAction("app.lovable.adhan_zen_95.SNOOZE_" + notifId);
+        snooze.putExtra("prayerName", prayerName);
+        snooze.putExtra("phase", phase);
+        snooze.putExtra("adhan", adhan);
+        snooze.putExtra("iqamah", iqamah);
+        snooze.putExtra("type", type);
+        snooze.putExtra("notifId", notifId);
+        int snoozeFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) snoozeFlags |= PendingIntent.FLAG_IMMUTABLE;
+        PendingIntent snoozePi = PendingIntent.getBroadcast(context, notifId + 1, snooze, snoozeFlags);
+        int snoozeMins = SnoozeReceiver.snoozeMinutes(context);
+
         NotificationCompat.Builder b = new NotificationCompat.Builder(context, NotifChannels.CHANNEL_ADHAN)
                 .setSmallIcon(context.getResources().getIdentifier("ic_stat_name", "drawable", context.getPackageName()) != 0
                         ? context.getResources().getIdentifier("ic_stat_name", "drawable", context.getPackageName())
@@ -60,12 +76,13 @@ public class AlarmReceiver extends BroadcastReceiver {
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setAutoCancel(true)
                 .setVibrate(new long[]{0, 500, 250, 500})
+                .addAction(0, "Snooze " + snoozeMins + " min", snoozePi)
                 .setSound(sound, AudioAttributes.USAGE_ALARM);
         if (contentPi != null) b.setContentIntent(contentPi);
 
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        int notifId = ("notif_" + prayerName + "_" + phase).hashCode();
         if (nm != null) nm.notify(notifId, b.build());
+
 
         // === Self-perpetuation ===
         // Preferred: top the rolling window back up from the stored year of timings,

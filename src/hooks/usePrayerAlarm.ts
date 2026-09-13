@@ -104,5 +104,14 @@ export const usePrayerAlarm = (prayers: Prayer[]) => {
     setAlarm({ active: false, prayerName: '', prayerTime: '' });
   };
 
-  return { alarm, dismissAlarm };
+  /** Silences the alarm now and rings it again after the given delay. */
+  const snoozeAlarm = (minutes: number) => {
+    const snoozed = { ...alarm };
+    setAlarm({ active: false, prayerName: '', prayerTime: '' });
+    setTimeout(() => {
+      setAlarm({ ...snoozed, active: true });
+    }, Math.max(1, minutes) * 60 * 1000);
+  };
+
+  return { alarm, dismissAlarm, snoozeAlarm };
 };
