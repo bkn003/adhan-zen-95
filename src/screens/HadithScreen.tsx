@@ -33,7 +33,16 @@ const LANG_TTS: Record<string, string> = {
   rus: 'ru-RU',
 };
 
+/** Languages recited with the natural (generated) voice — phone voices sound robotic here. */
+const AI_LANG_NAMES: Record<string, string> = {
+  ara: 'Arabic',
+  tam: 'Tamil',
+  urd: 'Urdu',
+  ben: 'Bengali',
+};
+
 const RATE_KEY = 'hadithSpeechRate';
+
 
 export const HadithScreen = ({ onBack }: HadithScreenProps) => {
   const { language } = useLanguage();
