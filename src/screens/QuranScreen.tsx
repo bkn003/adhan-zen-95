@@ -61,6 +61,8 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
     const raw = Number(localStorage.getItem(RATE_KEY));
     return raw >= 0.5 && raw <= 1.5 ? raw : 0.85;
   });
+  const [aiVoice, setAiVoice] = useState<boolean>(() => isAiVoiceEnabled());
+  const [aiVoiceNote, setAiVoiceNote] = useState<string | null>(null);
   const [openSurah, setOpenSurah] = useState<number | null>(() => {
     try {
       const raw = localStorage.getItem(LAST_READ_KEY);
