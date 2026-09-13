@@ -647,16 +647,48 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
                     </select>
                   ) : (
                     <div className="mt-2 space-y-2">
+                      {!lang.audioEdition && aiVoiceHelpsFor(lang.code) && (
+                        <div className="px-1 space-y-1">
+                          <button
+                            onClick={() => {
+                              stopAudio();
+                              const next = !aiVoice;
+                              setAiVoice(next);
+                              setAiVoiceEnabled(next);
+                              setAiVoiceNote(null);
+                            }}
+                            className={`w-full px-3 py-2 rounded-xl text-[11px] font-semibold border active:scale-[0.99] ${
+                              aiVoice
+                                ? 'bg-emerald-600 text-primary-foreground border-transparent'
+                                : 'bg-muted border-border text-muted-foreground'
+                            }`}
+                          >
+                            {aiVoice
+                              ? `Natural ${lang.englishLabel} reciter · on`
+                              : `Natural ${lang.englishLabel} reciter · off`}
+                          </button>
+                          <p className="text-[10px] text-muted-foreground">
+                            {aiVoiceNote
+                              ? aiVoiceNote
+                              : aiVoice
+                                ? `A clear ${lang.englishLabel} reciting voice is created once and saved on this phone for offline replay.`
+                                : `Your phone's own ${lang.englishLabel} voice will be used.`}
+                          </p>
+                        </div>
+                      )}
                       <p className="px-1 text-[10px] text-muted-foreground flex items-center gap-1">
                         <Volume2 className="w-3 h-3 shrink-0" />
                         {lang.audioEdition
                           ? `Human-voice ${lang.englishLabel} recitation`
-                          : voiceMissing
-                            ? `${lang.englishLabel} voice not installed on this device — add it in your phone's text-to-speech settings.`
-                            : naturalVoice
-                              ? `Recited by ${chosenVoice?.name ?? 'a natural voice'} on this device`
-                              : `Using your device's ${lang.englishLabel} voice${chosenVoice ? ` (${chosenVoice.name})` : ''} — install the enhanced ${lang.englishLabel} voice in your phone's text-to-speech settings for a clearer recitation.`}
+                          : aiVoice && aiVoiceHelpsFor(lang.code)
+                            ? `Reciting in ${lang.englishLabel} with the natural voice`
+                            : voiceMissing
+                              ? `${lang.englishLabel} voice not installed on this device — add it in your phone's text-to-speech settings.`
+                              : naturalVoice
+                                ? `Recited by ${chosenVoice?.name ?? 'a natural voice'} on this device`
+                                : `Using your device's ${lang.englishLabel} voice${chosenVoice ? ` (${chosenVoice.name})` : ''} — install the enhanced ${lang.englishLabel} voice in your phone's text-to-speech settings for a clearer recitation.`}
                       </p>
+
                       <div className="px-1 space-y-1.5">
                         <span className="text-[10px] font-semibold text-muted-foreground">Arabic reciter (real voice)</span>
                         <select
