@@ -274,7 +274,7 @@ export const HomeScreen = ({
   usePrayerNotifications(prayerTimes);
 
   // Prayer alarm overlay (full-screen with sound)
-  const { alarm, dismissAlarm } = usePrayerAlarm(finalPrayerTimes);
+  const { alarm, dismissAlarm, snoozeAlarm } = usePrayerAlarm(finalPrayerTimes);
 
   // Prayer time change notifier for My Mohalla
   const mohallaId = localStorage.getItem('myMohallaId');
