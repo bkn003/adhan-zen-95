@@ -40,6 +40,14 @@
             android:enabled="true"
             android:exported="false" />
 
+        <!-- "Snooze" action on an adhan notification -->
+        <receiver
+            android:name=".SnoozeReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+
+
         <!-- Re-schedules prayer alarms after device reboot / app update -->
         <receiver
             android:name=".BootReceiver"
