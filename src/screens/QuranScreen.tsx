@@ -240,13 +240,15 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
     audioRef.current = null;
     releaseObjectUrl();
     cancelSpeech();
+    cancelAiVoice();
     setIsPlaying(false);
     setActiveIdx(null);
     setPosition(0);
     setDuration(0);
   }, []);
 
-  useEffect(() => () => { audioRef.current?.pause(); releaseObjectUrl(); cancelSpeech(); }, []);
+  useEffect(() => () => { audioRef.current?.pause(); releaseObjectUrl(); cancelSpeech(); cancelAiVoice(); }, []);
+
 
   const currentSurah = surahs.find((s) => s.number === openSurah);
 
