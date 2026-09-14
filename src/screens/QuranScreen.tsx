@@ -278,8 +278,11 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
     setPosition(startAt);
     setDuration(0);
 
+    // A real reciter's recording for this verse, when one has been uploaded.
+    const humanSrc = mode === 'translation' ? humanUrls[ayah.numberInSurah] : undefined;
+
     // Recitation of the translation (languages without a human audio edition)
-    if (useSpeech) {
+    if (useSpeech && !humanSrc) {
       const text = translation[idx]?.text;
       if (!text) { stopAudio(); return; }
       setIsPlaying(true);
@@ -311,16 +314,17 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
       return;
     }
 
-    if (!audioEdition) { stopAudio(); return; }
+    if (!audioEdition && !humanSrc) { stopAudio(); return; }
 
-    const cached = await cachedAudioUrl(audioEdition, ayah.number);
-    const src = cached || audioUrls[ayah.numberInSurah];
+    const cached = humanSrc || !audioEdition ? null : await cachedAudioUrl(audioEdition, ayah.number);
+    const src = humanSrc || cached || audioUrls[ayah.numberInSurah];
     if (!src) {
       setError(offline ? 'This surah is not downloaded for offline recitation yet.' : 'Audio is not available for this ayah.');
       setIsPlaying(false);
       return;
     }
     if (cached) objectUrlRef.current = cached;
+
 
     const audio = new Audio(src);
     audioRef.current = audio;
