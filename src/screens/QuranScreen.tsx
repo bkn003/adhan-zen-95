@@ -353,7 +353,7 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
         document.getElementById(`ayah-${ayah.numberInSurah}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 120);
     }
-  }, [arabic, translation, repeatVerse, autoScroll, stopAudio, useSpeech, lang, speechRate, audioEdition, audioUrls, offline, aiVoice]);
+  }, [arabic, translation, repeatVerse, autoScroll, stopAudio, useSpeech, lang, speechRate, audioEdition, audioUrls, offline, aiVoice, mode, humanUrls]);
 
   useEffect(() => { playIndexRef.current = playIndex; }, [playIndex]);
 
