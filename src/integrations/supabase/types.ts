@@ -959,6 +959,42 @@ export type Database = {
           },
         ]
       }
+      recitation_audio: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          lang_code: string
+          reciter_name: string | null
+          ref1: number
+          ref2: number
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind?: string
+          lang_code: string
+          reciter_name?: string | null
+          ref1: number
+          ref2: number
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          lang_code?: string
+          reciter_name?: string | null
+          ref1?: number
+          ref2?: number
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       reminder_sends: {
         Row: {
           created_at: string
