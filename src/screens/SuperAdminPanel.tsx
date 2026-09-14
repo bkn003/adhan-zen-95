@@ -11,6 +11,7 @@ import { useRamadanContext } from '@/contexts/RamadanContext';
 
 import { AdminAuthCard } from '@/components/admin/AdminAuthCard';
 import { AuditLogExplorer } from '@/components/admin/AuditLogExplorer';
+import { RecitationUploader } from '@/components/admin/RecitationUploader';
 import { authHeaders, fetchAdminScope, adminSignOut, ADMIN_SECTIONS } from '@/utils/adminApi';
 
 const SUPABASE_URL = "https://lhufqnokmdqkvzcxqwkl.supabase.co";
@@ -737,6 +738,11 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
             </div>
             <HijriAdjustment />
           </div>
+
+          {/* Reciter recordings */}
+          <RecitationUploader />
+
+
 
           {/* Sahar End Time */}
           <div className="bg-gray-800/60 backdrop-blur-sm rounded-2xl p-4 border border-gray-700/40">

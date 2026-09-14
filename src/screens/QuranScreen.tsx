@@ -130,6 +130,17 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
   const audioEdition = mode === 'arabic' ? reciter : lang.audioEdition;
   const useSpeech = mode === 'translation' && !lang.audioEdition;
 
+  /** Human recordings uploaded for this language + surah (verse -> url). */
+  const [humanUrls, setHumanUrls] = useState<Record<number, string>>({});
+  useEffect(() => {
+    if (!openSurah) { setHumanUrls({}); return; }
+    let cancelled = false;
+    getRecitationUrls('quran', langCode, openSurah)
+      .then((m) => { if (!cancelled) setHumanUrls(m); })
+      .catch(() => { if (!cancelled) setHumanUrls({}); });
+    return () => { cancelled = true; };
+  }, [openSurah, langCode]);
+
   useEffect(() => {
     const on = () => setOffline(false);
     const off = () => setOffline(true);
@@ -267,8 +278,11 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
     setPosition(startAt);
     setDuration(0);
 
+    // A real reciter's recording for this verse, when one has been uploaded.
+    const humanSrc = mode === 'translation' ? humanUrls[ayah.numberInSurah] : undefined;
+
     // Recitation of the translation (languages without a human audio edition)
-    if (useSpeech) {
+    if (useSpeech && !humanSrc) {
       const text = translation[idx]?.text;
       if (!text) { stopAudio(); return; }
       setIsPlaying(true);
@@ -300,16 +314,17 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
       return;
     }
 
-    if (!audioEdition) { stopAudio(); return; }
+    if (!audioEdition && !humanSrc) { stopAudio(); return; }
 
-    const cached = await cachedAudioUrl(audioEdition, ayah.number);
-    const src = cached || audioUrls[ayah.numberInSurah];
+    const cached = humanSrc || !audioEdition ? null : await cachedAudioUrl(audioEdition, ayah.number);
+    const src = humanSrc || cached || audioUrls[ayah.numberInSurah];
     if (!src) {
       setError(offline ? 'This surah is not downloaded for offline recitation yet.' : 'Audio is not available for this ayah.');
       setIsPlaying(false);
       return;
     }
     if (cached) objectUrlRef.current = cached;
+
 
     const audio = new Audio(src);
     audioRef.current = audio;
@@ -338,12 +353,12 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
         document.getElementById(`ayah-${ayah.numberInSurah}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 120);
     }
-  }, [arabic, translation, repeatVerse, autoScroll, stopAudio, useSpeech, lang, speechRate, audioEdition, audioUrls, offline, aiVoice]);
+  }, [arabic, translation, repeatVerse, autoScroll, stopAudio, useSpeech, lang, speechRate, audioEdition, audioUrls, offline, aiVoice, mode, humanUrls]);
 
   useEffect(() => { playIndexRef.current = playIndex; }, [playIndex]);
 
   const togglePlayPause = useCallback(() => {
-    if (useSpeech) {
+    if (useSpeech && !audioRef.current) {
       if (isPlaying) { cancelSpeech(); setIsPlaying(false); }
       else playIndex(activeIdx ?? 0);
       return;
