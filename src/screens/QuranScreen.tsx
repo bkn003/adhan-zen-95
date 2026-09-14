@@ -358,7 +358,7 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
   useEffect(() => { playIndexRef.current = playIndex; }, [playIndex]);
 
   const togglePlayPause = useCallback(() => {
-    if (useSpeech) {
+    if (useSpeech && !audioRef.current) {
       if (isPlaying) { cancelSpeech(); setIsPlaying(false); }
       else playIndex(activeIdx ?? 0);
       return;
