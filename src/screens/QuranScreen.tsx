@@ -19,6 +19,7 @@ import {
 import {
   speakWithAiVoice, cancelAiVoice, isAiVoiceEnabled, setAiVoiceEnabled, aiVoiceHelpsFor,
 } from '@/utils/aiVoice';
+import { getRecitationUrls } from '@/utils/humanReciters';
 
 interface QuranScreenProps {
   onBack: () => void;
