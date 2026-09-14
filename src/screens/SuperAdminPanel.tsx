@@ -738,6 +738,11 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
             <HijriAdjustment />
           </div>
 
+          {/* Reciter recordings */}
+          <RecitationUploader />
+
+
+
           {/* Sahar End Time */}
           <div className="bg-gray-800/60 backdrop-blur-sm rounded-2xl p-4 border border-gray-700/40">
             <div className="flex items-center justify-between">
