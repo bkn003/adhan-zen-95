@@ -130,6 +130,17 @@ export const QuranScreen: React.FC<QuranScreenProps> = ({ onBack }) => {
   const audioEdition = mode === 'arabic' ? reciter : lang.audioEdition;
   const useSpeech = mode === 'translation' && !lang.audioEdition;
 
+  /** Human recordings uploaded for this language + surah (verse -> url). */
+  const [humanUrls, setHumanUrls] = useState<Record<number, string>>({});
+  useEffect(() => {
+    if (!openSurah) { setHumanUrls({}); return; }
+    let cancelled = false;
+    getRecitationUrls('quran', langCode, openSurah)
+      .then((m) => { if (!cancelled) setHumanUrls(m); })
+      .catch(() => { if (!cancelled) setHumanUrls({}); });
+    return () => { cancelled = true; };
+  }, [openSurah, langCode]);
+
   useEffect(() => {
     const on = () => setOffline(false);
     const off = () => setOffline(true);
