@@ -175,14 +175,31 @@ export const HadithScreen = ({ onBack }: HadithScreenProps) => {
     if (speakingId === h.hadithnumber) {
       window.speechSynthesis?.cancel();
       cancelAiVoice();
+      stopAudio();
       setSpeakingId(null);
       return;
     }
     window.speechSynthesis?.cancel();
     cancelAiVoice();
+    stopAudio();
     const ttsLang = LANG_TTS[lang] || 'en-IN';
     setSpeakingId(h.hadithnumber);
     try {
+      // A real recording uploaded for this hadith always wins.
+      const recorded = humanUrls[h.hadithnumber];
+      if (recorded) {
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const el = new Audio(recorded);
+            el.playbackRate = rate;
+            audioRef.current = el;
+            el.onended = () => resolve();
+            el.onerror = () => reject(new Error('playback failed'));
+            el.play().catch(reject);
+          });
+          return;
+        } catch { /* fall through to a spoken voice */ }
+      }
       if (AI_LANG_NAMES[lang]) {
         try {
           await speakWithAiVoice(h.text, { language: AI_LANG_NAMES[lang], rate });
