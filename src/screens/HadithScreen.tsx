@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, BookOpen, Bookmark, BookmarkCheck, Search, Share2,
   Volume2, Square, Loader2, ChevronRight,
