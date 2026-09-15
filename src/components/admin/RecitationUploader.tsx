@@ -36,7 +36,10 @@ export const RecitationUploader: React.FC = () => {
   const [progress, setProgress] = useState('');
 
   const langs = kind === 'quran'
-    ? QURAN_LANGUAGES.map((l) => ({ code: l.code, label: l.englishLabel }))
+    ? [
+        { code: 'ar', label: 'Arabic (original)' },
+        ...QURAN_LANGUAGES.map((l) => ({ code: l.code, label: l.englishLabel })),
+      ]
     : HADITH_LANGS;
 
   useEffect(() => {
