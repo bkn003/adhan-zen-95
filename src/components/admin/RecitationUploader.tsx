@@ -137,12 +137,24 @@ export const RecitationUploader: React.FC = () => {
         </label>
         <label className="space-y-1">
           <span className="text-[10px] text-gray-500 uppercase tracking-wider">{numLabel}</span>
-          <input
-            type="number" min={1}
-            value={ref1}
-            onChange={(e) => setRef1(Math.max(1, Number(e.target.value) || 1))}
-            className="w-full bg-gray-700/40 border border-gray-600/40 rounded-xl px-3 py-2 text-xs text-white"
-          />
+          {kind === 'hadith' ? (
+            <select
+              value={ref1}
+              onChange={(e) => setRef1(Number(e.target.value))}
+              className="w-full bg-gray-700/40 border border-gray-600/40 rounded-xl px-3 py-2 text-xs text-white"
+            >
+              {HADITH_BOOKS.map((b, i) => (
+                <option key={b.id} value={i + 1}>{b.title}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="number" min={1}
+              value={ref1}
+              onChange={(e) => setRef1(Math.max(1, Number(e.target.value) || 1))}
+              className="w-full bg-gray-700/40 border border-gray-600/40 rounded-xl px-3 py-2 text-xs text-white"
+            />
+          )}
         </label>
         <label className="space-y-1">
           <span className="text-[10px] text-gray-500 uppercase tracking-wider">{itemLabel}</span>
