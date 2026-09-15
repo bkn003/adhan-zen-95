@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, BookOpen, Bookmark, BookmarkCheck, Search, Share2,
   Volume2, Square, Loader2, ChevronRight,
@@ -16,6 +16,7 @@ import {
 } from '@/storage/hadithStore';
 import { speakTranslation, hasNaturalVoiceFor } from '@/utils/quranEditions';
 import { speakWithAiVoice, cancelAiVoice } from '@/utils/aiVoice';
+import { getRecitationUrls } from '@/utils/humanReciters';
 
 interface HadithScreenProps {
   onBack: () => void;
@@ -62,10 +63,35 @@ export const HadithScreen = ({ onBack }: HadithScreenProps) => {
   /** Arabic original of the same book, for Arabic recitation of each hadith. */
   const [arabicEdition, setArabicEdition] = useState<HadithEdition | null>(null);
   const [speakingArabicId, setSpeakingArabicId] = useState<number | null>(null);
+  /** Uploaded human recordings for this book + language, keyed by hadith number. */
+  const [humanUrls, setHumanUrls] = useState<Record<number, string>>({});
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  /** Book number used to match uploaded recordings (order of HADITH_BOOKS). */
+  const bookNumber = book ? HADITH_BOOKS.findIndex((b) => b.id === book.id) + 1 : 0;
+
+  useEffect(() => {
+    if (!bookNumber) { setHumanUrls({}); return; }
+    let alive = true;
+    getRecitationUrls('hadith', lang, bookNumber)
+      .then((u) => { if (alive) setHumanUrls(u); })
+      .catch(() => { if (alive) setHumanUrls({}); });
+    return () => { alive = false; };
+  }, [bookNumber, lang]);
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+  };
 
   useEffect(() => { loadHadithBookmarks().then(setBookmarks); }, []);
   useEffect(() => { localStorage.setItem(RATE_KEY, String(rate)); }, [rate]);
-  useEffect(() => () => { try { window.speechSynthesis?.cancel(); } catch { /* noop */ } }, []);
+  useEffect(() => () => {
+    try { window.speechSynthesis?.cancel(); } catch { /* noop */ }
+    stopAudio();
+  }, []);
 
   const openBook = async (b: HadithBook, forcedLang?: string) => {
     const chosen = forcedLang || resolveHadithLang(b, language);
@@ -152,14 +178,31 @@ export const HadithScreen = ({ onBack }: HadithScreenProps) => {
     if (speakingId === h.hadithnumber) {
       window.speechSynthesis?.cancel();
       cancelAiVoice();
+      stopAudio();
       setSpeakingId(null);
       return;
     }
     window.speechSynthesis?.cancel();
     cancelAiVoice();
+    stopAudio();
     const ttsLang = LANG_TTS[lang] || 'en-IN';
     setSpeakingId(h.hadithnumber);
     try {
+      // A real recording uploaded for this hadith always wins.
+      const recorded = humanUrls[h.hadithnumber];
+      if (recorded) {
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const el = new Audio(recorded);
+            el.playbackRate = rate;
+            audioRef.current = el;
+            el.onended = () => resolve();
+            el.onerror = () => reject(new Error('playback failed'));
+            el.play().catch(reject);
+          });
+          return;
+        } catch { /* fall through to a spoken voice */ }
+      }
       if (AI_LANG_NAMES[lang]) {
         try {
           await speakWithAiVoice(h.text, { language: AI_LANG_NAMES[lang], rate });
