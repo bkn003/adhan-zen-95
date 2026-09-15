@@ -16,6 +16,7 @@ import {
 } from '@/storage/hadithStore';
 import { speakTranslation, hasNaturalVoiceFor } from '@/utils/quranEditions';
 import { speakWithAiVoice, cancelAiVoice } from '@/utils/aiVoice';
+import { getRecitationUrls } from '@/utils/humanReciters';
 
 interface HadithScreenProps {
   onBack: () => void;
