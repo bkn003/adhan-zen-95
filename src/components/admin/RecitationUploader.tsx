@@ -2,20 +2,23 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Mic, Upload, Trash2, Loader2, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { QURAN_LANGUAGES } from '@/utils/quranEditions';
-import { HADITH_BOOKS } from '@/utils/hadithSources';
+import { HADITH_BOOKS, HADITH_LANGUAGES } from '@/utils/hadithSources';
 import {
   listRecitations, uploadRecitation, deleteRecitation, getRecitationUrls,
   type RecitationKind, type RecitationRow,
 } from '@/utils/humanReciters';
 
-/** Languages offered for hadith recordings (dataset language codes). */
-const HADITH_LANGS = [
-  { code: 'ara', label: 'Arabic' },
-  { code: 'eng', label: 'English' },
-  { code: 'tam', label: 'Tamil' },
-  { code: 'urd', label: 'Urdu' },
-  { code: 'ben', label: 'Bengali' },
-];
+/** Plain English names for the hadith dataset languages. */
+const HADITH_LANG_NAMES: Record<string, string> = {
+  eng: 'English', ara: 'Arabic', urd: 'Urdu', tam: 'Tamil', ben: 'Bengali',
+  ind: 'Indonesian', tur: 'Turkish', fra: 'French', rus: 'Russian',
+};
+
+/** Every language a hadith reader can show — each can have real recordings. */
+const HADITH_LANGS = HADITH_LANGUAGES.map((l) => ({
+  code: l.code,
+  label: HADITH_LANG_NAMES[l.code] || l.label,
+}));
 
 /**
  * Super-admin only: upload one audio file per verse (or per hadith) so the
@@ -33,7 +36,10 @@ export const RecitationUploader: React.FC = () => {
   const [progress, setProgress] = useState('');
 
   const langs = kind === 'quran'
-    ? QURAN_LANGUAGES.map((l) => ({ code: l.code, label: l.englishLabel }))
+    ? [
+        { code: 'ar', label: 'Arabic (original)' },
+        ...QURAN_LANGUAGES.map((l) => ({ code: l.code, label: l.englishLabel })),
+      ]
     : HADITH_LANGS;
 
   useEffect(() => {
