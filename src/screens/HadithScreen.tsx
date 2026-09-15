@@ -88,7 +88,10 @@ export const HadithScreen = ({ onBack }: HadithScreenProps) => {
 
   useEffect(() => { loadHadithBookmarks().then(setBookmarks); }, []);
   useEffect(() => { localStorage.setItem(RATE_KEY, String(rate)); }, [rate]);
-  useEffect(() => () => { try { window.speechSynthesis?.cancel(); } catch { /* noop */ } }, []);
+  useEffect(() => () => {
+    try { window.speechSynthesis?.cancel(); } catch { /* noop */ }
+    stopAudio();
+  }, []);
 
   const openBook = async (b: HadithBook, forcedLang?: string) => {
     const chosen = forcedLang || resolveHadithLang(b, language);
