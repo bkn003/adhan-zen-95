@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Mic, Upload, Trash2, Loader2, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { QURAN_LANGUAGES } from '@/utils/quranEditions';
+import { HADITH_BOOKS } from '@/utils/hadithSources';
 import {
   listRecitations, uploadRecitation, deleteRecitation, getRecitationUrls,
   type RecitationKind, type RecitationRow,
