@@ -63,6 +63,28 @@ export const HadithScreen = ({ onBack }: HadithScreenProps) => {
   /** Arabic original of the same book, for Arabic recitation of each hadith. */
   const [arabicEdition, setArabicEdition] = useState<HadithEdition | null>(null);
   const [speakingArabicId, setSpeakingArabicId] = useState<number | null>(null);
+  /** Uploaded human recordings for this book + language, keyed by hadith number. */
+  const [humanUrls, setHumanUrls] = useState<Record<number, string>>({});
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  /** Book number used to match uploaded recordings (order of HADITH_BOOKS). */
+  const bookNumber = book ? HADITH_BOOKS.findIndex((b) => b.id === book.id) + 1 : 0;
+
+  useEffect(() => {
+    if (!bookNumber) { setHumanUrls({}); return; }
+    let alive = true;
+    getRecitationUrls('hadith', lang, bookNumber)
+      .then((u) => { if (alive) setHumanUrls(u); })
+      .catch(() => { if (alive) setHumanUrls({}); });
+    return () => { alive = false; };
+  }, [bookNumber, lang]);
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+  };
 
   useEffect(() => { loadHadithBookmarks().then(setBookmarks); }, []);
   useEffect(() => { localStorage.setItem(RATE_KEY, String(rate)); }, [rate]);
