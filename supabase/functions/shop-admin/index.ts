@@ -65,15 +65,11 @@ serve(async (req) => {
           .eq("is_paused", false),
       ]);
       isSuper = (roles ?? []).some((r: any) => r.role === "super_admin");
-      const mosqueIds = (mosqueAdmin ?? []).map((m: any) => m.location_id as string);
       for (const g of grants ?? []) {
         if (!g.location_id) isGlobalApprover = true;
         else approverLocationIds.push(g.location_id as string);
       }
-      // A mosque admin only gets approval rights where it was explicitly granted.
-      approverLocationIds = approverLocationIds.filter(
-        (id) => isSuper || isGlobalApprover || mosqueIds.includes(id) || true,
-      );
+      void mosqueAdmin; // mosque admins only review where a grant exists
     }
 
     const canReview = isSuper || isGlobalApprover || approverLocationIds.length > 0;
