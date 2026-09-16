@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.ai-voice]
 verify_jwt = false
+
+[functions.shop-admin]
+verify_jwt = false
