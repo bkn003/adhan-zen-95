@@ -1016,6 +1016,331 @@ export type Database = {
         }
         Relationships: []
       }
+      shop_approvers: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+          location_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          location_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          location_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_approvers_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_order_items: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string
+          product_id: string | null
+          product_name: string
+          quantity: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id: string
+          product_id?: string | null
+          product_name: string
+          quantity?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string
+          product_id?: string | null
+          product_name?: string
+          quantity?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "shop_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_orders: {
+        Row: {
+          address: string | null
+          contact_email: string | null
+          contact_name: string
+          contact_phone: string
+          created_at: string
+          fulfilment: string
+          id: string
+          marketing_consent: boolean
+          note: string | null
+          shop_id: string
+          status: string
+          status_note: string | null
+          total_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          contact_email?: string | null
+          contact_name: string
+          contact_phone: string
+          created_at?: string
+          fulfilment?: string
+          id?: string
+          marketing_consent?: boolean
+          note?: string | null
+          shop_id: string
+          status?: string
+          status_note?: string | null
+          total_amount?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          contact_email?: string | null
+          contact_name?: string
+          contact_phone?: string
+          created_at?: string
+          fulfilment?: string
+          id?: string
+          marketing_consent?: boolean
+          note?: string | null
+          shop_id?: string
+          status?: string
+          status_note?: string | null
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_orders_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_product_reports: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_product_reports_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "shop_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_products: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_available: boolean
+          is_hidden: boolean
+          name: string
+          photo_path: string | null
+          price: number
+          report_count: number
+          shop_id: string
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_available?: boolean
+          is_hidden?: boolean
+          name: string
+          photo_path?: string | null
+          price?: number
+          report_count?: number
+          shop_id: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_available?: boolean
+          is_hidden?: boolean
+          name?: string
+          photo_path?: string | null
+          price?: number
+          report_count?: number
+          shop_id?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_products_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shops: {
+        Row: {
+          address: string | null
+          approved_at: string | null
+          approved_by: string | null
+          area: string | null
+          category: string
+          created_at: string
+          delivery_available: boolean
+          description: string | null
+          email: string | null
+          halal_certificate_path: string | null
+          halal_declared: boolean
+          id: string
+          latitude: number | null
+          longitude: number | null
+          map_link: string | null
+          min_order_amount: number
+          name: string
+          nearest_location_id: string | null
+          owner_name: string
+          owner_user_id: string
+          phone: string
+          pickup_available: boolean
+          rejection_reason: string | null
+          status: string
+          timings: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          area?: string | null
+          category?: string
+          created_at?: string
+          delivery_available?: boolean
+          description?: string | null
+          email?: string | null
+          halal_certificate_path?: string | null
+          halal_declared?: boolean
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          map_link?: string | null
+          min_order_amount?: number
+          name: string
+          nearest_location_id?: string | null
+          owner_name: string
+          owner_user_id: string
+          phone: string
+          pickup_available?: boolean
+          rejection_reason?: string | null
+          status?: string
+          timings?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          area?: string | null
+          category?: string
+          created_at?: string
+          delivery_available?: boolean
+          description?: string | null
+          email?: string | null
+          halal_certificate_path?: string | null
+          halal_declared?: boolean
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          map_link?: string | null
+          min_order_amount?: number
+          name?: string
+          nearest_location_id?: string | null
+          owner_name?: string
+          owner_user_id?: string
+          phone?: string
+          pickup_available?: boolean
+          rejection_reason?: string | null
+          status?: string
+          timings?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shops_nearest_location_id_fkey"
+            columns: ["nearest_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_tickets: {
         Row: {
           admin_reply: string | null
@@ -1209,10 +1534,15 @@ export type Database = {
         Args: { p_reason?: string; p_review_id: string }
         Returns: boolean
       }
+      report_shop_product: {
+        Args: { p_product_id: string; p_reason?: string }
+        Returns: boolean
+      }
       set_mosque_admin_credentials: {
         Args: { p_location_id: string; p_password: string; p_username: string }
         Returns: boolean
       }
+      shops_marketplace_enabled: { Args: never; Returns: boolean }
       verify_mosque_admin: {
         Args: { p_password: string; p_username: string }
         Returns: string
