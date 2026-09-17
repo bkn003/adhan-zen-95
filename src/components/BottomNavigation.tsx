@@ -1,4 +1,4 @@
-import { Home, MapPin, Compass, Settings, CalendarCheck } from 'lucide-react';
+import { Home, MapPin, Compass, Settings, CalendarCheck, ShoppingBag } from 'lucide-react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import type { Screen } from '@/types/navigation.types';
 
