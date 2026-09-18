@@ -17,6 +17,7 @@ export const LANGUAGE_LABELS: Record<Language, string> = {
 type TranslationKeys = {
     // Nav
     home: string; nearby: string; qibla: string; tracker: string; settings: string;
+    shops?: string;
     // Prayer labels
     nextPrayer: string; adhan: string; iqamah: string; khutbah: string;
     // Prayer names (for QazaScreen, DND toggles etc.)
@@ -62,6 +63,7 @@ type TranslationKeys = {
 
 const en: TranslationKeys = {
     home: 'Home', nearby: 'Mosques', qibla: 'Qibla', tracker: 'Tracker', settings: 'Settings',
+    shops: 'Shops',
     nextPrayer: 'Next Prayer', adhan: 'Azaan', iqamah: 'Iqamath', khutbah: 'Khutbah',
     fajr: 'Fajr', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha', witr: 'Witr',
     islamicCalendar: 'Islamic Calendar', nearbyMosques: 'Mosques', qiblaDirection: 'Qibla Direction',
@@ -100,6 +102,7 @@ const en: TranslationKeys = {
 
 const hi: TranslationKeys = {
     home: 'होम', nearby: 'मस्जिदें', qibla: 'क़िबला', tracker: 'ट्रैकर', settings: 'सेटिंग्स',
+    shops: 'दुकानें',
     nextPrayer: 'अगली नमाज़', adhan: 'अज़ान', iqamah: 'इक़ामत', khutbah: 'ख़ुतबा',
     fajr: 'फज्र', dhuhr: 'ज़ुहर', asr: 'अस्र', maghrib: 'मग़रिब', isha: 'ईशा', witr: 'वित्र',
     islamicCalendar: 'इस्लामी कैलेंडर', nearbyMosques: 'मस्जिदें', qiblaDirection: 'क़िबला दिशा',
