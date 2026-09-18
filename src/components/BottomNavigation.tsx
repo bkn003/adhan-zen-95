@@ -1,5 +1,7 @@
 import { Home, MapPin, Compass, Settings, CalendarCheck, ShoppingBag } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { isMarketplaceEnabled } from '@/utils/shopApi';
 import type { Screen } from '@/types/navigation.types';
 
 interface BottomNavigationProps {
@@ -12,14 +14,23 @@ export const BottomNavigation = ({
   onScreenChange
 }: BottomNavigationProps) => {
   const { t } = useLanguage();
+  const { data: shopsEnabled } = useQuery({
+    queryKey: ['shops-enabled'],
+    queryFn: isMarketplaceEnabled,
+    staleTime: 5 * 60_000,
+  });
 
   const navItems = [
     { id: 'home' as Screen, icon: Home, label: t('home'), activeColor: 'bg-emerald-500' },
     { id: 'nearby' as Screen, icon: MapPin, label: t('nearby'), activeColor: 'bg-blue-500' },
+    ...(shopsEnabled
+      ? [{ id: 'shops' as Screen, icon: ShoppingBag, label: t('shops') || 'Shops', activeColor: 'bg-rose-500' }]
+      : []),
     { id: 'qibla' as Screen, icon: Compass, label: t('qibla'), activeColor: 'bg-amber-500' },
     { id: 'qaza' as Screen, icon: CalendarCheck, label: t('tracker'), activeColor: 'bg-indigo-500' },
     { id: 'settings' as Screen, icon: Settings, label: t('settings'), activeColor: 'bg-violet-500' },
   ];
+
 
   return (
     <div

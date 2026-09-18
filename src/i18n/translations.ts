@@ -141,6 +141,7 @@ const hi: TranslationKeys = {
 
 const ur: TranslationKeys = {
     home: 'ہوم', nearby: 'مسجدیں', qibla: 'قبلہ', tracker: 'ٹریکر', settings: 'ترتیبات',
+    shops: 'دکانیں',
     nextPrayer: 'اگلی نماز', adhan: 'اذان', iqamah: 'اقامت', khutbah: 'خطبہ',
     fajr: 'فجر', dhuhr: 'ظہر', asr: 'عصر', maghrib: 'مغرب', isha: 'عشاء', witr: 'وتر',
     islamicCalendar: 'اسلامی تقویم', nearbyMosques: 'مسجدیں', qiblaDirection: 'قبلہ کی سمت',
@@ -179,6 +180,7 @@ const ur: TranslationKeys = {
 
 const ta: TranslationKeys = {
     home: 'முகப்பு', nearby: 'மஸ்ஜித்கள்', qibla: 'கிப்லா', tracker: 'கண்காணிப்பு', settings: 'அமைப்புகள்',
+    shops: 'கடைகள்',
     nextPrayer: 'அடுத்த தொழுகை', adhan: 'பாங்கு', iqamah: 'இகாமத்', khutbah: 'குத்பா',
     fajr: 'ஃபஜ்ர்', dhuhr: 'லுஹர்', asr: 'அஸர்', maghrib: 'மஃரிப்', isha: 'இஷா', witr: 'வித்ர்',
     islamicCalendar: 'இஸ்லாமிய நாட்காட்டி', nearbyMosques: 'மஸ்ஜித்கள்', qiblaDirection: 'கிப்லா திசை',

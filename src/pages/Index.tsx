@@ -25,6 +25,7 @@ import { SupportScreen } from '@/screens/SupportScreen';
 import { RamadanScheduleScreen } from '@/screens/RamadanScheduleScreen';
 import { PrayerHistoryScreen } from '@/screens/PrayerHistoryScreen';
 import { MosqueMapScreen } from '@/screens/MosqueMapScreen';
+import { ShopsHub } from '@/screens/shops/ShopsHub';
 import { useEventReminders } from '@/components/MosqueEvents';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import { useAdaptiveTimezone } from '@/hooks/useAdaptiveTimezone';
@@ -173,7 +174,7 @@ const Index = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const s = params.get('screen');
-    if (s && ['home', 'nearby', 'qibla', 'qaza', 'settings'].includes(s)) {
+    if (s && ['home', 'nearby', 'shops', 'qibla', 'qaza', 'settings'].includes(s)) {
       setCurrentScreen(s as Screen);
       // Clean the URL
       window.history.replaceState({}, '', window.location.pathname);
@@ -410,6 +411,8 @@ const Index = () => {
             onMosqueDetails={handleMosqueDetails}
           />
         );
+      case 'shops':
+        return <ShopsHub />;
       case 'qibla':
         return <QiblaScreen />;
       case 'qaza':
