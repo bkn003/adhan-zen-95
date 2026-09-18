@@ -19,6 +19,7 @@ import { AdminAuthCard } from '@/components/admin/AdminAuthCard';
 import { BulkCopyTimings } from '@/components/admin/BulkCopyTimings';
 import { KhutbahAdmin } from '@/components/admin/KhutbahAdmin';
 import { AttendanceTrends } from '@/components/admin/AttendanceTrends';
+import { MarketplaceAdmin } from '@/components/admin/MarketplaceAdmin';
 import { rangeLabel } from '@/utils/prayerExport';
 import { authHeaders, fetchAdminScope, adminSignOut, canManageSection, type AdminScope, type AdminSectionKey } from '@/utils/adminApi';
 
@@ -616,6 +617,16 @@ export const MosqueAdminPanel = ({ onBack }: MosqueAdminPanelProps) => {
         <ReviewsAdmin locationId={locationId!} />
       </CollapsibleSection>
       )}
+
+      {/* Halal marketplace (only rendered when this admin was granted approval rights) */}
+      <CollapsibleSection
+        title="Halal Shops (approvals & reports)"
+        expanded={expandedSection === 'shops'}
+        onToggle={() => setExpandedSection(expandedSection === 'shops' ? null : 'shops')}
+      >
+        <MarketplaceAdmin />
+      </CollapsibleSection>
+
 
       {/* Donations */}
       {can('donations') && (
