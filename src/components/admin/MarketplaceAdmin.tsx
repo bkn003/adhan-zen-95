@@ -31,8 +31,12 @@ export const MarketplaceAdmin = ({ dark = false }: { dark?: boolean }) => {
     queryKey: ['shops-enabled-admin'],
     enabled: isSuper,
     queryFn: async () => {
-      const res = await adminCall<{ settings?: Record<string, string> }>('super_get_app_settings');
-      return (res.settings ?? {}) as Record<string, string>;
+      const res = await adminCall<{ settings?: { key: string; value: string }[] }>(
+        'super_get_app_settings',
+      );
+      const map: Record<string, string> = {};
+      for (const row of res.settings ?? []) map[row.key] = row.value;
+      return map;
     },
   });
   const enabled = (settings.data?.shops_enabled ?? 'false') === 'true';
