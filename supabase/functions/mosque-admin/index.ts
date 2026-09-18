@@ -167,6 +167,7 @@ serve(async (req) => {
           "app_donation_payee",
           "app_donation_note",
           "mosque_donations_enabled",
+          "shops_enabled",
         ]);
       if (error) return json({ error: error.message }, 500);
       return json({ settings: rows || [] });
@@ -186,6 +187,7 @@ serve(async (req) => {
         "app_donation_payee",
         "app_donation_note",
         "mosque_donations_enabled",
+        "shops_enabled",
       ]);
       const rows = Object.entries(entries)
         .filter(([k, v]) => allowed.has(k) && v !== undefined && v !== null)
