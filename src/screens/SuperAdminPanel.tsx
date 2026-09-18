@@ -12,6 +12,7 @@ import { useRamadanContext } from '@/contexts/RamadanContext';
 import { AdminAuthCard } from '@/components/admin/AdminAuthCard';
 import { AuditLogExplorer } from '@/components/admin/AuditLogExplorer';
 import { RecitationUploader } from '@/components/admin/RecitationUploader';
+import { MarketplaceAdmin } from '@/components/admin/MarketplaceAdmin';
 import { authHeaders, fetchAdminScope, adminSignOut, ADMIN_SECTIONS } from '@/utils/adminApi';
 
 const SUPABASE_URL = "https://lhufqnokmdqkvzcxqwkl.supabase.co";
@@ -741,6 +742,9 @@ export const SuperAdminPanel = ({ onBack }: SuperAdminPanelProps) => {
 
           {/* Reciter recordings */}
           <RecitationUploader />
+
+          {/* Halal marketplace */}
+          <MarketplaceAdmin dark />
 
 
 
