@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Phone, MapPin, ShieldCheck, Flag, Minus, Plus, Navigation } from 'lucide-react';
+import { ArrowLeft, Phone, MapPin, ShieldCheck, Flag, Minus, Plus, Navigation, Volume2, Square, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
+import { useLanguage } from '@/i18n/LanguageContext';
+import { playShopVoice, stopShopVoice } from '@/utils/shopVoice';
 import {
   getShop,
   listShopProducts,
@@ -25,6 +27,9 @@ interface Props {
 export const ShopDetailsScreen = ({ shopId, onBack, onCheckout }: Props) => {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const { language } = useLanguage();
+  const [voice, setVoice] = useState<'idle' | 'loading' | 'playing'>('idle');
+  const [speed, setSpeed] = useState(1);
 
   const shop = useQuery({ queryKey: ['shop', shopId], queryFn: () => getShop(shopId) });
   const products = useQuery({ queryKey: ['shop-products', shopId], queryFn: () => listShopProducts(shopId) });
@@ -67,6 +72,31 @@ export const ShopDetailsScreen = ({ shopId, onBack, onCheckout }: Props) => {
       toast({ title: 'Reported', description: 'Thank you. Our team will review this product.' });
     } catch (e: any) {
       toast({ title: 'Could not report', description: e.message, variant: 'destructive' });
+    }
+  };
+
+  useEffect(() => () => stopShopVoice(), []);
+
+  const listen = async () => {
+    if (voice !== 'idle') {
+      stopShopVoice();
+      setVoice('idle');
+      return;
+    }
+    if (!shop.data) return;
+    setVoice('loading');
+    try {
+      setVoice('playing');
+      await playShopVoice({
+        shop: shop.data,
+        products: products.data ?? [],
+        lang: language,
+        rate: speed,
+      });
+    } catch (e: any) {
+      toast({ title: 'No voice available', description: e?.message, variant: 'destructive' });
+    } finally {
+      setVoice('idle');
     }
   };
 
@@ -117,6 +147,36 @@ export const ShopDetailsScreen = ({ shopId, onBack, onCheckout }: Props) => {
               <Navigation className="w-4 h-4" /> Directions
             </a>
           )}
+        </div>
+        <div className="pt-1 border-t border-gray-100 mt-1">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={listen}
+              className="flex-1 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold flex items-center justify-center gap-1"
+            >
+              {voice === 'loading' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : voice === 'playing' ? (
+                <Square className="w-4 h-4" />
+              ) : (
+                <Volume2 className="w-4 h-4" />
+              )}
+              {voice === 'idle' ? 'Listen to this shop' : 'Stop'}
+            </button>
+            <select
+              value={speed}
+              onChange={(e) => setSpeed(Number(e.target.value))}
+              className="px-2 py-2 rounded-xl border border-gray-200 text-[11px] bg-white"
+              aria-label="Voice speed"
+            >
+              {[0.8, 1, 1.25].map((r) => (
+                <option key={r} value={r}>{r}×</option>
+              ))}
+            </select>
+          </div>
+          <p className="text-[10px] text-gray-400 mt-1">
+            Plays the shop's own recording when available, otherwise reads the listing aloud in your language.
+          </p>
         </div>
         {s.halal_certificate_path && photoUrls[s.halal_certificate_path] && (
           <a
