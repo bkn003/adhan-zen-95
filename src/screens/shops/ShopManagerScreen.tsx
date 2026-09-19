@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Plus, Trash2, Save, Package, ClipboardList } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Package, ClipboardList, Mic } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { shopVoiceUploadPath } from '@/utils/shopVoice';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -95,6 +97,28 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
     min_order_amount: shop.min_order_amount,
     description: shop.description ?? '',
   });
+
+  const [voiceLang, setVoiceLang] = useState('hi');
+  const [voiceFile, setVoiceFile] = useState<File | null>(null);
+  const [savingVoice, setSavingVoice] = useState(false);
+
+  const uploadVoice = async () => {
+    if (!voiceFile) return;
+    setSavingVoice(true);
+    try {
+      const path = shopVoiceUploadPath(shop.id, voiceLang, voiceFile.name);
+      const { error } = await supabase.storage
+        .from('shop-media')
+        .upload(path, voiceFile, { upsert: true, contentType: voiceFile.type || 'audio/mpeg' });
+      if (error) throw error;
+      setVoiceFile(null);
+      toast({ title: 'Voice clip uploaded', description: 'Customers will hear it on your shop page.' });
+    } catch (e: any) {
+      toast({ title: 'Could not upload', description: e.message, variant: 'destructive' });
+    } finally {
+      setSavingVoice(false);
+    }
+  };
 
   const saveShop = async () => {
     try {
