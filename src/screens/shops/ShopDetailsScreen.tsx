@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Phone, MapPin, ShieldCheck, Flag, Minus, Plus, Navigation } from 'lucide-react';
+import { ArrowLeft, Phone, MapPin, ShieldCheck, Flag, Minus, Plus, Navigation, Volume2, Square, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
+import { useLanguage } from '@/i18n/LanguageContext';
+import { playShopVoice, stopShopVoice } from '@/utils/shopVoice';
 import {
   getShop,
   listShopProducts,
@@ -25,6 +27,9 @@ interface Props {
 export const ShopDetailsScreen = ({ shopId, onBack, onCheckout }: Props) => {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const { language } = useLanguage();
+  const [voice, setVoice] = useState<'idle' | 'loading' | 'playing'>('idle');
+  const [speed, setSpeed] = useState(1);
 
   const shop = useQuery({ queryKey: ['shop', shopId], queryFn: () => getShop(shopId) });
   const products = useQuery({ queryKey: ['shop-products', shopId], queryFn: () => listShopProducts(shopId) });
@@ -67,6 +72,31 @@ export const ShopDetailsScreen = ({ shopId, onBack, onCheckout }: Props) => {
       toast({ title: 'Reported', description: 'Thank you. Our team will review this product.' });
     } catch (e: any) {
       toast({ title: 'Could not report', description: e.message, variant: 'destructive' });
+    }
+  };
+
+  useEffect(() => () => stopShopVoice(), []);
+
+  const listen = async () => {
+    if (voice !== 'idle') {
+      stopShopVoice();
+      setVoice('idle');
+      return;
+    }
+    if (!shop.data) return;
+    setVoice('loading');
+    try {
+      setVoice('playing');
+      await playShopVoice({
+        shop: shop.data,
+        products: products.data ?? [],
+        lang: language,
+        rate: speed,
+      });
+    } catch (e: any) {
+      toast({ title: 'No voice available', description: e?.message, variant: 'destructive' });
+    } finally {
+      setVoice('idle');
     }
   };
 
