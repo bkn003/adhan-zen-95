@@ -148,6 +148,36 @@ export const ShopDetailsScreen = ({ shopId, onBack, onCheckout }: Props) => {
             </a>
           )}
         </div>
+        <div className="pt-1 border-t border-gray-100 mt-1">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={listen}
+              className="flex-1 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold flex items-center justify-center gap-1"
+            >
+              {voice === 'loading' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : voice === 'playing' ? (
+                <Square className="w-4 h-4" />
+              ) : (
+                <Volume2 className="w-4 h-4" />
+              )}
+              {voice === 'idle' ? 'Listen to this shop' : 'Stop'}
+            </button>
+            <select
+              value={speed}
+              onChange={(e) => setSpeed(Number(e.target.value))}
+              className="px-2 py-2 rounded-xl border border-gray-200 text-[11px] bg-white"
+              aria-label="Voice speed"
+            >
+              {[0.8, 1, 1.25].map((r) => (
+                <option key={r} value={r}>{r}×</option>
+              ))}
+            </select>
+          </div>
+          <p className="text-[10px] text-gray-400 mt-1">
+            Plays the shop's own recording when available, otherwise reads the listing aloud in your language.
+          </p>
+        </div>
         {s.halal_certificate_path && photoUrls[s.halal_certificate_path] && (
           <a
             href={photoUrls[s.halal_certificate_path]}

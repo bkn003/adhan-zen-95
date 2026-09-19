@@ -278,6 +278,42 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
           <button onClick={saveShop} className="w-full py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold flex items-center justify-center gap-2">
             <Save className="w-4 h-4" /> Save changes
           </button>
+
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-2">
+            <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1">
+              <Mic className="w-4 h-4 text-emerald-600" /> Your own voice introduction
+            </h3>
+            <p className="text-[11px] text-gray-500">
+              Record a short clip in one language. Customers reading the app in that language hear your
+              voice on the shop page; everyone else hears the listing read aloud automatically.
+            </p>
+            <select
+              className={field}
+              value={voiceLang}
+              onChange={(e) => setVoiceLang(e.target.value)}
+            >
+              {VOICE_LANGS.map(([code, label]) => (
+                <option key={code} value={code}>{label}</option>
+              ))}
+            </select>
+            <label className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 rounded-xl p-2 cursor-pointer">
+              <Mic className="w-4 h-4 text-emerald-600" />
+              <span className="flex-1">{voiceFile ? voiceFile.name : 'Choose an audio clip (mp3 / m4a)'}</span>
+              <input
+                type="file"
+                accept="audio/*"
+                className="hidden"
+                onChange={(e) => setVoiceFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
+            <button
+              onClick={uploadVoice}
+              disabled={!voiceFile || savingVoice}
+              className="w-full py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold disabled:opacity-60"
+            >
+              {savingVoice ? 'Uploading…' : 'Upload voice clip'}
+            </button>
+          </div>
         </div>
       )}
     </div>
