@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, Plus, Trash2, Save, Package, ClipboardList, Mic } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { shopVoiceUploadPath, VOICE_LANGS } from '@/utils/shopVoice';
+import { isValidVpa } from '@/utils/upi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import {
