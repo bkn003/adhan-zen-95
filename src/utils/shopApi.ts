@@ -272,6 +272,26 @@ export async function cancelMyOrder(orderId: string) {
   if (error) throw error;
 }
 
+/** Customer says they completed the UPI payment; the shop still confirms receipt. */
+export async function markOrderPaid(orderId: string) {
+  const { error } = await supabase
+    .from('shop_orders')
+    .update({ payment_status: 'marked_paid', payment_marked_at: new Date().toISOString() } as any)
+    .eq('id', orderId);
+  if (error) throw error;
+}
+
+/** Shop confirms the money actually arrived (or resets it). */
+export async function setOrderPaymentStatus(orderId: string, status: 'pending' | 'marked_paid' | 'received') {
+  const { error } = await supabase
+    .from('shop_orders')
+    .update({ payment_status: status } as any)
+    .eq('id', orderId);
+  if (error) throw error;
+}
+
+
+
 // ------------------------------------------------------------- seller / shop
 export async function getMyShop(): Promise<Shop | null> {
   const { data: session } = await supabase.auth.getUser();
