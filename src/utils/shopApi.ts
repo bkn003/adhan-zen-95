@@ -45,8 +45,12 @@ export interface Shop {
   delivery_available: boolean;
   pickup_available: boolean;
   min_order_amount: number;
+  upi_id: string | null;
+  upi_payee_name: string | null;
+  upi_enabled: boolean;
   halal_declared: boolean;
   halal_certificate_path: string | null;
+
   status: string;
   rejection_reason: string | null;
   created_at: string;
