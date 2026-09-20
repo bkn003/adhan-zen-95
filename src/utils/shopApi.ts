@@ -210,6 +210,8 @@ export interface PlaceOrderInput {
   address?: string;
   note?: string;
   marketingConsent: boolean;
+  /** 'upi' when the customer pays the shop's UPI ID now, 'cash' on handover. */
+  paymentMethod?: 'cash' | 'upi';
   items: OrderItem[];
 }
 
@@ -218,6 +220,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<string> {
   const uid = session?.user?.id;
   if (!uid) throw new Error('Please sign in to place an order');
   const total = input.items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
+
 
   const { data: order, error } = await supabase
     .from('shop_orders')
