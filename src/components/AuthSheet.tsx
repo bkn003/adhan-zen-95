@@ -105,8 +105,10 @@ export const AuthSheet: React.FC = () => {
 
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      clearAttempts();
       toast.success('Signed in');
       closeAuth();
+
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
