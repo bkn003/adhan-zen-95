@@ -1104,6 +1104,9 @@ export type Database = {
           id: string
           marketing_consent: boolean
           note: string | null
+          payment_marked_at: string | null
+          payment_method: string
+          payment_status: string
           shop_id: string
           status: string
           status_note: string | null
@@ -1121,6 +1124,9 @@ export type Database = {
           id?: string
           marketing_consent?: boolean
           note?: string | null
+          payment_marked_at?: string | null
+          payment_method?: string
+          payment_status?: string
           shop_id: string
           status?: string
           status_note?: string | null
@@ -1138,6 +1144,9 @@ export type Database = {
           id?: string
           marketing_consent?: boolean
           note?: string | null
+          payment_marked_at?: string | null
+          payment_method?: string
+          payment_status?: string
           shop_id?: string
           status?: string
           status_note?: string | null
@@ -1274,6 +1283,9 @@ export type Database = {
           status: string
           timings: string | null
           updated_at: string
+          upi_enabled: boolean
+          upi_id: string | null
+          upi_payee_name: string | null
         }
         Insert: {
           address?: string | null
@@ -1302,6 +1314,9 @@ export type Database = {
           status?: string
           timings?: string | null
           updated_at?: string
+          upi_enabled?: boolean
+          upi_id?: string | null
+          upi_payee_name?: string | null
         }
         Update: {
           address?: string | null
@@ -1330,6 +1345,9 @@ export type Database = {
           status?: string
           timings?: string | null
           updated_at?: string
+          upi_enabled?: boolean
+          upi_id?: string | null
+          upi_payee_name?: string | null
         }
         Relationships: [
           {
