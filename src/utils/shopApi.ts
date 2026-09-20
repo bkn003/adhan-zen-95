@@ -45,8 +45,12 @@ export interface Shop {
   delivery_available: boolean;
   pickup_available: boolean;
   min_order_amount: number;
+  upi_id: string | null;
+  upi_payee_name: string | null;
+  upi_enabled: boolean;
   halal_declared: boolean;
   halal_certificate_path: string | null;
+
   status: string;
   rejection_reason: string | null;
   created_at: string;
@@ -82,9 +86,12 @@ export interface ShopOrder {
   status: string;
   status_note: string | null;
   marketing_consent: boolean;
+  payment_method: string;
+  payment_status: string;
   created_at: string;
   shops?: { name: string; phone: string; address: string | null } | null;
   shop_order_items?: OrderItem[];
+
 }
 
 export interface OrderItem {
@@ -203,6 +210,8 @@ export interface PlaceOrderInput {
   address?: string;
   note?: string;
   marketingConsent: boolean;
+  /** 'upi' when the customer pays the shop's UPI ID now, 'cash' on handover. */
+  paymentMethod?: 'cash' | 'upi';
   items: OrderItem[];
 }
 
@@ -211,6 +220,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<string> {
   const uid = session?.user?.id;
   if (!uid) throw new Error('Please sign in to place an order');
   const total = input.items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
+
 
   const { data: order, error } = await supabase
     .from('shop_orders')
@@ -225,7 +235,9 @@ export async function placeOrder(input: PlaceOrderInput): Promise<string> {
       note: input.note || null,
       total_amount: total,
       marketing_consent: input.marketingConsent,
-    })
+      payment_method: input.paymentMethod ?? 'cash',
+    } as any)
+
     .select('id')
     .single();
   if (error) throw error;
@@ -259,6 +271,26 @@ export async function cancelMyOrder(orderId: string) {
     .eq('id', orderId);
   if (error) throw error;
 }
+
+/** Customer says they completed the UPI payment; the shop still confirms receipt. */
+export async function markOrderPaid(orderId: string) {
+  const { error } = await supabase
+    .from('shop_orders')
+    .update({ payment_status: 'marked_paid', payment_marked_at: new Date().toISOString() } as any)
+    .eq('id', orderId);
+  if (error) throw error;
+}
+
+/** Shop confirms the money actually arrived (or resets it). */
+export async function setOrderPaymentStatus(orderId: string, status: 'pending' | 'marked_paid' | 'received') {
+  const { error } = await supabase
+    .from('shop_orders')
+    .update({ payment_status: status } as any)
+    .eq('id', orderId);
+  if (error) throw error;
+}
+
+
 
 // ------------------------------------------------------------- seller / shop
 export async function getMyShop(): Promise<Shop | null> {
