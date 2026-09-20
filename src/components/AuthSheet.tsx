@@ -171,20 +171,7 @@ export const AuthSheet: React.FC = () => {
             </div>
           ) : (
             <>
-              <button
-                onClick={google}
-                disabled={busy}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 active:bg-gray-50 disabled:opacity-60"
-              >
-                <img src="https://www.google.com/favicon.ico" alt="" className="w-4 h-4" />
-                Continue with Google
-              </button>
 
-              <div className="flex items-center gap-2">
-                <span className="h-px flex-1 bg-gray-100" />
-                <span className="text-[10px] uppercase tracking-wide text-gray-400">or email</span>
-                <span className="h-px flex-1 bg-gray-100" />
-              </div>
 
               <form onSubmit={submit} className="space-y-2">
                 {mode === 'signup' && (
