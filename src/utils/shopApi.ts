@@ -235,7 +235,9 @@ export async function placeOrder(input: PlaceOrderInput): Promise<string> {
       note: input.note || null,
       total_amount: total,
       marketing_consent: input.marketingConsent,
-    })
+      payment_method: input.paymentMethod ?? 'cash',
+    } as any)
+
     .select('id')
     .single();
   if (error) throw error;
