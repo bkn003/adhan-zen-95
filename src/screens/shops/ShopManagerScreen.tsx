@@ -125,13 +125,28 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
   };
 
   const saveShop = async () => {
+    const upi = shopForm.upi_id.trim();
+    if (shopForm.upi_enabled && !isValidVpa(upi)) {
+      toast({
+        title: 'Check your UPI ID',
+        description: 'It should look like yourname@bank, exactly as your payment app shows it.',
+        variant: 'destructive',
+      });
+      return;
+    }
     try {
-      await updateMyShop(shop.id, { ...shopForm, min_order_amount: Number(shopForm.min_order_amount) || 0 });
+      await updateMyShop(shop.id, {
+        ...shopForm,
+        upi_id: upi || null,
+        upi_payee_name: shopForm.upi_payee_name.trim() || shop.name,
+        min_order_amount: Number(shopForm.min_order_amount) || 0,
+      });
       toast({ title: 'Shop updated' });
     } catch (e: any) {
       toast({ title: 'Could not update', description: e.message, variant: 'destructive' });
     }
   };
+
 
   return (
     <div className="min-h-screen pb-28">
