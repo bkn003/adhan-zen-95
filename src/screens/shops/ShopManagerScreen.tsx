@@ -96,7 +96,11 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
     pickup_available: shop.pickup_available,
     min_order_amount: shop.min_order_amount,
     description: shop.description ?? '',
+    upi_id: shop.upi_id ?? '',
+    upi_payee_name: shop.upi_payee_name ?? shop.name,
+    upi_enabled: shop.upi_enabled ?? false,
   });
+
 
   const [voiceLang, setVoiceLang] = useState('hi');
   const [voiceFile, setVoiceFile] = useState<File | null>(null);
