@@ -3,6 +3,8 @@ import { X, Mail, Lock, LogIn, ShieldCheck, Loader2, Phone } from 'lucide-react'
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { retryAfterSeconds, recordAttempt, clearAttempts, formatWait } from '@/utils/authRateLimit';
+
 
 type Mode = 'signin' | 'signup' | 'forgot';
 
@@ -37,36 +39,20 @@ export const AuthSheet: React.FC = () => {
     }
   };
 
-  const google = async () => {
-    setBusy(true);
-    try {
-      await clearAnonSession();
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          // Return to the exact page the user started from and keep the session.
-          redirectTo: `${window.location.origin}${window.location.pathname}`,
-          queryParams: { prompt: 'select_account' },
-        },
-      });
-      if (error) throw error;
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Google sign-in failed';
-      // Supabase returns "Unsupported provider" when Google is not configured.
-      toast.error(
-        /unsupported provider|provider is not enabled/i.test(msg)
-          ? 'Google sign-in is not enabled yet. Please sign in with your email and password for now.'
-          : msg,
-      );
-      setBusy(false);
-    }
-  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const wait = retryAfterSeconds(mode);
+    if (wait > 0) {
+      toast.error(`Too many attempts. Please try again in ${formatWait(wait)}.`);
+      return;
+    }
+    recordAttempt(mode);
     setBusy(true);
     try {
       await clearAnonSession();
+
+
 
       if (mode === 'forgot') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -119,8 +105,10 @@ export const AuthSheet: React.FC = () => {
 
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      clearAttempts();
       toast.success('Signed in');
       closeAuth();
+
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
@@ -183,20 +171,7 @@ export const AuthSheet: React.FC = () => {
             </div>
           ) : (
             <>
-              <button
-                onClick={google}
-                disabled={busy}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 active:bg-gray-50 disabled:opacity-60"
-              >
-                <img src="https://www.google.com/favicon.ico" alt="" className="w-4 h-4" />
-                Continue with Google
-              </button>
 
-              <div className="flex items-center gap-2">
-                <span className="h-px flex-1 bg-gray-100" />
-                <span className="text-[10px] uppercase tracking-wide text-gray-400">or email</span>
-                <span className="h-px flex-1 bg-gray-100" />
-              </div>
 
               <form onSubmit={submit} className="space-y-2">
                 {mode === 'signup' && (

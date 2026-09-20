@@ -88,6 +88,22 @@ const LANG_NAMES: Record<string, string> = {
   en: 'English',
 };
 
+/** Languages a shop owner may upload a voice clip for. */
+export const VOICE_LANGS: [string, string][] = [
+  ['hi', 'Hindi'],
+  ['ta', 'Tamil'],
+  ['ur', 'Urdu'],
+  ['bn', 'Bengali'],
+  ['te', 'Telugu'],
+  ['kn', 'Kannada'],
+  ['ml', 'Malayalam'],
+  ['gu', 'Gujarati'],
+  ['mr', 'Marathi'],
+  ['ar', 'Arabic'],
+  ['en', 'English'],
+];
+
+
 let clip: HTMLAudioElement | null = null;
 
 export function stopShopVoice() {
