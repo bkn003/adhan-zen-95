@@ -42,9 +42,17 @@ export const AuthSheet: React.FC = () => {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const wait = retryAfterSeconds(mode);
+    if (wait > 0) {
+      toast.error(`Too many attempts. Please try again in ${formatWait(wait)}.`);
+      return;
+    }
+    recordAttempt(mode);
     setBusy(true);
     try {
       await clearAnonSession();
+
+
 
       if (mode === 'forgot') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
