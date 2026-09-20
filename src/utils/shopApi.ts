@@ -86,9 +86,12 @@ export interface ShopOrder {
   status: string;
   status_note: string | null;
   marketing_consent: boolean;
+  payment_method: string;
+  payment_status: string;
   created_at: string;
   shops?: { name: string; phone: string; address: string | null } | null;
   shop_order_items?: OrderItem[];
+
 }
 
 export interface OrderItem {
