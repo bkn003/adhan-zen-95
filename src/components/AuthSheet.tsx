@@ -214,19 +214,15 @@ export const AuthSheet: React.FC = () => {
                   />
                 </div>
                 {mode !== 'forgot' && (
-                  <div className="relative">
-                    <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="password"
-                      required
-                      minLength={6}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Password"
-                      className="w-full text-sm pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-emerald-400"
-                    />
-                  </div>
+                  <PasswordInput
+                    value={password}
+                    onChange={setPassword}
+                    required
+                    minLength={6}
+                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                  />
                 )}
+
                 <button
                   type="submit"
                   disabled={busy}
