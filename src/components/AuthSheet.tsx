@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, LogIn, ShieldCheck, Loader2, Phone } from 'lucide-react';
+import { X, Mail, LogIn, ShieldCheck, Loader2, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { PasswordInput } from '@/components/PasswordInput';
+import { checkOptionalMobile, normalizeMobile, isEmail } from '@/utils/validation';
 import { retryAfterSeconds, recordAttempt, clearAttempts, formatWait } from '@/utils/authRateLimit';
+
 
 
 type Mode = 'signin' | 'signup' | 'forgot';
