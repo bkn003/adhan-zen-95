@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Lock, ShieldCheck, Loader2 } from 'lucide-react';
+import { ShieldCheck, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { PasswordInput } from '@/components/PasswordInput';
+import { checkPassword } from '@/utils/validation';
+
 
 /** Public route hit by the Supabase recovery email link. */
 const ResetPassword: React.FC = () => {
@@ -26,6 +29,11 @@ const ResetPassword: React.FC = () => {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const bad = checkPassword(password);
+    if (bad) {
+      toast.error(bad);
+      return;
+    }
     if (password !== confirm) {
       toast.error('Passwords do not match');
       return;
@@ -49,34 +57,27 @@ const ResetPassword: React.FC = () => {
             <ShieldCheck className="w-4 h-4" /> Set a new password
           </p>
           <p className="text-[11px] opacity-90 mt-0.5">
-            {ready ? 'Choose a password with at least 6 characters.' : 'Open this page from the reset link in your email.'}
+            {ready ? 'At least 8 characters, with a letter and a number.' : 'Open this page from the reset link in your email.'}
           </p>
         </div>
         <form onSubmit={submit} className="p-4 space-y-2">
-          <div className="relative">
-            <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="New password"
-              className="w-full text-sm pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-emerald-400"
-            />
-          </div>
-          <div className="relative">
-            <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              placeholder="Confirm password"
-              className="w-full text-sm pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-emerald-400"
-            />
-          </div>
+          <PasswordInput
+            value={password}
+            onChange={setPassword}
+            placeholder="New password"
+            required
+            minLength={8}
+            autoComplete="new-password"
+          />
+          <PasswordInput
+            value={confirm}
+            onChange={setConfirm}
+            placeholder="Confirm password"
+            required
+            minLength={8}
+            autoComplete="new-password"
+          />
+
           <button
             type="submit"
             disabled={busy || !ready}
