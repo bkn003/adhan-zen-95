@@ -1205,11 +1205,14 @@ export type Database = {
           id: string
           is_available: boolean
           is_hidden: boolean
+          mrp: number | null
           name: string
           photo_path: string | null
           price: number
           report_count: number
           shop_id: string
+          stock_qty: number
+          track_stock: boolean
           unit: string | null
           updated_at: string
         }
@@ -1221,11 +1224,14 @@ export type Database = {
           id?: string
           is_available?: boolean
           is_hidden?: boolean
+          mrp?: number | null
           name: string
           photo_path?: string | null
           price?: number
           report_count?: number
           shop_id: string
+          stock_qty?: number
+          track_stock?: boolean
           unit?: string | null
           updated_at?: string
         }
@@ -1237,11 +1243,14 @@ export type Database = {
           id?: string
           is_available?: boolean
           is_hidden?: boolean
+          mrp?: number | null
           name?: string
           photo_path?: string | null
           price?: number
           report_count?: number
           shop_id?: string
+          stock_qty?: number
+          track_stock?: boolean
           unit?: string | null
           updated_at?: string
         }
@@ -1286,6 +1295,7 @@ export type Database = {
           upi_enabled: boolean
           upi_id: string | null
           upi_payee_name: string | null
+          whatsapp: string | null
         }
         Insert: {
           address?: string | null
@@ -1317,6 +1327,7 @@ export type Database = {
           upi_enabled?: boolean
           upi_id?: string | null
           upi_payee_name?: string | null
+          whatsapp?: string | null
         }
         Update: {
           address?: string | null
@@ -1348,6 +1359,7 @@ export type Database = {
           upi_enabled?: boolean
           upi_id?: string | null
           upi_payee_name?: string | null
+          whatsapp?: string | null
         }
         Relationships: [
           {
