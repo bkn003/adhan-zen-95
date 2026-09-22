@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Plus, Trash2, Save, Package, ClipboardList, Mic } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Package, ClipboardList, Mic, Pencil, MapPin, IndianRupee, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { shopVoiceUploadPath, VOICE_LANGS } from '@/utils/shopVoice';
 import { isValidVpa } from '@/utils/upi';
+import { compressImage, kb } from '@/utils/imageCompress';
+import { checkMobile, checkOptionalMobile, checkAmount, checkInteger, checkLatitude, checkLongitude, checkLink, checkText, firstError } from '@/utils/validation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -45,21 +47,39 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
   const [file, setFile] = useState<File | null>(null);
   const [savingProduct, setSavingProduct] = useState(false);
 
+  const resetDraft = () =>
+    setDraft({ name: '', price: 0, unit: '', is_available: true, mrp: null, stock_qty: 0, track_stock: false });
+
   const submitProduct = async () => {
-    if (!draft.name?.trim()) {
-      toast({ title: 'Product name required', variant: 'destructive' });
+    const problem = firstError([
+      () => checkText(draft.name ?? '', 'Product name', 2, 80),
+      () => checkAmount(draft.price ?? 0, 'Price'),
+      () => (draft.mrp ? checkAmount(draft.mrp, 'MRP') : null),
+      () => (draft.track_stock ? checkInteger(draft.stock_qty ?? 0, 'Stock quantity', 0, 100000) : null),
+      () =>
+        draft.mrp && Number(draft.mrp) < Number(draft.price)
+          ? 'MRP cannot be lower than your selling price.'
+          : null,
+    ]);
+    if (problem) {
+      toast({ title: problem, variant: 'destructive' });
       return;
     }
     setSavingProduct(true);
     try {
       let photo_path = draft.photo_path ?? null;
-      if (file) photo_path = await uploadShopMedia(shop.id, file);
+      if (file) {
+        const small = await compressImage(file, { maxKb: 40, maxEdge: 900 });
+        photo_path = await uploadShopMedia(shop.id, small);
+      }
       await saveProduct(shop.id, {
         ...draft,
         price: Number(draft.price) || 0,
+        mrp: draft.mrp ? Number(draft.mrp) : null,
+        stock_qty: Number(draft.stock_qty) || 0,
         photo_path,
       } as Partial<ShopProduct>);
-      setDraft({ name: '', price: 0, unit: '', is_available: true });
+      resetDraft();
       setFile(null);
       qc.invalidateQueries({ queryKey: ['manage-products', shop.id] });
       toast({ title: 'Saved' });
@@ -93,6 +113,11 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
     timings: shop.timings ?? '',
     address: shop.address ?? '',
     phone: shop.phone,
+    whatsapp: shop.whatsapp ?? '',
+    area: shop.area ?? '',
+    latitude: shop.latitude != null ? String(shop.latitude) : '',
+    longitude: shop.longitude != null ? String(shop.longitude) : '',
+    map_link: shop.map_link ?? '',
     delivery_available: shop.delivery_available,
     pickup_available: shop.pickup_available,
     min_order_amount: shop.min_order_amount,
@@ -101,6 +126,35 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
     upi_payee_name: shop.upi_payee_name ?? shop.name,
     upi_enabled: shop.upi_enabled ?? false,
   });
+
+  const [locating, setLocating] = useState(false);
+  const useMyLocation = () => {
+    if (!navigator.geolocation) {
+      toast({ title: 'Location not available', description: 'Please type the coordinates instead.', variant: 'destructive' });
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setShopForm((f) => ({
+          ...f,
+          latitude: pos.coords.latitude.toFixed(6),
+          longitude: pos.coords.longitude.toFixed(6),
+        }));
+        setLocating(false);
+        toast({ title: 'Location captured', description: 'Remember to save your changes.' });
+      },
+      () => {
+        setLocating(false);
+        toast({
+          title: 'Could not get your location',
+          description: 'Allow location for this app in your phone settings, or type the coordinates.',
+          variant: 'destructive',
+        });
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
 
 
   const [voiceLang, setVoiceLang] = useState('hi');
@@ -127,17 +181,31 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
 
   const saveShop = async () => {
     const upi = shopForm.upi_id.trim();
-    if (shopForm.upi_enabled && !isValidVpa(upi)) {
-      toast({
-        title: 'Check your UPI ID',
-        description: 'It should look like yourname@bank, exactly as your payment app shows it.',
-        variant: 'destructive',
-      });
+    const problem = firstError([
+      () => checkMobile(shopForm.phone, 'Mobile number'),
+      () => checkOptionalMobile(shopForm.whatsapp, 'WhatsApp number'),
+      () => checkAmount(shopForm.min_order_amount || 0, 'Minimum order amount', 0),
+      () => checkLatitude(shopForm.latitude),
+      () => checkLongitude(shopForm.longitude),
+      () => checkLink(shopForm.map_link, 'Map link'),
+      () =>
+        shopForm.upi_enabled && !isValidVpa(upi)
+          ? 'Check your UPI ID — it should look like yourname@bank, exactly as your payment app shows it.'
+          : null,
+      () => (!shopForm.delivery_available && !shopForm.pickup_available ? 'Choose delivery, pickup, or both.' : null),
+    ]);
+    if (problem) {
+      toast({ title: problem, variant: 'destructive' });
       return;
     }
     try {
       await updateMyShop(shop.id, {
         ...shopForm,
+        whatsapp: shopForm.whatsapp.trim() || null,
+        area: shopForm.area.trim() || null,
+        map_link: shopForm.map_link.trim() || null,
+        latitude: shopForm.latitude ? Number(shopForm.latitude) : null,
+        longitude: shopForm.longitude ? Number(shopForm.longitude) : null,
         upi_id: upi || null,
         upi_payee_name: shopForm.upi_payee_name.trim() || shop.name,
         min_order_amount: Number(shopForm.min_order_amount) || 0,
