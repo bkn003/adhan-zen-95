@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Plus, Trash2, Save, Package, ClipboardList, Mic } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Package, ClipboardList, Mic, Pencil, MapPin, IndianRupee, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { shopVoiceUploadPath, VOICE_LANGS } from '@/utils/shopVoice';
 import { isValidVpa } from '@/utils/upi';
+import { compressImage, kb } from '@/utils/imageCompress';
+import { checkMobile, checkOptionalMobile, checkAmount, checkInteger, checkLatitude, checkLongitude, checkLink, checkText, firstError } from '@/utils/validation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -45,21 +47,38 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
   const [file, setFile] = useState<File | null>(null);
   const [savingProduct, setSavingProduct] = useState(false);
 
+  const resetDraft = () =>
+    setDraft({ name: '', price: 0, unit: '', is_available: true, mrp: null, stock_qty: 0, track_stock: false });
+
   const submitProduct = async () => {
-    if (!draft.name?.trim()) {
-      toast({ title: 'Product name required', variant: 'destructive' });
+    const problem = firstError(
+      checkText(draft.name ?? '', 'Product name', { min: 2, max: 80 }),
+      checkAmount(draft.price ?? 0, 'Price', { min: 1, required: true }),
+      draft.mrp ? checkAmount(draft.mrp, 'MRP') : null,
+      draft.track_stock ? checkInteger(draft.stock_qty ?? 0, 'Stock quantity') : null,
+      draft.mrp && Number(draft.mrp) < Number(draft.price)
+        ? 'MRP cannot be lower than your selling price.'
+        : null,
+    );
+    if (problem) {
+      toast({ title: problem, variant: 'destructive' });
       return;
     }
     setSavingProduct(true);
     try {
       let photo_path = draft.photo_path ?? null;
-      if (file) photo_path = await uploadShopMedia(shop.id, file);
+      if (file) {
+        const small = await compressImage(file, { maxKb: 40, maxEdge: 900 });
+        photo_path = await uploadShopMedia(shop.id, small);
+      }
       await saveProduct(shop.id, {
         ...draft,
         price: Number(draft.price) || 0,
+        mrp: draft.mrp ? Number(draft.mrp) : null,
+        stock_qty: Number(draft.stock_qty) || 0,
         photo_path,
       } as Partial<ShopProduct>);
-      setDraft({ name: '', price: 0, unit: '', is_available: true });
+      resetDraft();
       setFile(null);
       qc.invalidateQueries({ queryKey: ['manage-products', shop.id] });
       toast({ title: 'Saved' });
@@ -93,6 +112,11 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
     timings: shop.timings ?? '',
     address: shop.address ?? '',
     phone: shop.phone,
+    whatsapp: shop.whatsapp ?? '',
+    area: shop.area ?? '',
+    latitude: shop.latitude != null ? String(shop.latitude) : '',
+    longitude: shop.longitude != null ? String(shop.longitude) : '',
+    map_link: shop.map_link ?? '',
     delivery_available: shop.delivery_available,
     pickup_available: shop.pickup_available,
     min_order_amount: shop.min_order_amount,
@@ -101,6 +125,35 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
     upi_payee_name: shop.upi_payee_name ?? shop.name,
     upi_enabled: shop.upi_enabled ?? false,
   });
+
+  const [locating, setLocating] = useState(false);
+  const useMyLocation = () => {
+    if (!navigator.geolocation) {
+      toast({ title: 'Location not available', description: 'Please type the coordinates instead.', variant: 'destructive' });
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setShopForm((f) => ({
+          ...f,
+          latitude: pos.coords.latitude.toFixed(6),
+          longitude: pos.coords.longitude.toFixed(6),
+        }));
+        setLocating(false);
+        toast({ title: 'Location captured', description: 'Remember to save your changes.' });
+      },
+      () => {
+        setLocating(false);
+        toast({
+          title: 'Could not get your location',
+          description: 'Allow location for this app in your phone settings, or type the coordinates.',
+          variant: 'destructive',
+        });
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
 
 
   const [voiceLang, setVoiceLang] = useState('hi');
@@ -127,17 +180,30 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
 
   const saveShop = async () => {
     const upi = shopForm.upi_id.trim();
-    if (shopForm.upi_enabled && !isValidVpa(upi)) {
-      toast({
-        title: 'Check your UPI ID',
-        description: 'It should look like yourname@bank, exactly as your payment app shows it.',
-        variant: 'destructive',
-      });
+    const problem = firstError(
+      checkMobile(shopForm.phone, 'Mobile number'),
+      checkOptionalMobile(shopForm.whatsapp, 'WhatsApp number'),
+      checkAmount(shopForm.min_order_amount || 0, 'Minimum order amount'),
+      checkLatitude(shopForm.latitude),
+      checkLongitude(shopForm.longitude),
+      checkLink(shopForm.map_link, 'Map link'),
+      shopForm.upi_enabled && !isValidVpa(upi)
+        ? 'Check your UPI ID — it should look like yourname@bank, exactly as your payment app shows it.'
+        : null,
+      !shopForm.delivery_available && !shopForm.pickup_available ? 'Choose delivery, pickup, or both.' : null,
+    );
+    if (problem) {
+      toast({ title: problem, variant: 'destructive' });
       return;
     }
     try {
       await updateMyShop(shop.id, {
         ...shopForm,
+        whatsapp: shopForm.whatsapp.trim() || null,
+        area: shopForm.area.trim() || null,
+        map_link: shopForm.map_link.trim() || null,
+        latitude: shopForm.latitude ? Number(shopForm.latitude) : null,
+        longitude: shopForm.longitude ? Number(shopForm.longitude) : null,
         upi_id: upi || null,
         upi_payee_name: shopForm.upi_payee_name.trim() || shop.name,
         min_order_amount: Number(shopForm.min_order_amount) || 0,
@@ -181,18 +247,50 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
       {tab === 'products' && (
         <div className="px-4 mt-4 space-y-3">
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-2">
-            <h2 className="text-sm font-bold text-gray-800 flex items-center gap-1">
-              <Plus className="w-4 h-4" /> Add a product
+            <h2 className="text-sm font-bold text-gray-800 flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                {draft.id ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                {draft.id ? 'Edit product' : 'Add a product'}
+              </span>
+              {draft.id && (
+                <button onClick={() => { resetDraft(); setFile(null); }} className="text-gray-400" aria-label="Cancel editing">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </h2>
             <input className={field} placeholder="Product name" value={draft.name ?? ''} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
             <textarea className={field} rows={2} placeholder="Description (optional)" value={draft.description ?? ''} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
             <div className="flex gap-2">
               <input className={field} type="number" min={0} placeholder="Price ₹" value={draft.price || ''} onChange={(e) => setDraft({ ...draft, price: Number(e.target.value) })} />
-              <input className={field} placeholder="Unit e.g. kg" value={draft.unit ?? ''} onChange={(e) => setDraft({ ...draft, unit: e.target.value })} />
+              <input className={field} type="number" min={0} placeholder="MRP ₹ (optional)" value={draft.mrp ?? ''} onChange={(e) => setDraft({ ...draft, mrp: e.target.value === '' ? null : Number(e.target.value) })} />
             </div>
+            <div className="flex gap-2">
+              <input className={field} placeholder="Unit e.g. kg" value={draft.unit ?? ''} onChange={(e) => setDraft({ ...draft, unit: e.target.value })} />
+              <input className={field} placeholder="Category (optional)" value={draft.category ?? ''} onChange={(e) => setDraft({ ...draft, category: e.target.value })} />
+            </div>
+            <label className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 rounded-xl p-2">
+              <input
+                type="checkbox"
+                checked={!!draft.track_stock}
+                onChange={(e) => setDraft({ ...draft, track_stock: e.target.checked })}
+              />
+              <span className="flex-1">Keep count of stock</span>
+              {draft.track_stock && (
+                <input
+                  type="number"
+                  min={0}
+                  value={draft.stock_qty ?? 0}
+                  onChange={(e) => setDraft({ ...draft, stock_qty: Number(e.target.value) })}
+                  className="w-20 px-2 py-1 rounded-lg border border-gray-200 text-xs"
+                  placeholder="Qty"
+                />
+              )}
+            </label>
             <label className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 rounded-xl p-2 cursor-pointer">
               <Package className="w-4 h-4 text-emerald-600" />
-              <span className="flex-1">{file ? file.name : 'Product photo (optional)'}</span>
+              <span className="flex-1">
+                {file ? `${file.name} · ${kb(file.size)} (shrunk to about 40 KB)` : 'Product photo (optional)'}
+              </span>
               <input type="file" accept="image/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             </label>
             <button
@@ -200,7 +298,7 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
               disabled={savingProduct}
               className="w-full py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold disabled:opacity-60"
             >
-              {savingProduct ? 'Saving…' : 'Add product'}
+              {savingProduct ? 'Saving…' : draft.id ? 'Save product' : 'Add product'}
             </button>
           </div>
 
@@ -215,8 +313,12 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
                 <p className="text-sm font-semibold text-gray-800 truncate">{p.name}</p>
                 <p className="text-xs text-gray-500">
                   {formatMoney(Number(p.price))}
+                  {p.mrp && Number(p.mrp) > Number(p.price) && (
+                    <span className="line-through text-gray-400 ml-1">{formatMoney(Number(p.mrp))}</span>
+                  )}
                   {p.unit ? ` / ${p.unit}` : ''}
                 </p>
+                {p.track_stock && <p className="text-[10px] text-gray-500">{p.stock_qty} in stock</p>}
                 {p.is_hidden && <p className="text-[10px] text-red-600">Hidden after reports</p>}
               </div>
               <button
@@ -226,6 +328,13 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
                 }`}
               >
                 {p.is_available ? 'In stock' : 'Out of stock'}
+              </button>
+              <button
+                onClick={() => { setDraft(p); setFile(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                className="text-gray-500 p-1"
+                aria-label="Edit product"
+              >
+                <Pencil className="w-4 h-4" />
               </button>
               <button onClick={() => removeProduct(p)} className="text-red-500 p-1" aria-label="Delete product">
                 <Trash2 className="w-4 h-4" />
@@ -289,10 +398,53 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
 
       {tab === 'shop' && (
         <div className="px-4 mt-4 space-y-3">
-          <input className={field} placeholder="Mobile number" value={shopForm.phone} onChange={(e) => setShopForm({ ...shopForm, phone: e.target.value })} />
+          <input className={field} placeholder="Mobile number" inputMode="numeric" maxLength={13} value={shopForm.phone} onChange={(e) => setShopForm({ ...shopForm, phone: e.target.value })} />
+          <input className={field} placeholder="WhatsApp number (optional)" inputMode="numeric" maxLength={13} value={shopForm.whatsapp} onChange={(e) => setShopForm({ ...shopForm, whatsapp: e.target.value })} />
           <textarea className={field} rows={2} placeholder="Address" value={shopForm.address} onChange={(e) => setShopForm({ ...shopForm, address: e.target.value })} />
+          <input className={field} placeholder="Area / locality" value={shopForm.area} onChange={(e) => setShopForm({ ...shopForm, area: e.target.value })} />
           <input className={field} placeholder="Opening hours" value={shopForm.timings} onChange={(e) => setShopForm({ ...shopForm, timings: e.target.value })} />
           <textarea className={field} rows={2} placeholder="Description" value={shopForm.description} onChange={(e) => setShopForm({ ...shopForm, description: e.target.value })} />
+
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-2">
+            <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1">
+              <MapPin className="w-4 h-4 text-emerald-600" /> Where your shop is
+            </h3>
+            <p className="text-[11px] text-gray-500">
+              Pin the exact spot so customers get accurate directions.
+            </p>
+            <button
+              onClick={useMyLocation}
+              disabled={locating}
+              className="w-full py-2 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold disabled:opacity-60"
+            >
+              {locating ? 'Getting your location…' : 'Use my current location'}
+            </button>
+            <div className="flex gap-2">
+              <input className={field} placeholder="Latitude" value={shopForm.latitude} onChange={(e) => setShopForm({ ...shopForm, latitude: e.target.value })} />
+              <input className={field} placeholder="Longitude" value={shopForm.longitude} onChange={(e) => setShopForm({ ...shopForm, longitude: e.target.value })} />
+            </div>
+            <input className={field} placeholder="Map link (optional)" value={shopForm.map_link} onChange={(e) => setShopForm({ ...shopForm, map_link: e.target.value })} />
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-2">
+            <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1">
+              <IndianRupee className="w-4 h-4 text-emerald-600" /> Your UPI payment details
+            </h3>
+            <p className="text-[11px] text-gray-500">
+              Customers can pay you directly at checkout. Money goes straight to your UPI ID — the app
+              never holds it.
+            </p>
+            <label className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 rounded-xl p-2">
+              <input
+                type="checkbox"
+                checked={shopForm.upi_enabled}
+                onChange={(e) => setShopForm({ ...shopForm, upi_enabled: e.target.checked })}
+              />
+              <span className="flex-1">Accept UPI payment at checkout</span>
+            </label>
+            <input className={field} placeholder="Your UPI ID e.g. shopname@upi" value={shopForm.upi_id} onChange={(e) => setShopForm({ ...shopForm, upi_id: e.target.value })} />
+            <input className={field} placeholder="Name shown while paying" value={shopForm.upi_payee_name} onChange={(e) => setShopForm({ ...shopForm, upi_payee_name: e.target.value })} />
+          </div>
           <div className="flex gap-2">
             {(
               [

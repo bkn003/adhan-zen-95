@@ -3,6 +3,7 @@ import { LocalNotifications, Channel, LocalNotificationSchema } from '@capacitor
 import { Preferences } from '@capacitor/preferences';
 import type { Prayer } from '@/types/prayer.types';
 import { scheduleDndForPrayers, scheduleReliableAlarms, getDndSettings, updateCountdownPrayers } from './dndService';
+import { isIos, scheduleIosAdhanAlarms } from './iosAdhanAlarms';
 
 // Helper: parse "HH:mm" or "hh:mm AM" into a Date on a given day
 function parseTimeToDate(time: string, baseDate: Date): Date {
@@ -71,6 +72,14 @@ function buildNotification(prayer: Prayer, when: Date, idBase: number): LocalNot
 
 export async function scheduleTodayAdhanNotifications(prayers: Prayer[], baseDate: Date): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
+
+  // iPhone: pre-arm real local notifications (they survive app close and reboot).
+  if (isIos()) {
+    const armed = await scheduleIosAdhanAlarms(prayers);
+    console.log(`🍏 Armed ${armed} iOS adhan/jamaat alarms`);
+    return;
+  }
+
 
   const ok = await requestPermission();
   if (!ok) return;

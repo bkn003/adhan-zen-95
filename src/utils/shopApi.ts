@@ -32,6 +32,7 @@ export interface Shop {
   name: string;
   owner_name: string;
   phone: string;
+  whatsapp: string | null;
   email: string | null;
   category: string;
   description: string | null;
@@ -64,6 +65,9 @@ export interface ShopProduct {
   description: string | null;
   price: number;
   unit: string | null;
+  mrp: number | null;
+  stock_qty: number;
+  track_stock: boolean;
   photo_path: string | null;
   category: string | null;
   is_available: boolean;
