@@ -51,16 +51,15 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
     setDraft({ name: '', price: 0, unit: '', is_available: true, mrp: null, stock_qty: 0, track_stock: false });
 
   const submitProduct = async () => {
-    const problem = firstError([
-      () => checkText(draft.name ?? '', 'Product name', 2, 80),
-      () => checkAmount(draft.price ?? 0, 'Price'),
-      () => (draft.mrp ? checkAmount(draft.mrp, 'MRP') : null),
-      () => (draft.track_stock ? checkInteger(draft.stock_qty ?? 0, 'Stock quantity', 0, 100000) : null),
-      () =>
-        draft.mrp && Number(draft.mrp) < Number(draft.price)
-          ? 'MRP cannot be lower than your selling price.'
-          : null,
-    ]);
+    const problem = firstError(
+      checkText(draft.name ?? '', 'Product name', { min: 2, max: 80 }),
+      checkAmount(draft.price ?? 0, 'Price', { min: 1, required: true }),
+      draft.mrp ? checkAmount(draft.mrp, 'MRP') : null,
+      draft.track_stock ? checkInteger(draft.stock_qty ?? 0, 'Stock quantity') : null,
+      draft.mrp && Number(draft.mrp) < Number(draft.price)
+        ? 'MRP cannot be lower than your selling price.'
+        : null,
+    );
     if (problem) {
       toast({ title: problem, variant: 'destructive' });
       return;
@@ -181,19 +180,18 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
 
   const saveShop = async () => {
     const upi = shopForm.upi_id.trim();
-    const problem = firstError([
-      () => checkMobile(shopForm.phone, 'Mobile number'),
-      () => checkOptionalMobile(shopForm.whatsapp, 'WhatsApp number'),
-      () => checkAmount(shopForm.min_order_amount || 0, 'Minimum order amount', 0),
-      () => checkLatitude(shopForm.latitude),
-      () => checkLongitude(shopForm.longitude),
-      () => checkLink(shopForm.map_link, 'Map link'),
-      () =>
-        shopForm.upi_enabled && !isValidVpa(upi)
-          ? 'Check your UPI ID — it should look like yourname@bank, exactly as your payment app shows it.'
-          : null,
-      () => (!shopForm.delivery_available && !shopForm.pickup_available ? 'Choose delivery, pickup, or both.' : null),
-    ]);
+    const problem = firstError(
+      checkMobile(shopForm.phone, 'Mobile number'),
+      checkOptionalMobile(shopForm.whatsapp, 'WhatsApp number'),
+      checkAmount(shopForm.min_order_amount || 0, 'Minimum order amount'),
+      checkLatitude(shopForm.latitude),
+      checkLongitude(shopForm.longitude),
+      checkLink(shopForm.map_link, 'Map link'),
+      shopForm.upi_enabled && !isValidVpa(upi)
+        ? 'Check your UPI ID — it should look like yourname@bank, exactly as your payment app shows it.'
+        : null,
+      !shopForm.delivery_available && !shopForm.pickup_available ? 'Choose delivery, pickup, or both.' : null,
+    );
     if (problem) {
       toast({ title: problem, variant: 'destructive' });
       return;
