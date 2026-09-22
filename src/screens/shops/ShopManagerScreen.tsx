@@ -398,10 +398,53 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
 
       {tab === 'shop' && (
         <div className="px-4 mt-4 space-y-3">
-          <input className={field} placeholder="Mobile number" value={shopForm.phone} onChange={(e) => setShopForm({ ...shopForm, phone: e.target.value })} />
+          <input className={field} placeholder="Mobile number" inputMode="numeric" maxLength={13} value={shopForm.phone} onChange={(e) => setShopForm({ ...shopForm, phone: e.target.value })} />
+          <input className={field} placeholder="WhatsApp number (optional)" inputMode="numeric" maxLength={13} value={shopForm.whatsapp} onChange={(e) => setShopForm({ ...shopForm, whatsapp: e.target.value })} />
           <textarea className={field} rows={2} placeholder="Address" value={shopForm.address} onChange={(e) => setShopForm({ ...shopForm, address: e.target.value })} />
+          <input className={field} placeholder="Area / locality" value={shopForm.area} onChange={(e) => setShopForm({ ...shopForm, area: e.target.value })} />
           <input className={field} placeholder="Opening hours" value={shopForm.timings} onChange={(e) => setShopForm({ ...shopForm, timings: e.target.value })} />
           <textarea className={field} rows={2} placeholder="Description" value={shopForm.description} onChange={(e) => setShopForm({ ...shopForm, description: e.target.value })} />
+
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-2">
+            <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1">
+              <MapPin className="w-4 h-4 text-emerald-600" /> Where your shop is
+            </h3>
+            <p className="text-[11px] text-gray-500">
+              Pin the exact spot so customers get accurate directions.
+            </p>
+            <button
+              onClick={useMyLocation}
+              disabled={locating}
+              className="w-full py-2 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold disabled:opacity-60"
+            >
+              {locating ? 'Getting your location…' : 'Use my current location'}
+            </button>
+            <div className="flex gap-2">
+              <input className={field} placeholder="Latitude" value={shopForm.latitude} onChange={(e) => setShopForm({ ...shopForm, latitude: e.target.value })} />
+              <input className={field} placeholder="Longitude" value={shopForm.longitude} onChange={(e) => setShopForm({ ...shopForm, longitude: e.target.value })} />
+            </div>
+            <input className={field} placeholder="Map link (optional)" value={shopForm.map_link} onChange={(e) => setShopForm({ ...shopForm, map_link: e.target.value })} />
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-2">
+            <h3 className="text-sm font-bold text-gray-800 flex items-center gap-1">
+              <IndianRupee className="w-4 h-4 text-emerald-600" /> Your UPI payment details
+            </h3>
+            <p className="text-[11px] text-gray-500">
+              Customers can pay you directly at checkout. Money goes straight to your UPI ID — the app
+              never holds it.
+            </p>
+            <label className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 rounded-xl p-2">
+              <input
+                type="checkbox"
+                checked={shopForm.upi_enabled}
+                onChange={(e) => setShopForm({ ...shopForm, upi_enabled: e.target.checked })}
+              />
+              <span className="flex-1">Accept UPI payment at checkout</span>
+            </label>
+            <input className={field} placeholder="Your UPI ID e.g. shopname@upi" value={shopForm.upi_id} onChange={(e) => setShopForm({ ...shopForm, upi_id: e.target.value })} />
+            <input className={field} placeholder="Name shown while paying" value={shopForm.upi_payee_name} onChange={(e) => setShopForm({ ...shopForm, upi_payee_name: e.target.value })} />
+          </div>
           <div className="flex gap-2">
             {(
               [
