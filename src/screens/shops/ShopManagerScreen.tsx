@@ -247,18 +247,50 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
       {tab === 'products' && (
         <div className="px-4 mt-4 space-y-3">
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-2">
-            <h2 className="text-sm font-bold text-gray-800 flex items-center gap-1">
-              <Plus className="w-4 h-4" /> Add a product
+            <h2 className="text-sm font-bold text-gray-800 flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                {draft.id ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                {draft.id ? 'Edit product' : 'Add a product'}
+              </span>
+              {draft.id && (
+                <button onClick={() => { resetDraft(); setFile(null); }} className="text-gray-400" aria-label="Cancel editing">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </h2>
             <input className={field} placeholder="Product name" value={draft.name ?? ''} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
             <textarea className={field} rows={2} placeholder="Description (optional)" value={draft.description ?? ''} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
             <div className="flex gap-2">
               <input className={field} type="number" min={0} placeholder="Price ₹" value={draft.price || ''} onChange={(e) => setDraft({ ...draft, price: Number(e.target.value) })} />
-              <input className={field} placeholder="Unit e.g. kg" value={draft.unit ?? ''} onChange={(e) => setDraft({ ...draft, unit: e.target.value })} />
+              <input className={field} type="number" min={0} placeholder="MRP ₹ (optional)" value={draft.mrp ?? ''} onChange={(e) => setDraft({ ...draft, mrp: e.target.value === '' ? null : Number(e.target.value) })} />
             </div>
+            <div className="flex gap-2">
+              <input className={field} placeholder="Unit e.g. kg" value={draft.unit ?? ''} onChange={(e) => setDraft({ ...draft, unit: e.target.value })} />
+              <input className={field} placeholder="Category (optional)" value={draft.category ?? ''} onChange={(e) => setDraft({ ...draft, category: e.target.value })} />
+            </div>
+            <label className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 rounded-xl p-2">
+              <input
+                type="checkbox"
+                checked={!!draft.track_stock}
+                onChange={(e) => setDraft({ ...draft, track_stock: e.target.checked })}
+              />
+              <span className="flex-1">Keep count of stock</span>
+              {draft.track_stock && (
+                <input
+                  type="number"
+                  min={0}
+                  value={draft.stock_qty ?? 0}
+                  onChange={(e) => setDraft({ ...draft, stock_qty: Number(e.target.value) })}
+                  className="w-20 px-2 py-1 rounded-lg border border-gray-200 text-xs"
+                  placeholder="Qty"
+                />
+              )}
+            </label>
             <label className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 rounded-xl p-2 cursor-pointer">
               <Package className="w-4 h-4 text-emerald-600" />
-              <span className="flex-1">{file ? file.name : 'Product photo (optional)'}</span>
+              <span className="flex-1">
+                {file ? `${file.name} · ${kb(file.size)} (shrunk to about 40 KB)` : 'Product photo (optional)'}
+              </span>
               <input type="file" accept="image/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             </label>
             <button
@@ -266,7 +298,7 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
               disabled={savingProduct}
               className="w-full py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold disabled:opacity-60"
             >
-              {savingProduct ? 'Saving…' : 'Add product'}
+              {savingProduct ? 'Saving…' : draft.id ? 'Save product' : 'Add product'}
             </button>
           </div>
 
@@ -281,8 +313,12 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
                 <p className="text-sm font-semibold text-gray-800 truncate">{p.name}</p>
                 <p className="text-xs text-gray-500">
                   {formatMoney(Number(p.price))}
+                  {p.mrp && Number(p.mrp) > Number(p.price) && (
+                    <span className="line-through text-gray-400 ml-1">{formatMoney(Number(p.mrp))}</span>
+                  )}
                   {p.unit ? ` / ${p.unit}` : ''}
                 </p>
+                {p.track_stock && <p className="text-[10px] text-gray-500">{p.stock_qty} in stock</p>}
                 {p.is_hidden && <p className="text-[10px] text-red-600">Hidden after reports</p>}
               </div>
               <button
@@ -292,6 +328,13 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
                 }`}
               >
                 {p.is_available ? 'In stock' : 'Out of stock'}
+              </button>
+              <button
+                onClick={() => { setDraft(p); setFile(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                className="text-gray-500 p-1"
+                aria-label="Edit product"
+              >
+                <Pencil className="w-4 h-4" />
               </button>
               <button onClick={() => removeProduct(p)} className="text-red-500 p-1" aria-label="Delete product">
                 <Trash2 className="w-4 h-4" />
