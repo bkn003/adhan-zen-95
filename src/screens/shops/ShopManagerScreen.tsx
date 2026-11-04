@@ -36,6 +36,7 @@ export const ShopManagerScreen = ({ shop, onBack }: Props) => {
 
   const products = useQuery({ queryKey: ['manage-products', shop.id], queryFn: () => listShopProducts(shop.id) });
   const orders = useQuery({ queryKey: ['manage-orders', shop.id], queryFn: () => listShopOrders(shop.id) });
+  useOrderAlerts({ shopId: shop.id }, ['manage-orders', shop.id]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {

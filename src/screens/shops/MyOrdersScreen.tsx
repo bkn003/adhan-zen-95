@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { listMyOrders, cancelMyOrder, formatMoney } from '@/utils/shopApi';
+import { OrderTimeline, useOrderAlerts } from '@/components/shops/ShopExtras';
 
 const statusStyle: Record<string, string> = {
   placed: 'bg-amber-50 text-amber-700',
@@ -16,6 +17,8 @@ export const MyOrdersScreen = ({ onBack }: { onBack: () => void }) => {
   const { isSignedIn, openAuth } = useAuth();
   const qc = useQueryClient();
   const orders = useQuery({ queryKey: ['my-shop-orders'], queryFn: listMyOrders, enabled: isSignedIn });
+  const { user } = useAuth();
+  useOrderAlerts({ userId: user?.id }, ['my-shop-orders']);
 
   const cancel = async (id: string) => {
     try {
@@ -101,6 +104,11 @@ export const MyOrdersScreen = ({ onBack }: { onBack: () => void }) => {
                 )}
               </div>
             </div>
+            <OrderTimeline orderId={o.id} status={o.status} />
+            <p className="text-[11px] text-gray-500 mt-2">
+              Payment: {o.payment_method === 'upi' ? 'UPI' : 'Cash'} ·{' '}
+              {o.payment_status === 'received' ? 'Received by shop' : o.payment_status === 'marked_paid' ? 'You marked paid' : 'Pending'}
+            </p>
             {o.status_note && <p className="text-[11px] text-gray-500 mt-1">Shop note: {o.status_note}</p>}
           </div>
         ))}
