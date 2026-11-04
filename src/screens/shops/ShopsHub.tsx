@@ -18,7 +18,11 @@ type View =
   | { name: 'manage' };
 
 export const ShopsHub = () => {
-  const [view, setView] = useState<View>({ name: 'list' });
+  const [view, setView] = useState<View>(() => {
+    const id = sessionStorage.getItem('deeplink_shop');
+    if (id) { sessionStorage.removeItem('deeplink_shop'); return { name: 'shop', shopId: id }; }
+    return { name: 'list' };
+  });
   const { isSignedIn } = useAuth();
 
   const myShop = useQuery({ queryKey: ['my-shop'], queryFn: getMyShop, enabled: isSignedIn });
