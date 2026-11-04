@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Phone, MapPin, ShieldCheck, Flag, Minus, Plus, Navigation, Volume2, Square, Loader2, MessageCircle, Share2 } from 'lucide-react';
 import { telLink, whatsappLink, directionsLink } from '@/utils/contactLinks';
+import { ShopReviews } from '@/components/shops/ShopExtras';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -260,6 +261,11 @@ export const ShopDetailsScreen = ({ shopId, onBack, onCheckout }: Props) => {
             </div>
           );
         })}
+      </div>
+
+      <div className="px-4 mt-5">
+        <h2 className="text-sm font-bold text-gray-800 mb-2">Ratings & reviews</h2>
+        <ShopReviews shopId={shopId} />
       </div>
 
       {lines.length > 0 && (
