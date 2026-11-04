@@ -174,6 +174,10 @@ const Index = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const s = params.get('screen');
+    const shopParam = params.get('shop');
+    if (s === 'shops' && shopParam && /^[0-9a-f-]{36}$/i.test(shopParam)) {
+      sessionStorage.setItem('deeplink_shop', shopParam);
+    }
     if (s && ['home', 'nearby', 'shops', 'qibla', 'qaza', 'settings'].includes(s)) {
       setCurrentScreen(s as Screen);
       // Clean the URL

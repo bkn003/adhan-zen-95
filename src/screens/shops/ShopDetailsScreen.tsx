@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Phone, MapPin, ShieldCheck, Flag, Minus, Plus, Navigation, Volume2, Square, Loader2 } from 'lucide-react';
+import { ArrowLeft, Phone, MapPin, ShieldCheck, Flag, Minus, Plus, Navigation, Volume2, Square, Loader2, MessageCircle, Share2 } from 'lucide-react';
+import { telLink, whatsappLink, directionsLink } from '@/utils/contactLinks';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -104,6 +105,15 @@ export const ShopDetailsScreen = ({ shopId, onBack, onCheckout }: Props) => {
   if (!shop.data) return <div className="p-6 text-center text-gray-500">Shop not found.</div>;
 
   const s = shop.data;
+  const shareShop = async () => {
+    const url = `${window.location.origin}/?screen=shops&shop=${s.id}`;
+    const text = `${s.name} — halal shop near you`;
+    try {
+      if (navigator.share) { await navigator.share({ title: s.name, text, url }); return; }
+      await navigator.clipboard.writeText(`${text}\n${url}`);
+      toast({ title: 'Link copied', description: 'Paste it in WhatsApp or SMS.' });
+    } catch { /* cancelled */ }
+  };
 
   return (
     <div className="min-h-screen pb-32">
@@ -130,23 +140,25 @@ export const ShopDetailsScreen = ({ shopId, onBack, onCheckout }: Props) => {
           {minOrder > 0 && ` · Minimum order ${formatMoney(minOrder)}`}
         </p>
         {s.description && <p className="text-xs text-gray-600">{s.description}</p>}
-        <div className="flex gap-2 pt-1">
-          <a
-            href={`tel:${s.phone}`}
-            className="flex-1 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold flex items-center justify-center gap-1"
-          >
-            <Phone className="w-4 h-4" /> Call shop
-          </a>
-          {s.map_link && (
-            <a
-              href={s.map_link}
-              target="_blank"
-              rel="noreferrer"
-              className="flex-1 py-2 rounded-xl bg-white border border-gray-200 text-xs font-semibold text-gray-700 flex items-center justify-center gap-1"
-            >
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          {telLink(s.phone) && (
+            <a href={telLink(s.phone)} className="py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold flex items-center justify-center gap-1">
+              <Phone className="w-4 h-4" /> Call shop
+            </a>
+          )}
+          {whatsappLink(s.whatsapp || s.phone) && (
+            <a href={whatsappLink(s.whatsapp || s.phone, `Assalamu alaikum, I found ${s.name} on the app.`)} target="_blank" rel="noreferrer" className="py-2 rounded-xl bg-green-500 text-white text-xs font-semibold flex items-center justify-center gap-1">
+              <MessageCircle className="w-4 h-4" /> WhatsApp
+            </a>
+          )}
+          {directionsLink(s) && (
+            <a href={directionsLink(s)} target="_blank" rel="noreferrer" className="py-2 rounded-xl bg-white border border-gray-200 text-xs font-semibold text-gray-700 flex items-center justify-center gap-1">
               <Navigation className="w-4 h-4" /> Directions
             </a>
           )}
+          <button onClick={shareShop} className="py-2 rounded-xl bg-white border border-gray-200 text-xs font-semibold text-gray-700 flex items-center justify-center gap-1">
+            <Share2 className="w-4 h-4" /> Share shop
+          </button>
         </div>
         <div className="pt-1 border-t border-gray-100 mt-1">
           <div className="flex items-center gap-2">
