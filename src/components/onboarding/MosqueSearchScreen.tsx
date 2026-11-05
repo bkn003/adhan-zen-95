@@ -6,6 +6,7 @@ import { MapPin, Search, Navigation, Loader2 } from "lucide-react";
 import { useLocations } from "@/hooks/useLocations";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import type { Location } from "@/types/prayer.types";
+import { useInfiniteReveal } from "@/hooks/useInfiniteReveal";
 
 interface MosqueSearchScreenProps {
   onMosqueSelected: (location: Location) => void;
@@ -13,7 +14,6 @@ interface MosqueSearchScreenProps {
 
 export const MosqueSearchScreen = ({ onMosqueSelected }: MosqueSearchScreenProps) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [displayCount, setDisplayCount] = useState(10);
   const { data: locations, isLoading } = useLocations();
   const { latitude, longitude, calculateDistance } = useGeolocation();
 
@@ -37,12 +37,8 @@ export const MosqueSearchScreen = ({ onMosqueSelected }: MosqueSearchScreenProps
       return a.mosque_name.localeCompare(b.mosque_name);
     });
 
-  const displayedLocations = sortedLocations.slice(0, displayCount);
-  const hasMore = sortedLocations.length > displayCount;
-
-  const handleLoadMore = () => {
-    setDisplayCount(prev => prev + 10);
-  };
+  const { count, hasMore, sentinelRef } = useInfiniteReveal(sortedLocations.length, 15, 15, searchQuery);
+  const displayedLocations = sortedLocations.slice(0, count);
 
   const handleGetDirections = (location: Location) => {
     const destination = `${location.latitude},${location.longitude}`;
@@ -146,17 +142,12 @@ export const MosqueSearchScreen = ({ onMosqueSelected }: MosqueSearchScreenProps
               )}
             </div>
             
-            {hasMore && (
-              <div className="mt-4 text-center">
-                <Button
-                  onClick={handleLoadMore}
-                  variant="outline"
-                  className="w-full border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                >
-                  Load More ({sortedLocations.length - displayCount} remaining)
-                </Button>
-              </div>
-            )}
+              {hasMore && (
+                <div ref={sentinelRef} className="py-3 flex justify-center">
+                  <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                </div>
+              )}
+            </div>
           </div>
         </Card>
       </div>
