@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { MosqueTrustBadge } from '@/components/MosqueTrustBadge';
 import { toast } from 'sonner';
 import type { Location } from '@/types/prayer.types';
+import { useInfiniteReveal } from '@/hooks/useInfiniteReveal';
 
 
 interface NearbyScreenProps {
@@ -43,7 +44,6 @@ export const NearbyScreen = ({
   const [isSearching, setIsSearching] = useState(false);
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
   const [sortByTime, setSortByTime] = useState(false);
-  const [displayCount, setDisplayCount] = useState(10);
   const [radiusKm, setRadiusKm] = useState<number | null>(null);
 
 
@@ -148,10 +148,10 @@ export const NearbyScreen = ({
     : null;
 
 
+  const { count: displayCount, hasMore, sentinelRef } = useInfiniteReveal(
+    sortedLocations.length, 15, 15, `${searchQuery}|${[...activeFilters].join(',')}|${radiusKm}|${sortByTime}`
+  );
   const displayedLocations = sortedLocations.slice(0, displayCount);
-  const hasMore = sortedLocations.length > displayCount;
-
-  const handleLoadMore = () => setDisplayCount(prev => prev + 10);
 
   const handleGetDirections = (location: Location) => {
     const destination = `${location.latitude},${location.longitude}`;
@@ -432,16 +432,8 @@ export const NearbyScreen = ({
         )}
 
         {hasMore && !isSearching && (
-          <div className="pt-4 pb-2">
-            <Button
-              onClick={handleLoadMore}
-              variant="outline"
-              size="lg"
-              className="w-full bg-white hover:bg-gray-50 border-gray-200 text-gray-700 font-semibold rounded-2xl py-4"
-            >
-              <ChevronDown className="w-4 h-4 mr-2" />
-              Load More Mosques
-            </Button>
+          <div ref={sentinelRef} className="py-6 flex justify-center">
+            <div className="h-1.5 w-16 rounded-full bg-gray-200 animate-pulse" />
           </div>
         )}
       </div>

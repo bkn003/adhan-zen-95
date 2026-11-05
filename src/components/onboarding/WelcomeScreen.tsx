@@ -1,52 +1,64 @@
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { MapPin, Clock, Compass, Users } from "lucide-react";
+import { MapPin, Clock, Compass, Bell, BookOpen, WifiOff, Moon, ArrowRight } from "lucide-react";
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
 }
 
+const features = [
+  { icon: MapPin, title: "Nearby mosques", desc: "Live jamaat times" },
+  { icon: Bell, title: "Adhan alarms", desc: "Works when closed" },
+  { icon: Compass, title: "Qibla compass", desc: "Precise direction" },
+  { icon: BookOpen, title: "Quran & Hadith", desc: "Listen & read" },
+  { icon: Moon, title: "Ramadan mode", desc: "Sahar & Iftar" },
+  { icon: WifiOff, title: "Works offline", desc: "Your mosque saved" },
+];
+
 export const WelcomeScreen = ({ onGetStarted }: WelcomeScreenProps) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8 text-center bg-white/80 backdrop-blur-sm border-0 shadow-xl">
-        <div className="mb-8">
-          <div className="w-20 h-20 bg-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Users className="w-10 h-10 text-white" />
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary to-primary/70 text-primary-foreground px-6 pt-14 pb-20 rounded-b-[2.5rem]">
+        <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-primary-foreground/10" />
+        <div className="absolute -bottom-20 -left-10 w-44 h-44 rounded-full bg-primary-foreground/10" />
+        <div className="relative max-w-md mx-auto text-center animate-fade-in">
+          <div className="w-20 h-20 mx-auto mb-5 rounded-3xl bg-primary-foreground/15 backdrop-blur flex items-center justify-center text-4xl shadow-lg">
+            🕌
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Welcome to Prayer Guide
-          </h1>
-          <p className="text-gray-600 leading-relaxed">
-            Your personal prayer companion. Let's set up your location so we can show accurate prayer times and help you find nearby mosques.
+          <p className="text-sm opacity-80 mb-1" dir="rtl">السَّلَامُ عَلَيْكُمْ</p>
+          <h1 className="text-3xl font-bold mb-3">Welcome to Prayer Guide</h1>
+          <p className="opacity-90 leading-relaxed text-sm">
+            Never miss a jamaat. Accurate prayer times from your own mosque, wherever you are.
           </p>
         </div>
+      </div>
 
-        <div className="space-y-4 mb-8">
-          <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg">
-            <MapPin className="w-5 h-5 text-emerald-600" />
-            <span className="text-sm text-gray-700">Find nearby mosques</span>
-          </div>
-          
-          <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg">
-            <Clock className="w-5 h-5 text-emerald-600" />
-            <span className="text-sm text-gray-700">Accurate prayer times</span>
-          </div>
-          
-          <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg">
-            <Compass className="w-5 h-5 text-emerald-600" />
-            <span className="text-sm text-gray-700">Precise Qibla direction</span>
-          </div>
+      <div className="flex-1 max-w-md w-full mx-auto px-5 -mt-10 pb-8 flex flex-col">
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          {features.map(({ icon: Icon, title, desc }, i) => (
+            <div
+              key={title}
+              className="bg-card border border-border rounded-2xl p-4 shadow-sm animate-fade-in"
+              style={{ animationDelay: `${i * 60}ms`, animationFillMode: "both" }}
+            >
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
+                <Icon className="w-5 h-5 text-primary" />
+              </div>
+              <p className="font-semibold text-sm text-foreground">{title}</p>
+              <p className="text-xs text-muted-foreground">{desc}</p>
+            </div>
+          ))}
         </div>
 
-        <Button 
-          onClick={onGetStarted}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 text-lg font-medium"
-          size="lg"
-        >
+        <div className="flex items-center gap-2 justify-center text-xs text-muted-foreground mb-6">
+          <Clock className="w-3.5 h-3.5" />
+          Takes less than a minute to set up
+        </div>
+
+        <Button onClick={onGetStarted} size="lg" className="w-full h-14 text-lg font-semibold rounded-2xl shadow-lg mt-auto">
           Get Started
+          <ArrowRight className="w-5 h-5 ml-2" />
         </Button>
-      </Card>
+      </div>
     </div>
   );
 };
