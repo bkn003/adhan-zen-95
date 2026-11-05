@@ -7,6 +7,7 @@ import { compressImage, kb } from '@/utils/imageCompress';
 import { checkMobile, checkOptionalMobile, checkAmount, checkInteger, checkLatitude, checkLongitude, checkLink, checkText, firstError } from '@/utils/validation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
+import { useOrderAlerts } from '@/components/shops/ShopExtras';
 import {
   listShopProducts,
   saveProduct,
