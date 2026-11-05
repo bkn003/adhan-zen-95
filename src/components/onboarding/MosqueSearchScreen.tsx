@@ -150,6 +150,7 @@ export const MosqueSearchScreen = ({ onMosqueSelected }: MosqueSearchScreenProps
             </div>
           </div>
         </Card>
+        </Card>
       </div>
     </div>
   );
