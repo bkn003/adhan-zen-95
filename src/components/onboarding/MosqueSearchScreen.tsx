@@ -140,8 +140,7 @@ export const MosqueSearchScreen = ({ onMosqueSelected }: MosqueSearchScreenProps
                   </p>
                 </div>
               )}
-            </div>
-            
+
               {hasMore && (
                 <div ref={sentinelRef} className="py-3 flex justify-center">
                   <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
@@ -149,7 +148,6 @@ export const MosqueSearchScreen = ({ onMosqueSelected }: MosqueSearchScreenProps
               )}
             </div>
           </div>
-        </Card>
         </Card>
       </div>
     </div>
