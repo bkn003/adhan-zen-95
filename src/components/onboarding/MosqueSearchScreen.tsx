@@ -154,7 +154,7 @@ export const MosqueSearchScreen = ({ onMosqueSelected }: MosqueSearchScreenProps
                 <div className="text-center py-8">
                   <MapPin className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                   <p className="text-gray-500">
-                    {searchQuery ? 'No mosques found' : 'No mosques available'}
+                    {searchQuery ? 'No mosques found' : hasGps && radiusKm < 100 ? `No mosques within ${radiusKm} km — move the slider to widen` : 'No mosques available'}
                   </p>
                 </div>
               )}
