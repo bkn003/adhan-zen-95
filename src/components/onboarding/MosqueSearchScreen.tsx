@@ -14,6 +14,7 @@ interface MosqueSearchScreenProps {
 
 export const MosqueSearchScreen = ({ onMosqueSelected }: MosqueSearchScreenProps) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [radiusKm, setRadiusKm] = useState(10);
   const { data: locations, isLoading } = useLocations();
   const { latitude, longitude, calculateDistance } = useGeolocation();
 
@@ -23,6 +24,7 @@ export const MosqueSearchScreen = ({ onMosqueSelected }: MosqueSearchScreenProps
     location.district.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
+  const hasGps = !!(latitude && longitude);
   const sortedLocations = filteredLocations
     .map(location => ({
       ...location,
@@ -30,6 +32,7 @@ export const MosqueSearchScreen = ({ onMosqueSelected }: MosqueSearchScreenProps
         ? calculateDistance(latitude, longitude, location.latitude, location.longitude)
         : null
     }))
+    .filter(l => searchQuery || radiusKm >= 100 || l.distance === null || l.distance <= radiusKm)
     .sort((a, b) => {
       if (a.distance !== null && b.distance !== null) {
         return a.distance - b.distance;
@@ -37,7 +40,7 @@ export const MosqueSearchScreen = ({ onMosqueSelected }: MosqueSearchScreenProps
       return a.mosque_name.localeCompare(b.mosque_name);
     });
 
-  const { count, hasMore, sentinelRef } = useInfiniteReveal(sortedLocations.length, 15, 15, searchQuery);
+  const { count, hasMore, sentinelRef } = useInfiniteReveal(sortedLocations.length, 15, 15, `${searchQuery}|${radiusKm}`);
   const displayedLocations = sortedLocations.slice(0, count);
 
   const handleGetDirections = (location: Location) => {
@@ -83,6 +86,21 @@ export const MosqueSearchScreen = ({ onMosqueSelected }: MosqueSearchScreenProps
               className="pl-10 py-3 border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
             />
           </div>
+          {hasGps && !searchQuery && (
+            <div>
+              <div className="flex justify-between text-sm text-gray-600 mb-1">
+                <span>Show mosques within</span>
+                <span className="font-semibold text-emerald-700">{radiusKm >= 100 ? 'Any distance' : `${radiusKm} km`}</span>
+              </div>
+              <input
+                type="range" min={2} max={100} step={1}
+                value={radiusKm}
+                onChange={(e) => setRadiusKm(Number(e.target.value))}
+                className="w-full accent-emerald-600"
+                aria-label="Search radius"
+              />
+            </div>
+          )}
         </Card>
 
         <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
